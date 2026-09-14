@@ -33,7 +33,9 @@ $env:PYTHONPATH = "src"
 
 Os artefatos principais estão em:
 
+- `docs/REQUISITOS.md`: requisitos funcionais e não funcionais do cenário;
 - `docs/arquitetura/`: AS-IS, TO-BE, componentes, implantação e sequências;
+- `docs/EXEMPLOS_API.md`: exemplos executáveis de requisição, resposta e erro;
 - `docs/api/openapi.yaml`: contrato REST;
 - `docs/events/asyncapi.yaml`: contrato dos eventos;
 - `docs/MATRIZ_RASTREABILIDADE.md`: requisito, implementação, teste e evidência;
@@ -72,8 +74,8 @@ Os artefatos principais estão em:
 - `docs/EVIDENCIAS_VALIDACAO.md`
 
 **Entrega final**
-- `output/Relatorio_Tecnico_Cenario_4.docx` (versões renderizadas em PDF/imagens também em `tmp/report-render-v2` a `v4`)
-- Apresentação em slides/imagens em `tmp/presentation-build/` (fonte `.pptx` não localizada — confirmar local)
+- `output/Relatorio_Tecnico_Cenario_4.docx` — relatório técnico final com 18 páginas; render de verificação em `tmp/report-render-final/`.
+- `output/Apresentacao_Cenario_4.pptx` — apresentação técnica final com 15 slides; render de verificação em `tmp/presentation-build/`.
 
 **Código e testes**
 - `src/archcorp/` (implementação/protótipo)
@@ -103,10 +105,8 @@ A ordem segue a estrutura do `Guia.pdf` (requisitos → arquitetura atual → ar
 14. `docs/MATRIZ_RASTREABILIDADE.md` e `docs/BACKLOG_TASKS_SUBTASKS.md` — conferência cruzada de cobertura;
 15. `src/archcorp/` e `tests/` — protótipo/implementação sustentando a documentação;
 16. `docs/ROTEIRO_DEMONSTRACAO.md` e `docs/EVIDENCIAS_VALIDACAO.md` — validação dos três fluxos integrados;
-17. Slides em `tmp/presentation-build/` — apresentação técnica final;
-18. `output/Relatorio_Tecnico_Cenario_4.docx` — relatório técnico consolidado (15–20 páginas), por último, pois amarra todo o restante.
-
-> Observação: existem múltiplas pastas de render do relatório (`tmp/report-render-v1` a `v4`) além do `.docx` em `output/`. Confirmar qual é a versão oficial antes de tratar as demais como obsoletas.
+17. `output/Apresentacao_Cenario_4.pptx` — apresentação técnica final;
+18. `output/Relatorio_Tecnico_Cenario_4.docx` — relatório técnico consolidado com 18 páginas.
 
 ## Health checks e operação
 

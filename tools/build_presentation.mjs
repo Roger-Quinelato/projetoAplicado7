@@ -6,7 +6,8 @@ import { Presentation, PresentationFile } from "@oai/artifact-tool";
 const workspaceDir = "C:/ProjetoAplicado7";
 const SKILL_DIR = "C:/Users/roger/.codex/plugins/cache/openai-primary-runtime/presentations/26.909.12148/skills/presentations";
 const TMP_DIR = path.join(workspaceDir, "tmp/presentation-build");
-const FINAL_PPTX = path.join(workspaceDir, "output/Apresentacao_Cenario_4_v2.pptx");
+const FINAL_PPTX = path.join(workspaceDir, "output/Apresentacao_Cenario_4.pptx");
+const VALIDATED_PPTX = path.join(TMP_DIR, "Apresentacao_Cenario_4_validada.pptx");
 const RUNTIME_PYTHON = "C:/Users/roger/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe";
 const utils = await import(pathToFileURL(path.join(SKILL_DIR, "container_tools/artifact_tool_utils.mjs")).href);
 const { resolvePresentationFont, makeNativeBulletParagraphs, finalizePresentation } = utils;
@@ -61,7 +62,7 @@ function notes(slide, text) {
   textbox(slide, "Arquitetura de Integração\npara Empresa de Serviços", { left: 90, top: 170, width: 900, height: 190 }, 54, C.white, true);
   textbox(slide, "Projeto Aplicado  |  Cenário 4", { left: 94, top: 390, width: 600, height: 50 }, 27, "#C8DFE2");
   const accent = slide.shapes.add({ geometry: "rect", position: { left: 95, top: 130, width: 180, height: 10 }, fill: C.rust, line: { fill: "none", width: 0 } });
-  textbox(slide, "Equipe do Projeto Aplicado\n12 de setembro de 2026", { left: 94, top: 560, width: 520, height: 70 }, 20, C.white);
+  textbox(slide, "Equipe do Projeto Aplicado\n14 de setembro de 2026", { left: 94, top: 560, width: 520, height: 70 }, 20, C.white);
   notes(slide, "Fonte principal: Projeto Aplicado ArchCorp, enunciado acadêmico fornecido ao projeto, 2026.");
 }
 
@@ -217,11 +218,22 @@ function notes(slide, text) {
 // 14
 {
   const slide = base("Demonstração e resultados");
-  textbox(slide, "11 testes aprovados", { left: 105, top: 145, width: 360, height: 60 }, 34, C.green, true);
-  textbox(slide, "p95  4,75 ms", { left: 800, top: 145, width: 330, height: 60 }, 34, C.green, true);
+  textbox(slide, "13 testes aprovados", { left: 105, top: 145, width: 380, height: 60 }, 34, C.green, true);
+  textbox(slide, "p95  6,36 ms", { left: 800, top: 145, width: 330, height: 60 }, 34, C.green, true);
   bullets(slide, ["F1 cria rascunho sem recadastro", "F2 cria uma cobrança e um onboarding", "F3 registra SLA e inicia resolução", "Falha controlada preserva e reconcilia o chamado", "Rastreabilidade reúne auditoria e eventos"], { left: 170, top: 250, width: 900, height: 300 }, 28);
   textbox(slide, "Premissas do AS IS seguem para validação com a organização", { left: 250, top: 590, width: 800, height: 42 }, 23, C.rust, true);
-  notes(slide, "Fonte: docs/EVIDENCIAS_VALIDACAO.md. Medição local em 12 de setembro de 2026 com 200 consultas de prontidão.");
+  notes(slide, "Fonte: docs/EVIDENCIAS_VALIDACAO.md. Medição local em 13 de setembro de 2026 com 200 consultas de prontidão.");
+}
+
+// 15
+{
+  const slide = base("Conclusões e próximos passos");
+  textbox(slide, "Conclusões", { left: 90, top: 145, width: 430, height: 48 }, 29, C.teal, true);
+  bullets(slide, ["A arquitetura integrou os três fluxos obrigatórios", "Contratos e fronteiras permitem evolução incremental", "Outbox, inbox e correlação tornam falhas recuperáveis"], { left: 85, top: 215, width: 520, height: 255 }, 24);
+  textbox(slide, "Limites e evolução", { left: 700, top: 145, width: 430, height: 48 }, 29, C.teal, true);
+  bullets(slide, ["Validar premissas e interfaces do AS IS", "Conectar OIDC, TLS e sistemas reais por adaptadores", "Automatizar retentativas e sincronizar o prazo do Workflow"], { left: 695, top: 215, width: 500, height: 255 }, 24);
+  textbox(slide, "Próxima ação: validar a solução com dados, volumes e responsáveis reais", { left: 165, top: 545, width: 950, height: 62 }, 25, C.rust, true);
+  notes(slide, "Fonte: relatório técnico, seção 12, e docs/EVOLUCAO_MANUTENCAO.md. Inserir nomes e contribuições individuais antes da submissão.");
 }
 
 for (let i = 0; i < deck.slides.items.length; i++) {
@@ -230,17 +242,19 @@ for (let i = 0; i < deck.slides.items.length; i++) {
   await fs.writeFile(path.join(TMP_DIR, `slide-${String(i + 1).padStart(2, "0")}.png`), new Uint8Array(await png.arrayBuffer()));
 }
 
-const requirements = { explicitTotalSlideCount: 14, requiredNativeTableOwnerSlides: [], requiredNativeChartOwnerSlides: [] };
+const requirements = { explicitTotalSlideCount: 15, requiredNativeTableOwnerSlides: [], requiredNativeChartOwnerSlides: [] };
 const stagingDir = path.join(workspaceDir, ".codex-finalizer");
 await fs.mkdir(stagingDir, { recursive: true });
 await fs.mkdir(path.dirname(FINAL_PPTX), { recursive: true });
+await fs.rm(VALIDATED_PPTX, { force: true });
+await fs.rm(path.join(stagingDir, "Apresentacao_Cenario_4.validation.json"), { force: true });
 const candidatePath = path.join(stagingDir, "cenario4-candidate.pptx");
 await (await PresentationFile.exportPptx(deck)).save(candidatePath);
 await finalizePresentation({
   ...requirements,
   workspaceDir,
   candidatePath,
-  finalPath: FINAL_PPTX,
+  finalPath: VALIDATED_PPTX,
   pythonExecutable: RUNTIME_PYTHON,
   integrityValidatorPath: path.join(SKILL_DIR, "container_tools/inspect_presentation_package_integrity.py"),
   layoutValidatorPath: path.join(SKILL_DIR, "container_tools/inspect_presentation_layout_geometry.py"),
@@ -248,6 +262,7 @@ await finalizePresentation({
   requiredNativeTableOwnerSlides: [],
   fontPolicy: { basis: "design", families: [family] },
   verifyArtifactToolImport: true,
-  receiptPath: path.join(stagingDir, "Apresentacao_Cenario_4_v2.validation.json"),
+  receiptPath: path.join(stagingDir, "Apresentacao_Cenario_4.validation.json"),
 });
+await fs.copyFile(VALIDATED_PPTX, FINAL_PPTX);
 console.log(FINAL_PPTX);

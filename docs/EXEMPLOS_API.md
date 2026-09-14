@@ -137,6 +137,22 @@ Cliente inexistente, inelegível ou sem consentimento, resposta `422`:
 }
 ```
 
+Um corpo estruturalmente inválido também recebe `422`, mas usa a lista padrão de
+erros de validação do FastAPI. Exemplo com `customerId` inválido:
+
+```json
+{
+  "detail": [
+    {
+      "type": "uuid_parsing",
+      "loc": ["body", "customerId"],
+      "msg": "Input should be a valid UUID",
+      "input": "not-a-uuid"
+    }
+  ]
+}
+```
+
 Token ausente ou desconhecido, resposta `401`:
 
 ```json
@@ -294,7 +310,10 @@ Resposta `200 OK`:
 ```
 
 O reprocessamento preserva o número anterior de tentativas na auditoria. Ele altera
-o estado de entrega, mas não desativa inbox, idempotência ou restrições de negócio.
+o estado de entrega, mas não zera o contador acumulado nem desativa inbox,
+idempotência ou restrições de negócio. Portanto, uma nova falha após o
+reprocessamento devolve o evento imediatamente a `FAILED`; uma nova janela de três
+tentativas exigiria uma mudança explícita na política e na implementação.
 
 Contrato desconhecido na ativação, resposta `404`:
 
@@ -403,6 +422,21 @@ Contrato, cliente ou serviço sem elegibilidade, resposta `422`:
 ```json
 {
   "detail": "Contrato, serviço ou cliente sem elegibilidade"
+}
+```
+
+Um UUID inválido no corpo também recebe `422` com a lista de validação estrutural:
+
+```json
+{
+  "detail": [
+    {
+      "type": "uuid_parsing",
+      "loc": ["body", "contractId"],
+      "msg": "Input should be a valid UUID",
+      "input": "not-a-uuid"
+    }
+  ]
 }
 ```
 

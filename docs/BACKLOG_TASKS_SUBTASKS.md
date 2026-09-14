@@ -55,12 +55,12 @@
 
 ## Task 8 Entrega acadêmica
 
-- [ ] Subtask 8.1 Completar documentação arquitetural e exemplos.
-  - [ ] Subtask 8.1.1 Criar documento específico de requisitos.
-  - [ ] Subtask 8.1.2 Criar exemplos completos de requisição e resposta.
-  - [ ] Subtask 8.1.3 Criar diagramas de sequência dos três fluxos.
-  - [ ] Subtask 8.1.4 Revisar AS-IS, TO-BE, integrações, qualidade, evolução e viabilidade.
-  - [ ] Subtask 8.1.5 Validar OpenAPI, AsyncAPI, exemplos, links e diagramas.
+- [x] Subtask 8.1 Completar documentação arquitetural e exemplos.
+  - [x] Subtask 8.1.1 Criar documento específico de requisitos.
+  - [x] Subtask 8.1.2 Criar exemplos completos de requisição e resposta.
+  - [x] Subtask 8.1.3 Criar diagramas de sequência dos três fluxos.
+  - [x] Subtask 8.1.4 Revisar AS-IS, TO-BE, integrações, qualidade, evolução e viabilidade.
+  - [x] Subtask 8.1.5 Validar OpenAPI, AsyncAPI, exemplos, links e diagramas.
 - [x] Subtask 8.2 Criar roteiro de demonstração.
 - [x] Subtask 8.3 Criar relatório técnico de 15 a 20 páginas.
 - [x] Subtask 8.4 Criar apresentação técnica.
@@ -68,8 +68,8 @@
 
 ## Task 9 Revisão final da entrega
 
-- [ ] Subtask 9.1 Atualizar o roteiro após estabilizar fluxos e exemplos.
-- [ ] Subtask 9.2 Executar testes, contratos e medição de desempenho.
-- [ ] Subtask 9.3 Regenerar e inspecionar o relatório técnico.
-- [ ] Subtask 9.4 Regenerar e inspecionar a apresentação.
-- [ ] Subtask 9.5 Revisar a entrega contra o guia e atualizar a rastreabilidade.
+- [x] Subtask 9.1 Atualizar o roteiro após estabilizar fluxos e exemplos.
+- [x] Subtask 9.2 Executar testes, contratos e medição de desempenho.
+- [x] Subtask 9.3 Regenerar e inspecionar o relatório técnico.
+- [x] Subtask 9.4 Regenerar e inspecionar a apresentação.
+- [x] Subtask 9.5 Revisar a entrega contra o guia e atualizar a rastreabilidade.

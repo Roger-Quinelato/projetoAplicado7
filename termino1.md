@@ -69,13 +69,13 @@ devem permanecer identificadas como premissas a validar.
 | D3 | `docs/EXEMPLOS_API.md` | Código, testes e contratos | Requisições, respostas, erros, replay e correlação válidos para F1-F3 | Concluído |
 | D4 | OpenAPI e AsyncAPI | D3 e regras do `AGENT.md` | Contratos válidos, exemplos sincronizados e envelope completo | Concluído |
 | D5 | Revisar `docs/INTEGRACOES.md` | D2-D4 | Cada fluxo contém todos os itens exigidos pelo guia | Concluído |
-| D6 | `docs/arquitetura/FLUXOS_INTEGRACAO.md` | D3-D5 | Diagramas Mermaid de F1-F3 e cenários alternativos renderizam sem erro | Validação estrutural concluída; renderização visual pendente |
+| D6 | `docs/arquitetura/FLUXOS_INTEGRACAO.md` | D3-D5 | Diagramas Mermaid de F1-F3 e cenários alternativos renderizam sem erro | Concluído: sete diagramas renderizados sem erro |
 | D7 | Qualidade, evolução e visão de negócio | D2, D5, D6 | Metas, evidências, limitações e viabilidade estão separadas com clareza | Concluído |
 | D8 | Roteiro de demonstração | D3-D6 | Outra equipe executa F1-F3 e recuperação sem inferir payloads | Concluído |
-| D9 | Evidências atuais | D4, D6 e D8 | Testes, contratos e desempenho executados e registrados com data atual | Concluído: 12 testes e p95 de 6,36 ms |
-| D10 | Relatório técnico | D1-D9 e dados da equipe | DOCX entre 15 e 20 páginas e inspeção visual aprovada | Em andamento - Agente C |
-| D11 | Apresentação técnica | D1-D9 e dados da equipe | Deck consistente, renderizado e inspecionado integralmente | Em andamento - Agente B |
-| D12 | README, matriz e backlog | D10 e D11 | Nenhum item marcado como atendido sem evidência existente | Pendente |
+| D9 | Evidências atuais | D4, D6 e D8 | Testes, contratos e desempenho executados e registrados com data atual | Concluído: 13 testes e p95 de 6,36 ms |
+| D10 | Relatório técnico | D1-D9 e dados da equipe | DOCX entre 15 e 20 páginas e inspeção visual aprovada | Concluído: 18 páginas inspecionadas |
+| D11 | Apresentação técnica | D1-D9 e dados da equipe | Deck consistente, renderizado e inspecionado integralmente | Concluído: 15 slides inspecionados |
+| D12 | README, matriz e backlog | D10 e D11 | Nenhum item marcado como atendido sem evidência existente | Concluído |
 
 ## Melhorias obrigatórias
 

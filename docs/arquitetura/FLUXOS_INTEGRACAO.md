@@ -71,7 +71,9 @@ sequenceDiagram
     actor Operador
     participant API as API REST v1
     participant Contracts
+    participant Idempotency as Registro de idempotência
     participant Outbox
+    participant Audit as Auditoria
     participant Dispatcher
     participant Inbox
     participant Finance
@@ -80,15 +82,17 @@ sequenceDiagram
 
     Contratos->>API: POST /contracts/{id}/activate<br/>Idempotency-Key e X-Correlation-ID
     API->>Contracts: activate(contractId, chave, correlação)
-    Contracts->>Outbox: Buscar chave da operação
+    Contracts->>Idempotency: Buscar chave da operação
 
     alt Ativação repetida
-        Outbox-->>Contracts: Resposta armazenada
+        Idempotency-->>Contracts: Resposta armazenada
         Contracts-->>API: Mesmo contrato e eventId
         API-->>Contratos: 200 e Idempotency-Replayed true
     else Primeira ativação
         Contracts->>Contracts: Alterar estado para ACTIVE
-        Contracts->>Outbox: Gravar ContractActivated.v1 e auditoria
+        Contracts->>Outbox: Gravar ContractActivated.v1
+        Contracts->>Idempotency: Gravar resposta da operação
+        Contracts->>Audit: Gravar ativação e correlação
         Outbox-->>Contracts: eventId na mesma transação
         Contracts-->>API: Contrato ativo e eventId
         API-->>Contratos: 200 e Idempotency-Replayed false

@@ -1,5 +1,7 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
+from typing import Any, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -113,7 +115,7 @@ class ContractDraftCreate(BaseModel):
         }
     )
 
-    customerId: str
+    customerId: UUID
     serviceCode: str = Field(min_length=2, max_length=80)
     startsOn: date
     billing: Billing
@@ -135,8 +137,8 @@ class TicketCreate(BaseModel):
         }
     )
 
-    customerId: str
-    contractId: str
+    customerId: UUID
+    contractId: UUID
     serviceCode: str
     category: str = Field(min_length=2, max_length=80)
     description: str = Field(min_length=3, max_length=2000)
@@ -144,3 +146,88 @@ class TicketCreate(BaseModel):
 
 class ApiModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+
+
+class CustomerResponse(BaseModel):
+    customerId: UUID
+    name: str
+    email: EmailStr
+    eligible: bool
+
+
+class ContractDraftResponse(BaseModel):
+    contractId: UUID
+    customerId: UUID
+    serviceCode: str
+    startsOn: date
+    billing: Billing
+    slaHours: int
+    status: Literal["DRAFT"]
+
+
+class ContractActivationResponse(BaseModel):
+    contractId: UUID
+    customerId: UUID
+    serviceCode: str
+    startsOn: date
+    billing: Billing
+    slaHours: int
+    status: Literal["ACTIVE"]
+    eventId: UUID
+
+
+class EntitlementResponse(BaseModel):
+    eligible: bool
+    slaHours: int | None
+
+
+class TicketResponse(BaseModel):
+    ticketId: UUID
+    customerId: UUID
+    contractId: UUID
+    serviceCode: str
+    category: str
+    status: Literal["OPEN", "PENDING_ENTITLEMENT", "REJECTED_ENTITLEMENT"]
+    priority: Literal["NORMAL", "HIGH"]
+    slaHours: int | None
+    dueAt: datetime | None
+
+
+class DispatchResponse(BaseModel):
+    processed: int
+    failed: int
+
+
+class FailureResponse(BaseModel):
+    eventId: UUID
+    eventType: str
+    attempts: int
+    reason: str | None
+    correlationId: UUID
+
+
+class ReprocessResponse(BaseModel):
+    eventId: UUID
+    status: Literal["PENDING"]
+
+
+class AuditEntryResponse(BaseModel):
+    occurredAt: datetime
+    module: str
+    operation: str
+    result: str
+    entityId: str | None
+    details: dict[str, Any]
+
+
+class OperationEventResponse(BaseModel):
+    eventId: UUID
+    eventType: str
+    status: str
+    attempts: int
+
+
+class OperationTraceResponse(BaseModel):
+    correlationId: UUID
+    audit: list[AuditEntryResponse]
+    events: list[OperationEventResponse]
