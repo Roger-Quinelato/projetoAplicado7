@@ -1,0 +1,1154 @@
+openapi: 3.1.0
+info:
+  title: ArchCorp Integração Cenário 4
+  description: API demonstrativa para CRM, contratos, financeiro, atendimento, workflow
+    e integração.
+  version: 1.0.0
+paths:
+  /health/live:
+    get:
+      tags:
+      - Operação
+      summary: Live
+      operationId: live_health_live_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Live Health Live Get
+  /health/ready:
+    get:
+      tags:
+      - Operação
+      summary: Ready
+      operationId: ready_health_ready_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Ready Health Ready Get
+  /metrics:
+    get:
+      tags:
+      - Operação
+      summary: Metrics
+      operationId: metrics_metrics_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api/v1/crm/customers:
+    post:
+      tags:
+      - CRM
+      summary: Create Customer
+      operationId: create_customer_api_v1_crm_customers_post
+      security:
+      - HTTPBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerCreate'
+      responses:
+        '201':
+          description: Cliente criado no CRM com identificador global.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Create Customer Api V1 Crm Customers Post
+              example:
+                customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                name: Empresa Exemplo Ltda.
+                email: contato@empresa-exemplo.test
+                eligible: true
+          headers:
+            X-Correlation-ID:
+              description: UUID usado para correlacionar a requisição, os logs e os
+                eventos.
+              schema:
+                type: string
+                format: uuid
+              example: 11111111-1111-4111-8111-111111111111
+        '400':
+          description: Cabeçalho de correlação inválido.
+          content:
+            application/json:
+              example:
+                detail: X-Correlation-ID deve ser UUID
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/json:
+              example:
+                detail: Token ausente ou inválido
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/json:
+              example:
+                detail: Papel sem permissão para esta operação
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      parameters:
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
+  /api/v1/crm/customers/{customer_id}:
+    patch:
+      tags:
+      - CRM
+      summary: Update Customer
+      operationId: update_customer_api_v1_crm_customers__customer_id__patch
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: customer_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Customer Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Update Customer Api V1 Crm Customers  Customer Id  Patch
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/contracts/drafts:
+    post:
+      tags:
+      - Contratos
+      summary: Create Contract Draft
+      operationId: create_contract_draft_api_v1_contracts_drafts_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          examples:
+          - demo-contract-001
+          title: Idempotency-Key
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContractDraftCreate'
+      responses:
+        '201':
+          description: Rascunho criado ou resposta idempotente recuperada.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Create Contract Draft Api V1 Contracts Drafts Post
+              examples:
+                created:
+                  summary: Rascunho criado
+                  value:
+                    contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+                    customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                    serviceCode: SUPPORT-PREMIUM
+                    startsOn: '2026-10-01'
+                    billing:
+                      amount: 2500.0
+                      currency: BRL
+                      cycle: MONTHLY
+                    slaHours: 8
+                    status: DRAFT
+                replayed:
+                  summary: Resposta recuperada com Idempotency-Replayed true
+                  value:
+                    contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+                    customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                    serviceCode: SUPPORT-PREMIUM
+                    startsOn: '2026-10-01'
+                    billing:
+                      amount: 2500.0
+                      currency: BRL
+                      cycle: MONTHLY
+                    slaHours: 8
+                    status: DRAFT
+          headers:
+            X-Correlation-ID:
+              description: UUID usado para correlacionar a requisição, os logs e os
+                eventos.
+              schema:
+                type: string
+                format: uuid
+              example: 11111111-1111-4111-8111-111111111111
+            Idempotency-Replayed:
+              description: Retorna true quando a API reutiliza a resposta armazenada.
+              schema:
+                type: string
+                enum:
+                - 'true'
+                - 'false'
+              example: 'false'
+        '400':
+          description: Cabeçalho de correlação inválido.
+          content:
+            application/json:
+              example:
+                detail: X-Correlation-ID deve ser UUID
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/json:
+              example:
+                detail: Token ausente ou inválido
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/json:
+              example:
+                detail: Papel sem permissão para esta operação
+        '422':
+          description: Entrada inválida ou cliente inexistente ou inelegível.
+          content:
+            application/json:
+              example:
+                detail: Cliente inexistente ou inelegível
+  /api/v1/contracts/{contract_id}/activate:
+    post:
+      tags:
+      - Contratos
+      summary: Activate Contract
+      operationId: activate_contract_api_v1_contracts__contract_id__activate_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: contract_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Contract Id
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          examples:
+          - demo-activate-001
+          title: Idempotency-Key
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
+      responses:
+        '200':
+          description: Contrato ativado ou resposta idempotente recuperada.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Activate Contract Api V1 Contracts  Contract Id  Activate
+                  Post
+              examples:
+                activated:
+                  summary: Contrato ativado e evento gravado na outbox
+                  value:
+                    contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+                    customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                    serviceCode: SUPPORT-PREMIUM
+                    startsOn: '2026-10-01'
+                    billing:
+                      amount: 2500.0
+                      currency: BRL
+                      cycle: MONTHLY
+                    slaHours: 8
+                    status: ACTIVE
+                    eventId: cccccccc-cccc-4ccc-8ccc-cccccccccccc
+                replayed:
+                  summary: Resposta recuperada com Idempotency-Replayed true
+                  value:
+                    contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+                    customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                    serviceCode: SUPPORT-PREMIUM
+                    startsOn: '2026-10-01'
+                    billing:
+                      amount: 2500.0
+                      currency: BRL
+                      cycle: MONTHLY
+                    slaHours: 8
+                    status: ACTIVE
+                    eventId: cccccccc-cccc-4ccc-8ccc-cccccccccccc
+          headers:
+            X-Correlation-ID:
+              description: UUID usado para correlacionar a requisição, os logs e os
+                eventos.
+              schema:
+                type: string
+                format: uuid
+              example: 11111111-1111-4111-8111-111111111111
+            Idempotency-Replayed:
+              description: Retorna true quando a API reutiliza a resposta armazenada.
+              schema:
+                type: string
+                enum:
+                - 'true'
+                - 'false'
+              example: 'false'
+        '400':
+          description: Cabeçalho de correlação inválido.
+          content:
+            application/json:
+              example:
+                detail: X-Correlation-ID deve ser UUID
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/json:
+              example:
+                detail: Token ausente ou inválido
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/json:
+              example:
+                detail: Papel sem permissão para esta operação
+        '404':
+          description: Contrato não encontrado.
+          content:
+            application/json:
+              example:
+                detail: Contrato não encontrado
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/contracts/{contract_id}/entitlement:
+    get:
+      tags:
+      - Contratos
+      summary: Entitlement
+      operationId: entitlement_api_v1_contracts__contract_id__entitlement_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: contract_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Contract Id
+      - name: customerId
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Customerid
+      - name: serviceCode
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Servicecode
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
+      responses:
+        '200':
+          description: Elegibilidade e SLA do contrato.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Entitlement Api V1 Contracts  Contract Id  Entitlement
+                  Get
+              examples:
+                eligible:
+                  summary: Contrato elegível
+                  value:
+                    eligible: true
+                    slaHours: 8
+                notEligible:
+                  summary: Contrato não elegível
+                  value:
+                    eligible: false
+          headers:
+            X-Correlation-ID:
+              description: UUID usado para correlacionar a requisição, os logs e os
+                eventos.
+              schema:
+                type: string
+                format: uuid
+              example: 11111111-1111-4111-8111-111111111111
+        '400':
+          description: Cabeçalho de correlação inválido.
+          content:
+            application/json:
+              example:
+                detail: X-Correlation-ID deve ser UUID
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/json:
+              example:
+                detail: Token ausente ou inválido
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/json:
+              example:
+                detail: Papel sem permissão para esta operação
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/support/tickets:
+    post:
+      tags:
+      - Atendimento
+      summary: Open Ticket
+      operationId: open_ticket_api_v1_support_tickets_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          examples:
+          - demo-ticket-001
+          title: Idempotency-Key
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketCreate'
+      responses:
+        '201':
+          description: Chamado criado ou resposta idempotente recuperada.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Open Ticket Api V1 Support Tickets Post
+              examples:
+                open:
+                  summary: Chamado elegível aberto
+                  value:
+                    ticketId: dddddddd-dddd-4ddd-8ddd-dddddddddddd
+                    customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                    contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+                    serviceCode: SUPPORT-PREMIUM
+                    category: OUTAGE
+                    status: OPEN
+                    priority: HIGH
+                    slaHours: 8
+                    dueAt: '2026-10-01T18:10:00Z'
+                pending:
+                  summary: Chamado pendente por indisponibilidade de Contracts
+                  value:
+                    ticketId: dddddddd-dddd-4ddd-8ddd-dddddddddddd
+                    customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                    contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+                    serviceCode: SUPPORT-PREMIUM
+                    category: QUESTION
+                    status: PENDING_ENTITLEMENT
+                    priority: NORMAL
+                replayed:
+                  summary: Resposta recuperada com Idempotency-Replayed true
+                  value:
+                    ticketId: dddddddd-dddd-4ddd-8ddd-dddddddddddd
+                    customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                    contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+                    serviceCode: SUPPORT-PREMIUM
+                    category: OUTAGE
+                    status: OPEN
+                    priority: HIGH
+                    slaHours: 8
+                    dueAt: '2026-10-01T18:10:00Z'
+          headers:
+            X-Correlation-ID:
+              description: UUID usado para correlacionar a requisição, os logs e os
+                eventos.
+              schema:
+                type: string
+                format: uuid
+              example: 11111111-1111-4111-8111-111111111111
+            Idempotency-Replayed:
+              description: Retorna true quando a API reutiliza a resposta armazenada.
+              schema:
+                type: string
+                enum:
+                - 'true'
+                - 'false'
+              example: 'false'
+        '400':
+          description: Cabeçalho de correlação inválido.
+          content:
+            application/json:
+              example:
+                detail: X-Correlation-ID deve ser UUID
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/json:
+              example:
+                detail: Token ausente ou inválido
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/json:
+              example:
+                detail: Papel sem permissão para esta operação
+        '422':
+          description: Entrada inválida ou contrato, serviço ou cliente sem elegibilidade.
+          content:
+            application/json:
+              example:
+                detail: Contrato, serviço ou cliente sem elegibilidade
+  /api/v1/support/tickets/{ticket_id}/reconcile:
+    post:
+      tags:
+      - Atendimento
+      summary: Reconcile Ticket
+      operationId: reconcile_ticket_api_v1_support_tickets__ticket_id__reconcile_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: ticket_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Ticket Id
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
+      responses:
+        '200':
+          description: Chamado reconciliado com a elegibilidade atual.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Reconcile Ticket Api V1 Support Tickets  Ticket Id  Reconcile
+                  Post
+              examples:
+                open:
+                  summary: Elegibilidade confirmada
+                  value:
+                    ticketId: dddddddd-dddd-4ddd-8ddd-dddddddddddd
+                    customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                    contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+                    serviceCode: SUPPORT-PREMIUM
+                    category: OUTAGE
+                    status: OPEN
+                    priority: HIGH
+                    slaHours: 8
+                    dueAt: '2026-10-01T18:10:00Z'
+                rejected:
+                  summary: Elegibilidade rejeitada
+                  value:
+                    ticketId: dddddddd-dddd-4ddd-8ddd-dddddddddddd
+                    customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                    contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+                    serviceCode: SUPPORT-PREMIUM
+                    category: QUESTION
+                    status: REJECTED_ENTITLEMENT
+                    priority: NORMAL
+          headers:
+            X-Correlation-ID:
+              description: UUID usado para correlacionar a requisição, os logs e os
+                eventos.
+              schema:
+                type: string
+                format: uuid
+              example: 11111111-1111-4111-8111-111111111111
+        '400':
+          description: Cabeçalho de correlação inválido.
+          content:
+            application/json:
+              example:
+                detail: X-Correlation-ID deve ser UUID
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/json:
+              example:
+                detail: Token ausente ou inválido
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/json:
+              example:
+                detail: Papel sem permissão para esta operação
+        '404':
+          description: Chamado não encontrado.
+          content:
+            application/json:
+              example:
+                detail: Chamado não encontrado
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/integration/outbox/dispatch:
+    post:
+      tags:
+      - Integração
+      summary: Dispatch Outbox
+      operationId: dispatch_outbox_api_v1_integration_outbox_dispatch_post
+      security:
+      - HTTPBearer: []
+      responses:
+        '200':
+          description: Resumo do despacho dos eventos pendentes.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Dispatch Outbox Api V1 Integration Outbox Dispatch
+                  Post
+              example:
+                processed: 1
+                failed: 0
+          headers:
+            X-Correlation-ID:
+              description: UUID usado para correlacionar a requisição, os logs e os
+                eventos.
+              schema:
+                type: string
+                format: uuid
+              example: 11111111-1111-4111-8111-111111111111
+        '400':
+          description: Cabeçalho de correlação inválido.
+          content:
+            application/json:
+              example:
+                detail: X-Correlation-ID deve ser UUID
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/json:
+              example:
+                detail: Token ausente ou inválido
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/json:
+              example:
+                detail: Papel sem permissão para esta operação
+      parameters:
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
+  /api/v1/integration/failures:
+    get:
+      tags:
+      - Integração
+      summary: List Failures
+      operationId: list_failures_api_v1_integration_failures_get
+      security:
+      - HTTPBearer: []
+      responses:
+        '200':
+          description: Eventos que atingiram o limite de tentativas.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+                title: Response List Failures Api V1 Integration Failures Get
+              example:
+              - eventId: cccccccc-cccc-4ccc-8ccc-cccccccccccc
+                eventType: ContractActivated.v1
+                attempts: 3
+                reason: dependência simulada indisponível
+                correlationId: 11111111-1111-4111-8111-111111111111
+          headers:
+            X-Correlation-ID:
+              description: UUID usado para correlacionar a requisição, os logs e os
+                eventos.
+              schema:
+                type: string
+                format: uuid
+              example: 11111111-1111-4111-8111-111111111111
+        '400':
+          description: Cabeçalho de correlação inválido.
+          content:
+            application/json:
+              example:
+                detail: X-Correlation-ID deve ser UUID
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/json:
+              example:
+                detail: Token ausente ou inválido
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/json:
+              example:
+                detail: Papel sem permissão para esta operação
+      parameters:
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
+  /api/v1/integration/failures/{event_id}/reprocess:
+    post:
+      tags:
+      - Integração
+      summary: Reprocess
+      operationId: reprocess_api_v1_integration_failures__event_id__reprocess_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: event_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Event Id
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
+      responses:
+        '200':
+          description: Evento recolocado em PENDING para novo despacho.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Reprocess Api V1 Integration Failures  Event Id  Reprocess
+                  Post
+              example:
+                eventId: cccccccc-cccc-4ccc-8ccc-cccccccccccc
+                status: PENDING
+          headers:
+            X-Correlation-ID:
+              description: UUID usado para correlacionar a requisição, os logs e os
+                eventos.
+              schema:
+                type: string
+                format: uuid
+              example: 11111111-1111-4111-8111-111111111111
+        '400':
+          description: Cabeçalho de correlação inválido.
+          content:
+            application/json:
+              example:
+                detail: X-Correlation-ID deve ser UUID
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/json:
+              example:
+                detail: Token ausente ou inválido
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/json:
+              example:
+                detail: Papel sem permissão para esta operação
+        '404':
+          description: Evento com falha não encontrado.
+          content:
+            application/json:
+              example:
+                detail: Falha não encontrada
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/operations/{correlation_id}:
+    get:
+      tags:
+      - Integração
+      summary: Operation Trace
+      operationId: operation_trace_api_v1_operations__correlation_id__get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: correlation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Correlation Id
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
+      responses:
+        '200':
+          description: Auditoria e eventos vinculados ao correlationId.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Operation Trace Api V1 Operations  Correlation Id  Get
+              example:
+                correlationId: 11111111-1111-4111-8111-111111111111
+                audit:
+                - occurredAt: '2026-10-01T10:00:00Z'
+                  module: contracts
+                  operation: activate_contract
+                  result: success
+                  entityId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+                  details: {}
+                events:
+                - eventId: cccccccc-cccc-4ccc-8ccc-cccccccccccc
+                  eventType: ContractActivated.v1
+                  status: PUBLISHED
+                  attempts: 0
+          headers:
+            X-Correlation-ID:
+              description: UUID usado para correlacionar a requisição, os logs e os
+                eventos.
+              schema:
+                type: string
+                format: uuid
+              example: 11111111-1111-4111-8111-111111111111
+        '400':
+          description: Cabeçalho de correlação inválido.
+          content:
+            application/json:
+              example:
+                detail: X-Correlation-ID deve ser UUID
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/json:
+              example:
+                detail: Token ausente ou inválido
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/json:
+              example:
+                detail: Papel sem permissão para esta operação
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/demo/state:
+    get:
+      tags:
+      - Demonstração
+      summary: Demo State
+      operationId: demo_state_api_v1_demo_state_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Demo State Api V1 Demo State Get
+      security:
+      - HTTPBearer: []
+components:
+  schemas:
+    Billing:
+      properties:
+        amount:
+          anyOf:
+          - type: number
+            exclusiveMinimum: 0.0
+          - type: string
+            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d{0,2}0*$
+          title: Amount
+        currency:
+          type: string
+          pattern: ^[A-Z]{3}$
+          title: Currency
+        cycle:
+          type: string
+          pattern: ^(MONTHLY|QUARTERLY|YEARLY)$
+          title: Cycle
+      type: object
+      required:
+      - amount
+      - currency
+      - cycle
+      title: Billing
+    ContractDraftCreate:
+      properties:
+        customerId:
+          type: string
+          title: Customerid
+        serviceCode:
+          type: string
+          maxLength: 80
+          minLength: 2
+          title: Servicecode
+        startsOn:
+          type: string
+          format: date
+          title: Startson
+        billing:
+          $ref: '#/components/schemas/Billing'
+        slaHours:
+          type: integer
+          maximum: 720.0
+          minimum: 1.0
+          title: Slahours
+          default: 8
+      type: object
+      required:
+      - customerId
+      - serviceCode
+      - startsOn
+      - billing
+      title: ContractDraftCreate
+      examples:
+      - billing:
+          amount: 2500.0
+          currency: BRL
+          cycle: MONTHLY
+        customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+        serviceCode: SUPPORT-PREMIUM
+        slaHours: 8
+        startsOn: '2026-10-01'
+    CustomerCreate:
+      properties:
+        name:
+          type: string
+          maxLength: 150
+          minLength: 2
+          title: Name
+        email:
+          type: string
+          format: email
+          title: Email
+        eligible:
+          type: boolean
+          title: Eligible
+          default: true
+        consentService:
+          type: boolean
+          title: Consentservice
+          default: true
+        legacyId:
+          anyOf:
+          - type: string
+            maxLength: 100
+          - type: 'null'
+          title: Legacyid
+      type: object
+      required:
+      - name
+      - email
+      title: CustomerCreate
+      examples:
+      - consentService: true
+        eligible: true
+        email: contato@empresa-exemplo.test
+        legacyId: CRM-1001
+        name: Empresa Exemplo Ltda.
+    CustomerUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+            maxLength: 150
+            minLength: 2
+          - type: 'null'
+          title: Name
+        email:
+          anyOf:
+          - type: string
+            format: email
+          - type: 'null'
+          title: Email
+        eligible:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Eligible
+        consentService:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Consentservice
+      type: object
+      title: CustomerUpdate
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    TicketCreate:
+      properties:
+        customerId:
+          type: string
+          title: Customerid
+        contractId:
+          type: string
+          title: Contractid
+        serviceCode:
+          type: string
+          title: Servicecode
+        category:
+          type: string
+          maxLength: 80
+          minLength: 2
+          title: Category
+        description:
+          type: string
+          maxLength: 2000
+          minLength: 3
+          title: Description
+      type: object
+      required:
+      - customerId
+      - contractId
+      - serviceCode
+      - category
+      - description
+      title: TicketCreate
+      examples:
+      - category: OUTAGE
+        contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+        customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+        description: Serviço indisponível durante a demonstração
+        serviceCode: SUPPORT-PREMIUM
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+  securitySchemes:
+    HTTPBearer:
+      type: http
+      scheme: bearer
