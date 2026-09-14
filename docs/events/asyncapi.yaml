@@ -1,0 +1,197 @@
+asyncapi: 3.0.0
+info:
+  title: Eventos ArchCorp Cenário 4
+  version: 1.0.0
+  description: Contratos de eventos publicados pela outbox do monólito modular.
+servers:
+  localRabbitMQ:
+    host: rabbitmq:5672
+    protocol: amqp
+channels:
+  contractActivated:
+    address: ContractActivated.v1
+    messages:
+      contractActivated:
+        $ref: '#/components/messages/ContractActivated'
+  ticketOpened:
+    address: TicketOpened.v1
+    messages:
+      ticketOpened:
+        $ref: '#/components/messages/TicketOpened'
+  customerUpdated:
+    address: CustomerUpdated.v1
+    messages:
+      customerUpdated:
+        $ref: '#/components/messages/CustomerUpdated'
+operations:
+  publishContractActivated:
+    action: send
+    channel:
+      $ref: '#/channels/contractActivated'
+  receiveContractActivated:
+    action: receive
+    channel:
+      $ref: '#/channels/contractActivated'
+  publishTicketOpened:
+    action: send
+    channel:
+      $ref: '#/channels/ticketOpened'
+  receiveTicketOpened:
+    action: receive
+    channel:
+      $ref: '#/channels/ticketOpened'
+  publishCustomerUpdated:
+    action: send
+    channel:
+      $ref: '#/channels/customerUpdated'
+  receiveCustomerUpdated:
+    action: receive
+    channel:
+      $ref: '#/channels/customerUpdated'
+components:
+  messages:
+    ContractActivated:
+      name: ContractActivated.v1
+      title: Contrato ativado
+      contentType: application/json
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/EventEnvelope'
+          - type: object
+            properties:
+              eventType: { const: ContractActivated.v1 }
+              producer: { const: contracts }
+              payload: { $ref: '#/components/schemas/ContractActivatedPayload' }
+      examples:
+        - name: contractActivated
+          summary: Contrato ativado para faturamento e onboarding
+          payload:
+            eventId: cccccccc-cccc-4ccc-8ccc-cccccccccccc
+            eventType: ContractActivated.v1
+            eventVersion: 1
+            occurredAt: '2026-10-01T10:00:00Z'
+            correlationId: 11111111-1111-4111-8111-111111111111
+            causationId: null
+            producer: contracts
+            payload:
+              contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+              customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+              serviceCode: SUPPORT-PREMIUM
+              startsOn: '2026-10-01'
+              billing:
+                amount: 2500.00
+                currency: BRL
+                cycle: MONTHLY
+              slaHours: 8
+              status: ACTIVE
+    TicketOpened:
+      name: TicketOpened.v1
+      title: Chamado aberto
+      contentType: application/json
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/EventEnvelope'
+          - type: object
+            properties:
+              eventType: { const: TicketOpened.v1 }
+              producer: { const: support }
+              payload: { $ref: '#/components/schemas/TicketOpenedPayload' }
+      examples:
+        - name: ticketOpened
+          summary: Chamado elegível encaminhado para resolução
+          payload:
+            eventId: eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee
+            eventType: TicketOpened.v1
+            eventVersion: 1
+            occurredAt: '2026-10-01T10:10:00Z'
+            correlationId: 11111111-1111-4111-8111-111111111111
+            causationId: null
+            producer: support
+            payload:
+              ticketId: dddddddd-dddd-4ddd-8ddd-dddddddddddd
+              customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+              contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+              serviceCode: SUPPORT-PREMIUM
+              category: OUTAGE
+              status: OPEN
+              priority: HIGH
+              slaHours: 8
+              dueAt: '2026-10-01T18:10:00Z'
+    CustomerUpdated:
+      name: CustomerUpdated.v1
+      title: Cliente atualizado
+      contentType: application/json
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/EventEnvelope'
+          - type: object
+            properties:
+              eventType: { const: CustomerUpdated.v1 }
+              producer: { const: crm }
+              payload: { $ref: '#/components/schemas/CustomerUpdatedPayload' }
+      examples:
+        - name: customerUpdated
+          summary: Cadastro do CRM propagado para a projeção de Contracts
+          payload:
+            eventId: ffffffff-ffff-4fff-8fff-ffffffffffff
+            eventType: CustomerUpdated.v1
+            eventVersion: 1
+            occurredAt: '2026-10-01T09:50:00Z'
+            correlationId: 11111111-1111-4111-8111-111111111111
+            causationId: null
+            producer: crm
+            payload:
+              customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+              name: Empresa Exemplo Ltda.
+              email: contato@empresa-exemplo.test
+  schemas:
+    EventEnvelope:
+      type: object
+      required: [eventId, eventType, eventVersion, occurredAt, correlationId, causationId, producer, payload]
+      properties:
+        eventId: { type: string, format: uuid }
+        eventType: { type: string }
+        eventVersion: { type: integer, const: 1 }
+        occurredAt: { type: string, format: date-time }
+        correlationId: { type: string, format: uuid }
+        causationId: { type: [string, 'null'] }
+        producer: { type: string }
+        payload: { type: object }
+    Money:
+      type: object
+      required: [amount, currency, cycle]
+      properties:
+        amount: { type: number, multipleOf: 0.01, exclusiveMinimum: 0 }
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+        cycle: { type: string, enum: [MONTHLY, QUARTERLY, YEARLY] }
+    ContractActivatedPayload:
+      type: object
+      required: [contractId, customerId, serviceCode, startsOn, billing, slaHours, status]
+      properties:
+        contractId: { type: string, format: uuid }
+        customerId: { type: string, format: uuid }
+        serviceCode: { type: string }
+        startsOn: { type: string, format: date }
+        billing: { $ref: '#/components/schemas/Money' }
+        slaHours: { type: integer, minimum: 1 }
+        status: { const: ACTIVE }
+    TicketOpenedPayload:
+      type: object
+      required: [ticketId, customerId, contractId, serviceCode, category, status, priority]
+      properties:
+        ticketId: { type: string, format: uuid }
+        customerId: { type: string, format: uuid }
+        contractId: { type: string, format: uuid }
+        serviceCode: { type: string }
+        category: { type: string }
+        status: { type: string, enum: [OPEN, PENDING_ENTITLEMENT] }
+        priority: { type: string, enum: [NORMAL, HIGH] }
+        slaHours: { type: [integer, 'null'] }
+        dueAt: { type: [string, 'null'], format: date-time }
+    CustomerUpdatedPayload:
+      type: object
+      required: [customerId, name, email]
+      properties:
+        customerId: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string, format: email }
