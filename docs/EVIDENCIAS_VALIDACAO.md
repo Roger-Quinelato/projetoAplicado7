@@ -2,14 +2,14 @@
 
 ## Execução em 13 de setembro de 2026
 
-- Suíte automatizada: 12 testes aprovados em 20,76 segundos.
+- Suíte automatizada: 13 testes aprovados em 4,11 segundos.
 - Fluxo F1: rascunho criado a partir do UUID do CRM e repetição devolveu o mesmo contrato.
 - Fluxo F2: repetição da ativação e novo despacho mantiveram uma cobrança e um onboarding.
 - Fluxo F3: chamado recebeu SLA e iniciou uma instância de resolução.
 - Degradação: atendimento registrou `PENDING_ENTITLEMENT` e reconciliou após retorno de Contracts.
 - Segurança: papel de atendimento recebeu 403 ao tentar criar cliente.
 - Falha permanente: evento chegou a `FAILED` após três tentativas, apareceu na consulta e voltou a `PENDING` por reprocessamento auditado.
-- Contratos: o OpenAPI salvo corresponde ao `app.openapi()`, contém exemplos dos três fluxos e o AsyncAPI contém três eventos com o envelope obrigatório, incluindo `causationId`.
+- Contratos: o OpenAPI salvo corresponde ao `app.openapi()`, contém esquemas de resposta, exemplos dos três fluxos e UUID nos identificadores globais; o AsyncAPI contém três eventos com o envelope obrigatório, incluindo `causationId`.
 - Arquitetura: teste estático não encontrou importação de modelos internos entre contextos de negócio.
 - Desempenho local: 200 consultas de prontidão tiveram p95 de 6,36 ms, abaixo da meta de 500 ms no ambiente de teste local.
 
@@ -28,4 +28,11 @@ O aviso de depreciação emitido pelo cliente de teste pertence à compatibilida
 
 Os testes usam SQLite e adaptadores internos para rapidez. Docker Compose fornece PostgreSQL e RabbitMQ para a demonstração. A validação em infraestrutura externa, TLS, provedor OIDC real e produtos legados depende dos ambientes da organização e fica fora das informações fornecidas pelo enunciado.
 
-Os diagramas Mermaid receberam validação estrutural dos blocos e das ramificações. O ambiente não possui renderizador Mermaid instalado; a renderização visual permanece como verificação documental pendente e não altera as evidências de comportamento do protótipo.
+## Inspeção dos artefatos em 14 de setembro de 2026
+
+- A verificação final da suíte aprovou novamente os 13 testes; a execução completa levou 22,60 segundos e emitiu apenas o aviso de depreciação já registrado.
+- Os sete blocos Mermaid de AS-IS, TO-BE, fluxos e planejamento foram renderizados em SVG sem erro pelo Mermaid CLI 11.17.0.
+- O relatório técnico foi regenerado, renderizado em 18 páginas e inspecionado integralmente; não foram encontrados cortes, sobreposições, páginas vazias ou tabelas quebradas.
+- A apresentação foi regenerada com 15 slides. Os validadores de integridade, geometria, fontes e reimportação aprovaram o pacote, e todos os slides foram inspecionados em PNG.
+
+As imagens e recibos técnicos de verificação permanecem em `tmp/report-render-final/`, `tmp/presentation-build/`, `tmp/mermaid-render/` e `.codex-finalizer/`.

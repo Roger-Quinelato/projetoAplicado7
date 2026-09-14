@@ -25,10 +25,19 @@ from archcorp.schemas import (
     EXAMPLE_CUSTOMER_RESPONSE,
     EXAMPLE_PENDING_TICKET_RESPONSE,
     EXAMPLE_TICKET_RESPONSE,
+    ContractActivationResponse,
     ContractDraftCreate,
+    ContractDraftResponse,
     CustomerCreate,
+    CustomerResponse,
     CustomerUpdate,
+    DispatchResponse,
+    EntitlementResponse,
+    FailureResponse,
+    OperationTraceResponse,
+    ReprocessResponse,
     TicketCreate,
+    TicketResponse,
 )
 from archcorp.security import require_roles
 from archcorp.support.models import Ticket
@@ -111,10 +120,28 @@ CONTRACT_DRAFT_RESPONSES = {
         },
     },
     422: {
-        "description": "Entrada inválida ou cliente inexistente ou inelegível.",
+        "description": "Entrada inválida ou cliente inexistente, inelegível ou sem consentimento.",
         "content": {
             "application/json": {
-                "example": {"detail": "Cliente inexistente ou inelegível"}
+                "examples": {
+                    "businessRule": {
+                        "summary": "Cliente não pode originar contrato",
+                        "value": {"detail": "Cliente inexistente ou inelegível"},
+                    },
+                    "validation": {
+                        "summary": "Corpo da requisição inválido",
+                        "value": {
+                            "detail": [
+                                {
+                                    "type": "uuid_parsing",
+                                    "loc": ["body", "customerId"],
+                                    "msg": "Input should be a valid UUID",
+                                    "input": "not-a-uuid",
+                                }
+                            ]
+                        },
+                    },
+                }
             }
         },
     },
@@ -195,8 +222,26 @@ TICKET_RESPONSES = {
         "description": "Entrada inválida ou contrato, serviço ou cliente sem elegibilidade.",
         "content": {
             "application/json": {
-                "example": {
-                    "detail": "Contrato, serviço ou cliente sem elegibilidade"
+                "examples": {
+                    "businessRule": {
+                        "summary": "Contrato sem elegibilidade",
+                        "value": {
+                            "detail": "Contrato, serviço ou cliente sem elegibilidade"
+                        },
+                    },
+                    "validation": {
+                        "summary": "Corpo da requisição inválido",
+                        "value": {
+                            "detail": [
+                                {
+                                    "type": "uuid_parsing",
+                                    "loc": ["body", "contractId"],
+                                    "msg": "Input should be a valid UUID",
+                                    "input": "not-a-uuid",
+                                }
+                            ]
+                        },
+                    },
                 }
             }
         },
@@ -376,6 +421,7 @@ def metrics() -> str:
 @app.post(
     "/api/v1/crm/customers",
     status_code=201,
+    response_model=CustomerResponse,
     tags=["CRM"],
     dependencies=[Depends(require_roles("commercial", "admin"))],
     responses=CUSTOMER_CREATE_RESPONSES,
@@ -387,8 +433,8 @@ def create_customer(body: CustomerCreate, session: Session = Depends(get_session
 
 
 @app.patch("/api/v1/crm/customers/{customer_id}", tags=["CRM"], dependencies=[Depends(require_roles("commercial", "admin"))])
-def update_customer(customer_id: str, body: CustomerUpdate, session: Session = Depends(get_session)) -> dict:
-    customer = customers.update(session, customer_id, body.model_dump(exclude_unset=True, mode="json"), correlation_id_var.get())
+def update_customer(customer_id: UUID, body: CustomerUpdate, session: Session = Depends(get_session)) -> dict:
+    customer = customers.update(session, str(customer_id), body.model_dump(exclude_unset=True, mode="json"), correlation_id_var.get())
     if not customer:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
     return {"customerId": customer.customer_id, "name": customer.name, "email": customer.email}
@@ -397,6 +443,7 @@ def update_customer(customer_id: str, body: CustomerUpdate, session: Session = D
 @app.post(
     "/api/v1/contracts/drafts",
     status_code=201,
+    response_model=ContractDraftResponse,
     tags=["Contratos"],
     dependencies=[Depends(require_roles("commercial", "contracts", "admin"))],
     responses=CONTRACT_DRAFT_RESPONSES,
@@ -410,8 +457,10 @@ def create_contract_draft(
     ),
     session: Session = Depends(get_session),
 ) -> dict:
+    draft_data = body.model_dump()
+    draft_data["customerId"] = str(draft_data["customerId"])
     try:
-        result, replay = contracts.create_draft(session, body.model_dump(), idempotency_key, correlation_id_var.get())
+        result, replay = contracts.create_draft(session, draft_data, idempotency_key, correlation_id_var.get())
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     response.headers["Idempotency-Replayed"] = str(replay).lower()
@@ -420,13 +469,14 @@ def create_contract_draft(
 
 @app.post(
     "/api/v1/contracts/{contract_id}/activate",
+    response_model=ContractActivationResponse,
     tags=["Contratos"],
     dependencies=[Depends(require_roles("contracts", "admin"))],
     responses=CONTRACT_ACTIVATION_RESPONSES,
     openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def activate_contract(
-    contract_id: str,
+    contract_id: UUID,
     response: Response,
     idempotency_key: str = Header(
         alias="Idempotency-Key", examples=["demo-activate-001"]
@@ -434,7 +484,7 @@ def activate_contract(
     session: Session = Depends(get_session),
 ) -> dict:
     try:
-        result, replay = contracts.activate(session, contract_id, idempotency_key, correlation_id_var.get())
+        result, replay = contracts.activate(session, str(contract_id), idempotency_key, correlation_id_var.get())
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     response.headers["Idempotency-Replayed"] = str(replay).lower()
@@ -443,18 +493,20 @@ def activate_contract(
 
 @app.get(
     "/api/v1/contracts/{contract_id}/entitlement",
+    response_model=EntitlementResponse,
     tags=["Contratos"],
     dependencies=[Depends(require_roles("support", "admin"))],
     responses=ENTITLEMENT_RESPONSES,
     openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
-def entitlement(contract_id: str, customerId: str, serviceCode: str, session: Session = Depends(get_session)) -> dict:
-    return contracts.entitlement(session, contract_id, customerId, serviceCode)
+def entitlement(contract_id: UUID, customerId: UUID, serviceCode: str, session: Session = Depends(get_session)) -> dict:
+    return contracts.entitlement(session, str(contract_id), str(customerId), serviceCode)
 
 
 @app.post(
     "/api/v1/support/tickets",
     status_code=201,
+    response_model=TicketResponse,
     tags=["Atendimento"],
     dependencies=[Depends(require_roles("support", "admin"))],
     responses=TICKET_RESPONSES,
@@ -468,8 +520,9 @@ def open_ticket(
     ),
     session: Session = Depends(get_session),
 ) -> dict:
+    ticket_data = body.model_dump(mode="json")
     try:
-        result, replay = tickets.open(session, body.model_dump(mode="json"), idempotency_key, correlation_id_var.get())
+        result, replay = tickets.open(session, ticket_data, idempotency_key, correlation_id_var.get())
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     response.headers["Idempotency-Replayed"] = str(replay).lower()
@@ -478,20 +531,22 @@ def open_ticket(
 
 @app.post(
     "/api/v1/support/tickets/{ticket_id}/reconcile",
+    response_model=TicketResponse,
     tags=["Atendimento"],
     dependencies=[Depends(require_roles("support", "operations", "admin"))],
     responses=RECONCILIATION_RESPONSES,
     openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
-def reconcile_ticket(ticket_id: str, session: Session = Depends(get_session)) -> dict:
+def reconcile_ticket(ticket_id: UUID, session: Session = Depends(get_session)) -> dict:
     try:
-        return tickets.reconcile(session, ticket_id, correlation_id_var.get())
+        return tickets.reconcile(session, str(ticket_id), correlation_id_var.get())
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @app.post(
     "/api/v1/integration/outbox/dispatch",
+    response_model=DispatchResponse,
     tags=["Integração"],
     dependencies=[Depends(require_roles("operations", "admin"))],
     responses=DISPATCH_RESPONSES,
@@ -503,6 +558,7 @@ def dispatch_outbox(session: Session = Depends(get_session)) -> dict:
 
 @app.get(
     "/api/v1/integration/failures",
+    response_model=list[FailureResponse],
     tags=["Integração"],
     dependencies=[Depends(require_roles("operations", "admin"))],
     responses=FAILURE_LIST_RESPONSES,
@@ -515,13 +571,14 @@ def list_failures(session: Session = Depends(get_session)) -> list[dict]:
 
 @app.post(
     "/api/v1/integration/failures/{event_id}/reprocess",
+    response_model=ReprocessResponse,
     tags=["Integração"],
     dependencies=[Depends(require_roles("operations", "admin"))],
     responses=REPROCESS_RESPONSES,
     openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
-def reprocess(event_id: str, session: Session = Depends(get_session)) -> dict:
-    event = session.get(OutboxEvent, event_id)
+def reprocess(event_id: UUID, session: Session = Depends(get_session)) -> dict:
+    event = session.get(OutboxEvent, str(event_id))
     if not event or event.status != "FAILED":
         raise HTTPException(status_code=404, detail="Falha não encontrada")
     event.status = "PENDING"
@@ -533,15 +590,17 @@ def reprocess(event_id: str, session: Session = Depends(get_session)) -> dict:
 
 @app.get(
     "/api/v1/operations/{correlation_id}",
+    response_model=OperationTraceResponse,
     tags=["Integração"],
     dependencies=[Depends(require_roles("operations", "admin"))],
     responses=OPERATION_TRACE_RESPONSES,
     openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
-def operation_trace(correlation_id: str, session: Session = Depends(get_session)) -> dict:
-    entries = session.scalars(select(AuditLog).where(AuditLog.correlation_id == correlation_id).order_by(AuditLog.occurred_at)).all()
-    events = session.scalars(select(OutboxEvent).where(OutboxEvent.correlation_id == correlation_id).order_by(OutboxEvent.occurred_at)).all()
-    return {"correlationId": correlation_id, "audit": [{"occurredAt": a.occurred_at, "module": a.module, "operation": a.operation, "result": a.result, "entityId": a.entity_id, "details": a.details} for a in entries], "events": [{"eventId": e.event_id, "eventType": e.event_type, "status": e.status, "attempts": e.attempts} for e in events]}
+def operation_trace(correlation_id: UUID, session: Session = Depends(get_session)) -> dict:
+    correlation_value = str(correlation_id)
+    entries = session.scalars(select(AuditLog).where(AuditLog.correlation_id == correlation_value).order_by(AuditLog.occurred_at)).all()
+    events = session.scalars(select(OutboxEvent).where(OutboxEvent.correlation_id == correlation_value).order_by(OutboxEvent.occurred_at)).all()
+    return {"correlationId": correlation_value, "audit": [{"occurredAt": a.occurred_at, "module": a.module, "operation": a.operation, "result": a.result, "entityId": a.entity_id, "details": a.details} for a in entries], "events": [{"eventId": e.event_id, "eventType": e.event_type, "status": e.status, "attempts": e.attempts} for e in events]}
 
 
 @app.get("/api/v1/demo/state", tags=["Demonstração"], dependencies=[Depends(require_roles("admin"))])

@@ -29,7 +29,7 @@ correlação, mapeamentos legados, idempotência, outbox, inbox, auditoria e fal
 | API ou serviço utilizado | `POST /api/v1/contracts/drafts` e `CustomerReader` |
 | Dados enviados | `customerId`, `serviceCode`, `startsOn`, `billing.amount`, `billing.currency`, `billing.cycle` e `slaHours` |
 | Dados recebidos | `contractId`, `customerId`, serviço, início, cobrança, SLA e estado `DRAFT`; cabeçalhos `X-Correlation-ID` e `Idempotency-Replayed` |
-| Tratamento de erros | `400` para correlação inválida, `401` ou `403` para acesso, `422` para entrada inválida ou cliente inexistente/inelegível; repetição segura por `Idempotency-Key` |
+| Tratamento de erros | `400` para correlação inválida, `401` ou `403` para acesso; `422` com lista para validação estrutural ou com mensagem para cliente inexistente, inelegível ou sem consentimento; repetição segura por `Idempotency-Key` |
 
 Contracts consulta o CRM somente por `CustomerReader`. A porta confirma a
 existência, a elegibilidade e o consentimento e fornece os dados necessários para
@@ -77,7 +77,9 @@ exponencial ou jitter.
 O operador consulta `GET /api/v1/integration/failures` e, depois de corrigir a
 causa, usa `POST /api/v1/integration/failures/{eventId}/reprocess`. O comando muda
 o evento para `PENDING` e registra a ação na auditoria. Inbox e restrições únicas
-continuam ativas durante o novo despacho.
+continuam ativas durante o novo despacho. O contador acumulado de tentativas não é
+zerado; se o consumidor falhar novamente, o evento retorna imediatamente a
+`FAILED`.
 
 ## F3: chamado com contrato e SLA
 
@@ -91,7 +93,7 @@ continuam ativas durante o novo despacho.
 | API ou serviço utilizado | `POST /api/v1/support/tickets`, `ContractEntitlementPort`, `TicketOpened.v1`, dispatcher e rota de reconciliação |
 | Dados enviados | Na abertura: `customerId`, `contractId`, `serviceCode`, `category` e `description`; no evento: dados do chamado sem a descrição |
 | Dados recebidos | Elegibilidade e `slaHours` de Contracts; chamado com estado, prioridade, SLA e `dueAt`; Workflow registra uma instância de resolução |
-| Tratamento de erros | `400`, `401` ou `403` para acesso/correlação; `422` para combinação inelegível; `PENDING_ENTITLEMENT` quando o adaptador está indisponível; reconciliação posterior; idempotência na abertura |
+| Tratamento de erros | `400`, `401` ou `403` para acesso/correlação; `422` com lista para validação estrutural ou com mensagem para combinação inelegível; `PENDING_ENTITLEMENT` quando o adaptador está indisponível; reconciliação posterior; idempotência na abertura |
 
 Quando o adaptador está disponível, Support consulta Contracts por
 `ContractEntitlementPort`. Uma combinação ativa de contrato, cliente e serviço

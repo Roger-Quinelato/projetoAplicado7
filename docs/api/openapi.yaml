@@ -68,9 +68,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
-                title: Response Create Customer Api V1 Crm Customers Post
+                $ref: '#/components/schemas/CustomerResponse'
               example:
                 customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
                 name: Empresa Exemplo Ltda.
@@ -131,6 +129,7 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
           title: Customer Id
       requestBody:
         required: true
@@ -190,9 +189,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
-                title: Response Create Contract Draft Api V1 Contracts Drafts Post
+                $ref: '#/components/schemas/ContractDraftResponse'
               examples:
                 created:
                   summary: Rascunho criado
@@ -255,11 +252,25 @@ paths:
               example:
                 detail: Papel sem permissão para esta operação
         '422':
-          description: Entrada inválida ou cliente inexistente ou inelegível.
+          description: Entrada inválida ou cliente inexistente, inelegível ou sem
+            consentimento.
           content:
             application/json:
-              example:
-                detail: Cliente inexistente ou inelegível
+              examples:
+                businessRule:
+                  summary: Cliente não pode originar contrato
+                  value:
+                    detail: Cliente inexistente ou inelegível
+                validation:
+                  summary: Corpo da requisição inválido
+                  value:
+                    detail:
+                    - type: uuid_parsing
+                      loc:
+                      - body
+                      - customerId
+                      msg: Input should be a valid UUID
+                      input: not-a-uuid
   /api/v1/contracts/{contract_id}/activate:
     post:
       tags:
@@ -274,6 +285,7 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
           title: Contract Id
       - name: Idempotency-Key
         in: header
@@ -297,10 +309,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
-                title: Response Activate Contract Api V1 Contracts  Contract Id  Activate
-                  Post
+                $ref: '#/components/schemas/ContractActivationResponse'
               examples:
                 activated:
                   summary: Contrato ativado e evento gravado na outbox
@@ -390,12 +399,14 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
           title: Contract Id
       - name: customerId
         in: query
         required: true
         schema:
           type: string
+          format: uuid
           title: Customerid
       - name: serviceCode
         in: query
@@ -417,10 +428,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
-                title: Response Entitlement Api V1 Contracts  Contract Id  Entitlement
-                  Get
+                $ref: '#/components/schemas/EntitlementResponse'
               examples:
                 eligible:
                   summary: Contrato elegível
@@ -500,9 +508,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
-                title: Response Open Ticket Api V1 Support Tickets Post
+                $ref: '#/components/schemas/TicketResponse'
               examples:
                 open:
                   summary: Chamado elegível aberto
@@ -576,8 +582,21 @@ paths:
           description: Entrada inválida ou contrato, serviço ou cliente sem elegibilidade.
           content:
             application/json:
-              example:
-                detail: Contrato, serviço ou cliente sem elegibilidade
+              examples:
+                businessRule:
+                  summary: Contrato sem elegibilidade
+                  value:
+                    detail: Contrato, serviço ou cliente sem elegibilidade
+                validation:
+                  summary: Corpo da requisição inválido
+                  value:
+                    detail:
+                    - type: uuid_parsing
+                      loc:
+                      - body
+                      - contractId
+                      msg: Input should be a valid UUID
+                      input: not-a-uuid
   /api/v1/support/tickets/{ticket_id}/reconcile:
     post:
       tags:
@@ -592,6 +611,7 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
           title: Ticket Id
       - name: X-Correlation-ID
         in: header
@@ -607,10 +627,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
-                title: Response Reconcile Ticket Api V1 Support Tickets  Ticket Id  Reconcile
-                  Post
+                $ref: '#/components/schemas/TicketResponse'
               examples:
                 open:
                   summary: Elegibilidade confirmada
@@ -686,10 +703,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
-                title: Response Dispatch Outbox Api V1 Integration Outbox Dispatch
-                  Post
+                $ref: '#/components/schemas/DispatchResponse'
               example:
                 processed: 1
                 failed: 0
@@ -744,8 +758,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  additionalProperties: true
+                  $ref: '#/components/schemas/FailureResponse'
                 title: Response List Failures Api V1 Integration Failures Get
               example:
               - eventId: cccccccc-cccc-4ccc-8ccc-cccccccccccc
@@ -802,6 +815,7 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
           title: Event Id
       - name: X-Correlation-ID
         in: header
@@ -817,10 +831,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
-                title: Response Reprocess Api V1 Integration Failures  Event Id  Reprocess
-                  Post
+                $ref: '#/components/schemas/ReprocessResponse'
               example:
                 eventId: cccccccc-cccc-4ccc-8ccc-cccccccccccc
                 status: PENDING
@@ -876,6 +887,7 @@ paths:
         required: true
         schema:
           type: string
+          format: uuid
           title: Correlation Id
       - name: X-Correlation-ID
         in: header
@@ -891,9 +903,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
-                title: Response Operation Trace Api V1 Operations  Correlation Id  Get
+                $ref: '#/components/schemas/OperationTraceResponse'
               example:
                 correlationId: 11111111-1111-4111-8111-111111111111
                 audit:
@@ -959,7 +969,40 @@ paths:
       - HTTPBearer: []
 components:
   schemas:
-    Billing:
+    AuditEntryResponse:
+      properties:
+        occurredAt:
+          type: string
+          format: date-time
+          title: Occurredat
+        module:
+          type: string
+          title: Module
+        operation:
+          type: string
+          title: Operation
+        result:
+          type: string
+          title: Result
+        entityId:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Entityid
+        details:
+          additionalProperties: true
+          type: object
+          title: Details
+      type: object
+      required:
+      - occurredAt
+      - module
+      - operation
+      - result
+      - entityId
+      - details
+      title: AuditEntryResponse
+    Billing-Input:
       properties:
         amount:
           anyOf:
@@ -982,10 +1025,72 @@ components:
       - currency
       - cycle
       title: Billing
+    Billing-Output:
+      properties:
+        amount:
+          type: string
+          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d{0,2}0*$
+          title: Amount
+        currency:
+          type: string
+          pattern: ^[A-Z]{3}$
+          title: Currency
+        cycle:
+          type: string
+          pattern: ^(MONTHLY|QUARTERLY|YEARLY)$
+          title: Cycle
+      type: object
+      required:
+      - amount
+      - currency
+      - cycle
+      title: Billing
+    ContractActivationResponse:
+      properties:
+        contractId:
+          type: string
+          format: uuid
+          title: Contractid
+        customerId:
+          type: string
+          format: uuid
+          title: Customerid
+        serviceCode:
+          type: string
+          title: Servicecode
+        startsOn:
+          type: string
+          format: date
+          title: Startson
+        billing:
+          $ref: '#/components/schemas/Billing-Output'
+        slaHours:
+          type: integer
+          title: Slahours
+        status:
+          type: string
+          const: ACTIVE
+          title: Status
+        eventId:
+          type: string
+          format: uuid
+          title: Eventid
+      type: object
+      required:
+      - contractId
+      - customerId
+      - serviceCode
+      - startsOn
+      - billing
+      - slaHours
+      - status
+      - eventId
+      title: ContractActivationResponse
     ContractDraftCreate:
       properties:
         customerId:
           type: string
+          format: uuid
           title: Customerid
         serviceCode:
           type: string
@@ -997,7 +1102,7 @@ components:
           format: date
           title: Startson
         billing:
-          $ref: '#/components/schemas/Billing'
+          $ref: '#/components/schemas/Billing-Input'
         slaHours:
           type: integer
           maximum: 720.0
@@ -1020,6 +1125,42 @@ components:
         serviceCode: SUPPORT-PREMIUM
         slaHours: 8
         startsOn: '2026-10-01'
+    ContractDraftResponse:
+      properties:
+        contractId:
+          type: string
+          format: uuid
+          title: Contractid
+        customerId:
+          type: string
+          format: uuid
+          title: Customerid
+        serviceCode:
+          type: string
+          title: Servicecode
+        startsOn:
+          type: string
+          format: date
+          title: Startson
+        billing:
+          $ref: '#/components/schemas/Billing-Output'
+        slaHours:
+          type: integer
+          title: Slahours
+        status:
+          type: string
+          const: DRAFT
+          title: Status
+      type: object
+      required:
+      - contractId
+      - customerId
+      - serviceCode
+      - startsOn
+      - billing
+      - slaHours
+      - status
+      title: ContractDraftResponse
     CustomerCreate:
       properties:
         name:
@@ -1056,6 +1197,29 @@ components:
         email: contato@empresa-exemplo.test
         legacyId: CRM-1001
         name: Empresa Exemplo Ltda.
+    CustomerResponse:
+      properties:
+        customerId:
+          type: string
+          format: uuid
+          title: Customerid
+        name:
+          type: string
+          title: Name
+        email:
+          type: string
+          format: email
+          title: Email
+        eligible:
+          type: boolean
+          title: Eligible
+      type: object
+      required:
+      - customerId
+      - name
+      - email
+      - eligible
+      title: CustomerResponse
     CustomerUpdate:
       properties:
         name:
@@ -1083,6 +1247,63 @@ components:
           title: Consentservice
       type: object
       title: CustomerUpdate
+    DispatchResponse:
+      properties:
+        processed:
+          type: integer
+          title: Processed
+        failed:
+          type: integer
+          title: Failed
+      type: object
+      required:
+      - processed
+      - failed
+      title: DispatchResponse
+    EntitlementResponse:
+      properties:
+        eligible:
+          type: boolean
+          title: Eligible
+        slaHours:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Slahours
+      type: object
+      required:
+      - eligible
+      - slaHours
+      title: EntitlementResponse
+    FailureResponse:
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          title: Eventid
+        eventType:
+          type: string
+          title: Eventtype
+        attempts:
+          type: integer
+          title: Attempts
+        reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Reason
+        correlationId:
+          type: string
+          format: uuid
+          title: Correlationid
+      type: object
+      required:
+      - eventId
+      - eventType
+      - attempts
+      - reason
+      - correlationId
+      title: FailureResponse
     HTTPValidationError:
       properties:
         detail:
@@ -1092,13 +1313,74 @@ components:
           title: Detail
       type: object
       title: HTTPValidationError
+    OperationEventResponse:
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          title: Eventid
+        eventType:
+          type: string
+          title: Eventtype
+        status:
+          type: string
+          title: Status
+        attempts:
+          type: integer
+          title: Attempts
+      type: object
+      required:
+      - eventId
+      - eventType
+      - status
+      - attempts
+      title: OperationEventResponse
+    OperationTraceResponse:
+      properties:
+        correlationId:
+          type: string
+          format: uuid
+          title: Correlationid
+        audit:
+          items:
+            $ref: '#/components/schemas/AuditEntryResponse'
+          type: array
+          title: Audit
+        events:
+          items:
+            $ref: '#/components/schemas/OperationEventResponse'
+          type: array
+          title: Events
+      type: object
+      required:
+      - correlationId
+      - audit
+      - events
+      title: OperationTraceResponse
+    ReprocessResponse:
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          title: Eventid
+        status:
+          type: string
+          const: PENDING
+          title: Status
+      type: object
+      required:
+      - eventId
+      - status
+      title: ReprocessResponse
     TicketCreate:
       properties:
         customerId:
           type: string
+          format: uuid
           title: Customerid
         contractId:
           type: string
+          format: uuid
           title: Contractid
         serviceCode:
           type: string
@@ -1127,6 +1409,62 @@ components:
         customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
         description: Serviço indisponível durante a demonstração
         serviceCode: SUPPORT-PREMIUM
+    TicketResponse:
+      properties:
+        ticketId:
+          type: string
+          format: uuid
+          title: Ticketid
+        customerId:
+          type: string
+          format: uuid
+          title: Customerid
+        contractId:
+          type: string
+          format: uuid
+          title: Contractid
+        serviceCode:
+          type: string
+          title: Servicecode
+        category:
+          type: string
+          title: Category
+        status:
+          type: string
+          enum:
+          - OPEN
+          - PENDING_ENTITLEMENT
+          - REJECTED_ENTITLEMENT
+          title: Status
+        priority:
+          type: string
+          enum:
+          - NORMAL
+          - HIGH
+          title: Priority
+        slaHours:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Slahours
+        dueAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Dueat
+      type: object
+      required:
+      - ticketId
+      - customerId
+      - contractId
+      - serviceCode
+      - category
+      - status
+      - priority
+      - slaHours
+      - dueAt
+      title: TicketResponse
     ValidationError:
       properties:
         loc:
