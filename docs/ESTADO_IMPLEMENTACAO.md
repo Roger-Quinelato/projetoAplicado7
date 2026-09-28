@@ -17,4 +17,4 @@ Data: 27/09/2026. Este registro separa o que o código local executa, o que a do
 
 O catálogo T01–T22 e os prazos internos estão em `CRONOGRAMA_EXECUCAO.md`. Os estados e links externos são atualizados manualmente, sem promessa de sincronização automática. A entrega final requer nomes dos integrantes, contribuições individuais e validação docente das premissas/datas.
 
-Em 27/09/2026, as 22 tarefas também foram criadas como [GitHub Issues](https://github.com/Roger-Quinelato/projetoAplicado7/issues), cada uma com link para seu registro `ARCH7` no Jira. O [PR #2](https://github.com/Roger-Quinelato/projetoAplicado7/pull/2) contém a implementação. O GitHub Project permanece pendente de escopo de acesso.
+Em 27/09/2026, as 22 tarefas também foram criadas como [GitHub Issues](https://github.com/Roger-Quinelato/projetoAplicado7/issues), cada uma com link para seu registro `ARCH7` no Jira. Sete marcos Q1–Q7 e etiquetas de semana, tipo, prioridade e status permitem navegar pelo cronograma. O [PR #2](https://github.com/Roger-Quinelato/projetoAplicado7/pull/2) contém a implementação. O GitHub Project permanece pendente de escopo de acesso.

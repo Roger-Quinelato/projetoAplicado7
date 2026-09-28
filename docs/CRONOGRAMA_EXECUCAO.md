@@ -7,7 +7,7 @@ Atualizado em 27/09/2026. O projeto é um protótipo acadêmico conceitual para 
 - Cronograma visual enviado: Q1 a Q7, semanas S1 a S14, módulos de escopo, requisitos/AS-IS, TO-BE, APIs, protótipo, empreendedorismo/qualidade, relatório e entrega.
 - Plano de Execução e Cronograma Detalhado da ArchCorp: estrutura de 14 semanas e entregáveis acadêmicos.
 - `modelo-comum.md`: **tipo**, **prioridade**, **status** e **tempo** são campos independentes. Prioridade não define status.
-- Jira é o registro principal das demandas técnicas, dependências e aceite. Notion registra contexto e decisões; Drive guarda arquivos oficiais. Trello e as [22 GitHub Issues](https://github.com/Roger-Quinelato/projetoAplicado7/issues) são índices com link para o Jira. O GitHub Project depende da autorização do escopo `project`. Não há sincronização automática entre eles.
+- Jira é o registro principal das demandas técnicas, dependências e aceite. Notion registra contexto e decisões; Drive guarda arquivos oficiais. Trello e as [22 GitHub Issues](https://github.com/Roger-Quinelato/projetoAplicado7/issues) são índices com link para o Jira. As issues usam sete marcos Q1–Q7 e etiquetas independentes para tipo, prioridade, status e semana. O GitHub Project depende da autorização do escopo `project`. Não há sincronização automática entre eles.
 - Sem nome dos integrantes, atribuições permanecem sem responsável. A contribuição individual será registrada antes da submissão.
 
 ## Quinzenas e semanas
