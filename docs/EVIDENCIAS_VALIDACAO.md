@@ -12,6 +12,7 @@
 - GitHub: [PR #2](https://github.com/Roger-Quinelato/projetoAplicado7/pull/2) atualizado com o commit de implementação; [22 issues T01–T22](https://github.com/Roger-Quinelato/projetoAplicado7/issues) criadas como índice, cada uma com link para o Jira. Sete marcos Q1–Q7 e etiquetas de semana, tipo, prioridade e status foram verificados nas issues T01 e T22. O GitHub Project ainda requer autorização do escopo `project`.
 - Render e Supabase exigem autenticação do titular nas respectivas contas. Nenhuma URL pública, banco em nuvem ou persistência após reinício foi verificada até esta data.
 - O modo público inclui RLS e revogação de acesso Data API `anon`/`authenticated` às tabelas em PostgreSQL. Essa proteção é definida no código e continua pendente de verificação em um projeto Supabase real.
+- O [GitHub Actions Verify do PR #2](https://github.com/Roger-Quinelato/projetoAplicado7/actions/runs/36366105937) concluiu com sucesso em checkout limpo: suíte Python, instalação e build do frontend, e build da imagem Docker. Isso valida a construção, sem substituir o teste do serviço publicado.
 
 As evidências de 13/09 e 14/09 abaixo são históricas e descrevem a versão anterior do protótipo.
 
