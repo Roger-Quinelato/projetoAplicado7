@@ -1,8 +1,8 @@
 asyncapi: 3.0.0
 info:
-  title: Eventos ArchCorp Cenário 4
+  title: Eventos Localiza Cenário 4
   version: 1.0.0
-  description: Contratos de eventos publicados pela outbox do monólito modular.
+  description: Contratos de eventos da outbox. O protótipo executa consumidores internos no despacho e pode publicar uma cópia no RabbitMQ local; não consome do broker.
 servers:
   localRabbitMQ:
     host: rabbitmq:5672
@@ -23,6 +23,16 @@ channels:
     messages:
       customerUpdated:
         $ref: '#/components/messages/CustomerUpdated'
+  ticketEntitlementReconciled:
+    address: TicketEntitlementReconciled.v1
+    messages:
+      ticketEntitlementReconciled:
+        $ref: '#/components/messages/TicketEntitlementReconciled'
+  ticketResolved:
+    address: TicketResolved.v1
+    messages:
+      ticketResolved:
+        $ref: '#/components/messages/TicketResolved'
 operations:
   publishContractActivated:
     action: send
@@ -48,6 +58,22 @@ operations:
     action: receive
     channel:
       $ref: '#/channels/customerUpdated'
+  publishTicketEntitlementReconciled:
+    action: send
+    channel:
+      $ref: '#/channels/ticketEntitlementReconciled'
+  receiveTicketEntitlementReconciled:
+    action: receive
+    channel:
+      $ref: '#/channels/ticketEntitlementReconciled'
+  publishTicketResolved:
+    action: send
+    channel:
+      $ref: '#/channels/ticketResolved'
+  receiveTicketResolved:
+    action: receive
+    channel:
+      $ref: '#/channels/ticketResolved'
 components:
   messages:
     ContractActivated:
@@ -64,7 +90,7 @@ components:
               payload: { $ref: '#/components/schemas/ContractActivatedPayload' }
       examples:
         - name: contractActivated
-          summary: Contrato ativado para faturamento e onboarding
+          summary: Contrato ativado para faturamento e preparação de retirada
           payload:
             eventId: cccccccc-cccc-4ccc-8ccc-cccccccccccc
             eventType: ContractActivated.v1
@@ -76,7 +102,7 @@ components:
             payload:
               contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
               customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
-              serviceCode: SUPPORT-PREMIUM
+              serviceCode: RENTAL-FLEX
               startsOn: '2026-10-01'
               billing:
                 amount: 2500.00
@@ -111,7 +137,7 @@ components:
               ticketId: dddddddd-dddd-4ddd-8ddd-dddddddddddd
               customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
               contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
-              serviceCode: SUPPORT-PREMIUM
+              serviceCode: RENTAL-FLEX
               category: OUTAGE
               status: OPEN
               priority: HIGH
@@ -142,8 +168,72 @@ components:
             producer: crm
             payload:
               customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
-              name: Empresa Exemplo Ltda.
-              email: contato@empresa-exemplo.test
+              name: Cliente Frota Localiza Ltda.
+              email: gestor.frota@cliente-localiza.test
+    TicketEntitlementReconciled:
+      name: TicketEntitlementReconciled.v1
+      title: Elegibilidade do chamado reconciliada
+      contentType: application/json
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/EventEnvelope'
+          - type: object
+            properties:
+              eventType: { const: TicketEntitlementReconciled.v1 }
+              producer: { const: support }
+              payload: { $ref: '#/components/schemas/TicketStatusPayload' }
+      examples:
+        - name: ticketEntitlementReconciled
+          payload:
+            eventId: aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa
+            eventType: TicketEntitlementReconciled.v1
+            eventVersion: 1
+            occurredAt: '2026-10-01T10:10:00Z'
+            correlationId: 11111111-1111-4111-8111-111111111111
+            causationId: null
+            producer: support
+            payload:
+              ticketId: dddddddd-dddd-4ddd-8ddd-dddddddddddd
+              customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+              contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+              serviceCode: RENTAL-FLEX
+              category: QUESTION
+              status: OPEN
+              priority: NORMAL
+              slaHours: 8
+              dueAt: '2026-10-01T18:10:00Z'
+    TicketResolved:
+      name: TicketResolved.v1
+      title: Chamado resolvido
+      contentType: application/json
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/EventEnvelope'
+          - type: object
+            properties:
+              eventType: { const: TicketResolved.v1 }
+              producer: { const: support }
+              payload: { $ref: '#/components/schemas/TicketStatusPayload' }
+      examples:
+        - name: ticketResolved
+          payload:
+            eventId: aaaaaaaa-2222-4222-8222-aaaaaaaaaaaa
+            eventType: TicketResolved.v1
+            eventVersion: 1
+            occurredAt: '2026-10-01T12:10:00Z'
+            correlationId: 11111111-1111-4111-8111-111111111111
+            causationId: null
+            producer: support
+            payload:
+              ticketId: dddddddd-dddd-4ddd-8ddd-dddddddddddd
+              customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+              contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+              serviceCode: RENTAL-FLEX
+              category: OUTAGE
+              status: RESOLVED
+              priority: HIGH
+              slaHours: 8
+              dueAt: '2026-10-01T18:10:00Z'
   schemas:
     EventEnvelope:
       type: object
@@ -163,7 +253,7 @@ components:
       properties:
         amount: { type: number, multipleOf: 0.01, exclusiveMinimum: 0 }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
-        cycle: { type: string, enum: [MONTHLY, QUARTERLY, YEARLY] }
+        cycle: { type: string, enum: [ONCE, MONTHLY, QUARTERLY, YEARLY] }
     ContractActivatedPayload:
       type: object
       required: [contractId, customerId, serviceCode, startsOn, billing, slaHours, status]
@@ -195,3 +285,16 @@ components:
         customerId: { type: string, format: uuid }
         name: { type: string }
         email: { type: string, format: email }
+    TicketStatusPayload:
+      type: object
+      required: [ticketId, customerId, contractId, serviceCode, category, status, priority]
+      properties:
+        ticketId: { type: string, format: uuid }
+        customerId: { type: string, format: uuid }
+        contractId: { type: string, format: uuid }
+        serviceCode: { type: string }
+        category: { type: string }
+        status: { type: string, enum: [OPEN, PENDING_ENTITLEMENT, REJECTED_ENTITLEMENT, RESOLVED] }
+        priority: { type: string, enum: [NORMAL, HIGH] }
+        slaHours: { type: [integer, 'null'] }
+        dueAt: { type: [string, 'null'], format: date-time }

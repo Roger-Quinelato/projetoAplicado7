@@ -46,7 +46,7 @@ def test_api_rejeita_identificadores_globais_que_nao_sao_uuid(client, admin_head
         headers={**admin_headers, "Idempotency-Key": "invalid-draft-id"},
         json={
             "customerId": "not-a-uuid",
-            "serviceCode": "SUPPORT-PREMIUM",
+            "serviceCode": "RENTAL-FLEX",
             "startsOn": "2026-10-01",
             "billing": {"amount": 2500, "currency": "BRL", "cycle": "MONTHLY"},
             "slaHours": 8,
@@ -61,7 +61,7 @@ def test_api_rejeita_identificadores_globais_que_nao_sao_uuid(client, admin_head
         json={
             "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
             "contractId": "not-a-uuid",
-            "serviceCode": "SUPPORT-PREMIUM",
+            "serviceCode": "RENTAL-FLEX",
             "category": "OUTAGE",
             "description": "Identificador inválido",
         },
@@ -85,10 +85,10 @@ def test_modulos_de_negocio_nao_importam_models_de_outro_contexto():
     assert violations == []
 
 
-def test_asyncapi_define_envelope_e_tres_eventos():
+def test_asyncapi_define_envelope_e_eventos_atuais():
     schema = yaml.safe_load(Path("docs/events/asyncapi.yaml").read_text(encoding="utf-8"))
     assert schema["asyncapi"] == "3.0.0"
-    assert set(schema["channels"]) == {"contractActivated", "ticketOpened", "customerUpdated"}
+    assert set(schema["channels"]) == {"contractActivated", "ticketOpened", "customerUpdated", "ticketEntitlementReconciled", "ticketResolved"}
     required = schema["components"]["schemas"]["EventEnvelope"]["required"]
     assert {
         "eventId",

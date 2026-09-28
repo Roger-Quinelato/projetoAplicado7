@@ -1,15 +1,28 @@
 # Evidências de validação
 
+> Estado de execução em 27/09/2026: consulte [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
+
+## Verificação atual em 27/09/2026
+
+- `PYTHONPATH=src .venv/Scripts/python -m pytest -q --tb=short`: **17 testes aprovados**, um aviso de depreciação de Starlette/AnyIO. Inclui reserva → contrato → fatura → pagamento simulado; chamado → resolução → workflow; segredo do modo público; idempotência e reconciliação.
+- `cd web && npm run build`: TypeScript e Vite concluídos sem erro, com `web/dist` gerado. Falta testar a interface no serviço HTTPS público.
+- Inspeção local em navegador na mesma origem `http://127.0.0.1:8000/`: tela de acesso, painel e formulário CRM renderizaram; cadastro de cliente sintético apareceu na lista após escrita na API. A API respondeu `UP` em `/health/ready`. O teste HTTPS público continua pendente.
+- `tools/build_report.py`: DOCX regenerado em 27/09/2026. `tools/build_presentation.mjs`: PPTX regenerado; recibo `.codex-finalizer/Apresentacao_Cenario_4.validation.json` mostra integridade, layout e reimportação aprovados. Revisão editorial final e preenchimento da equipe pendentes.
+- Jira `ARCH7`: 22 tarefas T01–T22 criadas, com prioridade, data por semana e vínculos de bloqueio. Trello e Notion criados como índices/documentação; não há sincronização automática. Os respectivos IDs estão em `JIRA_SYNC.json`, `TRELLO_SYNC.json` e `NOTION_SYNC.json`.
+- Render e Supabase exigem autenticação do titular nas respectivas contas. Nenhuma URL pública, banco em nuvem ou persistência após reinício foi verificada até esta data.
+
+As evidências de 13/09 e 14/09 abaixo são históricas e descrevem a versão anterior do protótipo.
+
 ## Execução em 13 de setembro de 2026
 
 - Suíte automatizada: 13 testes aprovados em 4,11 segundos.
 - Fluxo F1: rascunho criado a partir do UUID do CRM e repetição devolveu o mesmo contrato.
-- Fluxo F2: repetição da ativação e novo despacho mantiveram uma cobrança e um onboarding.
+- Fluxo F2: repetição da ativação e novo despacho mantiveram uma cobrança e uma preparação de retirada.
 - Fluxo F3: chamado recebeu SLA e iniciou uma instância de resolução.
-- Degradação: atendimento registrou `PENDING_ENTITLEMENT` e reconciliou após retorno de Contracts.
-- Segurança: papel de atendimento recebeu 403 ao tentar criar cliente.
+- Degradação: atendimento e assistência 24h registrou `PENDING_ENTITLEMENT` e reconciliou após retorno de Contracts.
+- Segurança: papel de atendimento e assistência 24h recebeu 403 ao tentar criar cliente.
 - Falha permanente: evento chegou a `FAILED` após três tentativas, apareceu na consulta e voltou a `PENDING` por reprocessamento auditado.
-- Contratos: o OpenAPI salvo corresponde ao `app.openapi()`, contém esquemas de resposta, exemplos dos três fluxos e UUID nos identificadores globais; o AsyncAPI contém três eventos com o envelope obrigatório, incluindo `causationId`.
+- Reservas e contratos: o OpenAPI salvo corresponde ao `app.openapi()`, contém esquemas de resposta, exemplos dos três fluxos e UUID nos identificadores globais; o AsyncAPI contém três eventos com o envelope obrigatório, incluindo `causationId`.
 - Arquitetura: teste estático não encontrou importação de modelos internos entre contextos de negócio.
 - Desempenho local: 200 consultas de prontidão tiveram p95 de 6,36 ms, abaixo da meta de 500 ms no ambiente de teste local.
 

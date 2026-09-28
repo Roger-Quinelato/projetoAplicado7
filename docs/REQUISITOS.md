@@ -1,76 +1,85 @@
-# Requisitos da arquitetura do Cenário 4
+# Requisitos da Arquitetura do Cenario 4 - Localiza
 
-## Objetivo e fontes
+> Estado de execução em 27/09/2026: consulte [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
 
-Este documento reúne os requisitos da arquitetura proposta para integrar CRM,
-contratos, financeiro, atendimento e gestão de processos. Ele detalha o item 2
-do `Guia.pdf` e usa como referências o
-`PLANO_IMPLEMENTACAO_CENARIO_4.md`, o ADR-001, os contratos OpenAPI e
-AsyncAPI e o comportamento demonstrado pelo protótipo.
+## Objetivo e Fontes
 
-O guia confirma os sistemas do Cenário 4 e os problemas organizacionais gerais.
-Produtos, tecnologias, volumes, responsáveis e interfaces atuais não foram
-informados. Esses dados permanecem classificados como **Premissa a validar** e
-não alteram os requisitos da demonstração acadêmica.
+Este documento adapta o Cenario 4 do `Guia.pdf` para um estudo academico baseado
+na Localiza, com foco em locacao de veiculos e mobilidade corporativa. O guia e
+a fonte primaria da entrega: ele exige AS-IS, requisitos, TO-BE, padroes,
+integracoes, interoperabilidade, qualidade, evolucao, viabilidade, demonstracao
+de pelo menos tres fluxos e relatorio tecnico.
+
+As informacoes publicas da Localiza foram usadas apenas para contextualizar o
+dominio: aluguel de carros, solucoes para empresas, gestao de frotas, Webcorp,
+assistencia 24h, faturamento e ciclo operacional da frota. Produtos internos,
+tecnologias, volumes, SLAs reais e interfaces legadas nao foram informados pelo
+professor nem pela empresa; portanto permanecem como **Premissa a validar**.
+
+## Sistemas do Cenario
+
+| Sistema | Papel no caso Localiza |
+|---|---|
+| CRM | Cadastro de clientes, empresas, contatos, preferencias e oportunidades de mobilidade. |
+| Reservas e contratos | Reserva, contrato de locacao, grupo de veiculo, periodo, protecoes, condutores e SLA. |
+| Financeiro e faturamento | Pre-autorizacao, fatura, pagamento, caucoes, multas, adicionais e inadimplencia. |
+| Atendimento e assistencia 24h | Chamados, assistencia ao cliente, suporte durante a locacao, prioridade e historico. |
+| Gestao de processos operacionais | Preparacao do veiculo, retirada, devolucao, vistoria, manutencao, sinistro e tarefas internas. |
 
 ## Prioridades
 
-- **P0 — obrigatório nesta entrega:** requisito necessário para compreender a
-  arquitetura, executar os três fluxos mínimos ou demonstrar segurança,
-  recuperação e continuidade.
-- **P1 — evolução orientada por métricas:** requisito que deve ser preservado no
-  desenho, mas cuja implantação completa depende de dados de produção ausentes
-  no guia.
+- **P0 - obrigatorio nesta entrega:** requisito necessario para atender ao guia,
+  executar os tres fluxos integrados ou demonstrar seguranca, recuperacao e
+  continuidade.
+- **P1 - evolucao orientada por metricas:** requisito preservado no desenho,
+  mas dependente de dados reais de operacao.
 
-## Requisitos funcionais
+## Requisitos Funcionais
 
-| ID | Prioridade | Requisito | Critério de aceite | Rastreabilidade |
+| ID | Prioridade | Requisito | Criterio de aceite | Rastreabilidade |
 |---|---|---|---|---|
-| RF-01 | P0 | Manter uma referência única de cliente entre os sistemas. | Todo registro integrado usa um `customerId` global em UUID e pode manter identificadores legados associados ao sistema de origem. | F1, tabelas de mapeamento de IDs e teste de idempotência do contrato. |
-| RF-02 | P0 | Criar um contrato a partir de um cliente existente no CRM. | Um cliente elegível origina um contrato em estado `DRAFT` sem novo cadastro manual; repetir a requisição com a mesma `Idempotency-Key` devolve o mesmo `contractId`. | F1, `POST /api/v1/contracts/drafts` e `test_f1_cria_rascunho_sem_recadastro_e_reutiliza_idempotencia`. |
-| RF-03 | P0 | Ativar o contrato e iniciar faturamento e onboarding. | A ativação registra `ContractActivated.v1`; Finance cria uma cobrança e Workflow inicia um onboarding, sem duplicar efeitos após reentrega. | F2, outbox/inbox e `test_f2_ativacao_cria_uma_cobranca_e_um_onboarding`. |
-| RF-04 | P0 | Abrir chamado com o contrato, o serviço e o SLA aplicáveis. | Support consulta a elegibilidade, registra o SLA e publica `TicketOpened.v1`; se Contracts estiver indisponível, preserva o chamado em `PENDING_ENTITLEMENT` para reconciliação. | F3 e testes de abertura, indisponibilidade e reconciliação. |
-| RF-05 | P0 | Propagar alterações cadastrais relevantes. | O CRM publica `CustomerUpdated.v1`; o consumidor atualiza sua projeção após registrar o `eventId`, sem substituir a fonte oficial. | Evento `CustomerUpdated.v1` e `test_atualizacao_cadastral_chega_a_contratos`. |
-| RF-06 | P0 | Consultar o estado consolidado de uma operação. | Uma consulta por `correlationId` reúne auditoria e eventos associados à operação. | `GET /api/v1/operations/{correlation_id}` e roteiro de demonstração. |
-| RF-07 | P0 | Consultar e reprocessar integrações com falha permanente. | Um operador autorizado consulta motivo, tentativas e correlação e agenda reprocessamento sem duplicar efeitos já confirmados. | Rotas de falha e `test_falha_permanente_pode_ser_listada_e_reprocessada`. |
+| RF-01 | P0 | Manter uma referencia unica de cliente entre os sistemas. | Todo registro integrado usa `customerId` global em UUID e pode manter identificadores legados do CRM, Webcorp, contrato, faturamento e atendimento. | F1, mapeamento de IDs e teste de idempotencia. |
+| RF-02 | P0 | Criar reserva/rascunho de contrato de locacao a partir de cliente existente no CRM. | Um cliente elegivel origina contrato `DRAFT` para o produto `RENTAL-FLEX`, sem recadastro manual; repetir a mesma `Idempotency-Key` devolve o mesmo `contractId`. | F1 e `POST /api/v1/contracts/drafts`. |
+| RF-03 | P0 | Ativar a locacao e iniciar faturamento e preparacao de retirada. | A ativacao registra `ContractActivated.v1`; Finance cria a primeira cobranca da locacao e Workflow inicia o processo operacional de retirada, sem duplicar efeitos por reentrega. | F2, outbox/inbox e testes de fluxo. |
+| RF-04 | P0 | Abrir chamado de atendimento com contrato de locacao e SLA aplicaveis. | Support consulta a elegibilidade em Contracts, registra SLA e publica `TicketOpened.v1`; se Contracts estiver indisponivel, preserva o chamado em `PENDING_ENTITLEMENT` para reconciliacao. | F3 e testes de indisponibilidade. |
+| RF-05 | P0 | Propagar alteracoes cadastrais relevantes. | O CRM publica `CustomerUpdated.v1`; consumidores atualizam projecoes locais apos registrar o `eventId`, sem substituir a fonte oficial. | Evento `CustomerUpdated.v1`. |
+| RF-06 | P0 | Consultar o estado consolidado de uma operacao. | Uma consulta por `correlationId` reune auditoria e eventos da operacao de reserva, ativacao ou atendimento. | `GET /api/v1/operations/{correlation_id}`. |
+| RF-07 | P0 | Consultar e reprocessar integracoes com falha permanente. | Operador autorizado consulta motivo, tentativas e correlacao, e agenda reprocessamento sem duplicar cobrancas, processos ou chamados ja confirmados. | Rotas de falha e reprocessamento. |
 
-## Requisitos não funcionais
+## Requisitos Nao Funcionais
 
-| ID | Prioridade | Requisito | Critério de aceite | Rastreabilidade |
+| ID | Prioridade | Requisito | Criterio de aceite | Rastreabilidade |
 |---|---|---|---|---|
-| RNF-01 | P0 | Interoperabilidade | APIs e eventos usam contratos versionados, JSON em UTF-8, UUID global, datas e horas ISO 8601 UTC e valores monetários decimais com moeda explícita. Inconsistências preservam a fonte oficial e ficam registradas. | OpenAPI, AsyncAPI, F1 e documentação de integração. |
-| RNF-02 | P0 | Confiabilidade e tolerância a falhas | Fatos persistidos usam outbox; consumidores registram inbox; reentrega da mesma chave ou evento não duplica cobrança, processo ou chamado. Falhas permanentes preservam contexto para reprocessamento. | Testes de F1, F2, falha permanente e reprocessamento. |
-| RNF-03 | P0 | Segurança e privacidade | Rotas protegidas exigem autenticação e papéis compatíveis; entradas são validadas; logs e eventos não expõem tokens, senhas, dados bancários, documentos completos ou descrição sensível do chamado. TLS é obrigatório fora do ambiente local. | Testes 403 e 422, revisão dos payloads e adaptador local de autenticação. |
-| RNF-04 | P0 | Observabilidade | HTTP, logs, eventos, auditoria e erros propagam `correlationId`; health checks distinguem processo vivo de dependências prontas; métricas registram latência e falhas relevantes. | Middleware, `/health/live`, `/health/ready`, `/metrics` e consulta de operação. |
-| RNF-05 | P0 | Manutenibilidade | Contextos de negócio comunicam-se por interfaces públicas e não importam modelos internos nem acessam tabelas de outro contexto. Mudança estrutural exige novo ADR. | Teste estático de fronteiras, ADR-001 e documentação TO-BE. |
-| RNF-06 | P0 | Disponibilidade controlada | Uma indisponibilidade de Contracts não perde a solicitação de atendimento; o estado pendente permite reconciliação quando a dependência retorna. | Teste de indisponibilidade e reconciliação de F3. |
-| RNF-07 | P0 | Desempenho da demonstração | Consultas locais do protótipo apresentam p95 inferior a 500 ms, excluindo atrasos deliberados dos simuladores. A medição registra amostra e ambiente. | `scripts/performance_smoke.py` e evidência de execução. |
-| RNF-08 | P1 | Escalabilidade | APIs permanecem sem estado e consumidores idempotentes podem receber réplicas por fila quando métricas de latência, vazão ou idade da fila justificarem. | Estratégia de evolução e métricas operacionais; capacidade de produção ainda não validada. |
-| RNF-09 | P0 | Testabilidade | A suíte cobre os três fluxos, autorização, validação, reentrega, indisponibilidade, falha permanente, contratos e fronteiras entre módulos. | `tests/test_flows.py` e `tests/test_contracts_and_architecture.py`. |
+| RNF-01 | P0 | Interoperabilidade | APIs e eventos usam contratos versionados, JSON UTF-8, UUID global, datas ISO 8601 UTC e valores monetarios com moeda explicita. | OpenAPI, AsyncAPI e exemplos. |
+| RNF-02 | P0 | Confiabilidade e tolerancia a falhas | Outbox transacional, inbox, `Idempotency-Key` e restricoes unicas impedem efeitos duplicados em reentregas. | Testes F1, F2, F3 e falha permanente. |
+| RNF-03 | P0 | Seguranca e privacidade | Rotas exigem autenticacao e papel compativel; logs e eventos nao expoem token, senha, documento completo, dado bancario, CNH, placa completa ou descricao sensivel do chamado. | Testes 403/422 e revisao dos payloads. |
+| RNF-04 | P0 | Observabilidade | HTTP, logs, eventos, auditoria e falhas propagam `correlationId`; health checks e metricas permitem diagnostico. | `/health/*`, `/metrics` e consulta de operacao. |
+| RNF-05 | P0 | Manutenibilidade | Contextos comunicam-se por interfaces publicas, sem importar modelos internos nem acessar tabelas de outro contexto. Mudanca estrutural exige novo ADR. | Teste estatico de fronteiras e ADR-001. |
+| RNF-06 | P0 | Disponibilidade controlada | Falha temporaria de Contracts nao perde chamado de assistencia; estado pendente permite reconciliacao posterior. | Teste de F3 degradado. |
+| RNF-07 | P0 | Desempenho da demonstracao | Consultas locais do prototipo apresentam p95 inferior a 500 ms, excluindo atrasos deliberados. | `scripts/performance_smoke.py`. |
+| RNF-08 | P1 | Escalabilidade | API sem estado e consumidores idempotentes podem ser replicados por fila quando metricas justificarem. | Estrategia de evolucao. |
+| RNF-09 | P0 | Testabilidade | Suite cobre tres fluxos, autorizacao, validacao, reentrega, indisponibilidade, falha permanente, contratos e fronteiras. | `tests/`. |
 
-## Regras transversais
+## Regras Transversais
 
-- CRM é a fonte oficial de cliente, contatos, consentimentos e oportunidade.
-- Contracts é a fonte oficial de contrato, itens, vigência, plano e SLA.
-- Finance é a fonte oficial de cobrança, vencimento, pagamento e inadimplência.
-- Support é a fonte oficial de chamado, prioridade, histórico e resolução.
-- Workflow é a fonte oficial de instância, tarefa, responsável, prazo e estado.
-- Integration é a fonte oficial de IDs legados, correlação, outbox, inbox e
-  falhas.
+- CRM e a fonte oficial de cliente, contatos, consentimentos e oportunidades.
+- Contracts e a fonte oficial de reserva, contrato de locacao, grupo de veiculo,
+  periodo, protecoes e SLA contratado.
+- Finance e a fonte oficial de cobranca, fatura, pagamento, caucoes, adicionais
+  e inadimplencia.
+- Support e a fonte oficial de chamado, assistencia, prioridade, historico e
+  resolucao.
+- Workflow e a fonte oficial de tarefas operacionais, retirada, devolucao,
+  vistoria, manutencao e estados de processo.
+- Integration e a fonte oficial de IDs legados, correlacao, outbox, inbox,
+  auditoria e falhas.
 - REST atende comandos e consultas que exigem resposta imediata. Eventos
   representam fatos confirmados e efeitos desacoplados.
-- Mudanças compatíveis são aditivas. Mudanças incompatíveis criam nova versão
-  da API ou do evento.
 
-## Escopo e dependências externas
+## Escopo e Dependencias Externas
 
-A primeira entrega não substitui integralmente os cinco sistemas, não migra todo
-o histórico e não demonstra alta disponibilidade real. Integrações com produtos
-legados, TLS, OIDC corporativo e metas de capacidade dependem dos ambientes e
-dados da organização.
-
-As seguintes informações continuam como **Premissa a validar**: produtos e
-tecnologias existentes, responsáveis por sistema, interfaces atuais, volumes,
-SLAs operacionais e mecanismos reais de troca entre áreas. A validação pode
-refinar adaptadores e metas, mas não deve transformar hipóteses em fatos nem
-alterar uma decisão estrutural sem novo ADR.
+A primeira entrega nao substitui integralmente sistemas corporativos da Localiza,
+nao migra historico, nao integra meios reais de pagamento, telemetria, app,
+Webcorp, antifraude ou sistemas de loja/agencia. Esses pontos podem ser
+conectados futuramente por adaptadores, desde que preservem os contratos e as
+fronteiras definidos nesta documentacao.

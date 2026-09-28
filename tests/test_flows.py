@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import select
 
 from archcorp.config import settings
@@ -15,14 +17,14 @@ def test_f1_cria_rascunho_sem_recadastro_e_reutiliza_idempotencia(client, admin_
     assert contract["customerId"] == customer["customerId"]
     assert contract["status"] == "DRAFT"
     repeated = client.post("/api/v1/contracts/drafts", headers={**admin_headers, "Idempotency-Key": "draft-1"}, json={
-        "customerId": customer["customerId"], "serviceCode": "SUPPORT-PREMIUM", "startsOn": "2026-10-01",
+        "customerId": customer["customerId"], "serviceCode": "RENTAL-FLEX", "startsOn": "2026-10-01",
         "billing": {"amount": 2500, "currency": "BRL", "cycle": "MONTHLY"}, "slaHours": 8,
     })
     assert repeated.headers["Idempotency-Replayed"] == "true"
     assert repeated.json()["contractId"] == contract["contractId"]
 
 
-def test_f2_ativacao_cria_uma_cobranca_e_um_onboarding(client, admin_headers, integrated_contract):
+def test_f2_ativacao_cria_uma_cobranca_e_uma_preparacao_de_retirada(client, admin_headers, integrated_contract):
     _, contract = integrated_contract
     headers = {**admin_headers, "Idempotency-Key": "activate-1"}
     first = client.post(f"/api/v1/contracts/{contract['contractId']}/activate", headers=headers)
@@ -37,12 +39,24 @@ def test_f2_ativacao_cria_uma_cobranca_e_um_onboarding(client, admin_headers, in
         assert session.query(InboxEvent).count() == 2
 
 
+def test_ativacao_com_outra_chave_nao_publica_outro_evento(client, admin_headers, integrated_contract):
+    _, contract = integrated_contract
+    path = f"/api/v1/contracts/{contract['contractId']}/activate"
+    first = client.post(path, headers={**admin_headers, "Idempotency-Key": "activate-first"})
+    repeated = client.post(path, headers={**admin_headers, "Idempotency-Key": "activate-other"})
+    assert first.status_code == repeated.status_code == 200
+    assert repeated.headers["Idempotency-Replayed"] == "true"
+    assert repeated.json()["eventId"] == first.json()["eventId"]
+    with SessionLocal() as session:
+        assert session.query(OutboxEvent).filter_by(event_type="ContractActivated.v1").count() == 1
+
+
 def test_f3_abre_chamado_com_sla_e_inicia_resolucao(client, admin_headers, integrated_contract):
     customer, contract = integrated_contract
     client.post(f"/api/v1/contracts/{contract['contractId']}/activate", headers={**admin_headers, "Idempotency-Key": "activate-2"})
     client.post("/api/v1/integration/outbox/dispatch", headers=admin_headers)
     ticket = client.post("/api/v1/support/tickets", headers={**admin_headers, "Idempotency-Key": "ticket-1"}, json={
-        "customerId": customer["customerId"], "contractId": contract["contractId"], "serviceCode": "SUPPORT-PREMIUM",
+        "customerId": customer["customerId"], "contractId": contract["contractId"], "serviceCode": "RENTAL-FLEX",
         "category": "OUTAGE", "description": "Serviço indisponível",
     })
     assert ticket.status_code == 201
@@ -69,7 +83,7 @@ def test_indisponibilidade_de_contratos_cria_estado_pendente(client, admin_heade
     settings.contract_adapter_available = False
     try:
         ticket = client.post("/api/v1/support/tickets", headers={**admin_headers, "Idempotency-Key": "ticket-pending"}, json={
-            "customerId": customer["customerId"], "contractId": contract["contractId"], "serviceCode": "SUPPORT-PREMIUM",
+            "customerId": customer["customerId"], "contractId": contract["contractId"], "serviceCode": "RENTAL-FLEX",
             "category": "QUESTION", "description": "Consulta durante indisponibilidade",
         })
         assert ticket.json()["status"] == "PENDING_ENTITLEMENT"
@@ -77,6 +91,10 @@ def test_indisponibilidade_de_contratos_cria_estado_pendente(client, admin_heade
         settings.contract_adapter_available = True
     reconciled = client.post(f"/api/v1/support/tickets/{ticket.json()['ticketId']}/reconcile", headers=admin_headers)
     assert reconciled.json()["status"] == "OPEN"
+    client.post("/api/v1/integration/outbox/dispatch", headers=admin_headers)
+    with SessionLocal() as session:
+        process = session.query(ProcessInstance).filter_by(process_type="TICKET_RESOLUTION").one()
+        assert process.due_at.replace(tzinfo=None) == datetime.fromisoformat(reconciled.json()["dueAt"].replace("Z", "+00:00")).replace(tzinfo=None)
 
 
 def test_autorizacao_por_papel(client):
@@ -109,3 +127,6 @@ def test_falha_permanente_pode_ser_listada_e_reprocessada(client, admin_headers)
     assert failures.json()[0]["eventId"] == event_id
     replay = client.post(f"/api/v1/integration/failures/{event_id}/reprocess", headers=admin_headers)
     assert replay.json()["status"] == "PENDING"
+    with SessionLocal() as session:
+        event = session.get(OutboxEvent, event_id)
+        assert event.attempts == 0

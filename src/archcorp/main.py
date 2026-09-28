@@ -1,17 +1,22 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 from uuid import UUID, uuid4
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from archcorp.contracts.models import Contract
+from archcorp.contracts.models import Contract, Reservation
+from archcorp.contracts.routes import ReservationInput, reservation_data, router as contracts_router
 from archcorp.contracts.service import ContractService
 from archcorp.crm.models import Customer
 from archcorp.crm.service import CustomerService
+from archcorp.crm.routes import router as crm_router
 from archcorp.finance.models import Invoice
 from archcorp.finance.service import handle_contract_activated as finance_contract_activated
+from archcorp.finance.routes import router as finance_router
 from archcorp.infrastructure.db import Base, engine, get_session
 from archcorp.integration.models import AuditLog, LegacyIdMapping, OutboxEvent
 from archcorp.integration.service import EventDispatcher, audit
@@ -40,10 +45,13 @@ from archcorp.schemas import (
     TicketResponse,
 )
 from archcorp.security import require_roles
+from archcorp.config import settings
 from archcorp.support.models import Ticket
 from archcorp.support.service import TicketService
+from archcorp.support.routes import router as support_router
 from archcorp.workflow.models import ProcessInstance
-from archcorp.workflow.service import handle_contract_activated as workflow_contract_activated, handle_ticket_opened
+from archcorp.workflow.routes import router as workflow_router
+from archcorp.workflow.service import handle_contract_activated as workflow_contract_activated, handle_ticket_opened, handle_ticket_entitlement_reconciled, handle_ticket_resolved
 
 
 CORRELATION_REQUEST_PARAMETER = {
@@ -172,6 +180,7 @@ CONTRACT_ACTIVATION_RESPONSES = {
             "application/json": {"example": {"detail": "Contrato não encontrado"}}
         },
     },
+    409: {"description": "Contrato já encerrado ou estado incompatível para ativação."},
 }
 ENTITLEMENT_RESPONSES = {
     **COMMON_API_ERRORS,
@@ -276,6 +285,7 @@ RECONCILIATION_RESPONSES = {
             "application/json": {"example": {"detail": "Chamado não encontrado"}}
         },
     },
+    409: {"description": "Chamado não está pendente de elegibilidade."},
 }
 DISPATCH_RESPONSES = {
     **COMMON_API_ERRORS,
@@ -366,19 +376,23 @@ customers = CustomerService()
 contracts = ContractService(customers)
 tickets = TicketService(contracts)
 dispatcher = EventDispatcher({
-    "ContractActivated.v1": [("finance", finance_contract_activated), ("workflow-onboarding", workflow_contract_activated)],
+    "ContractActivated.v1": [("finance", finance_contract_activated), ("workflow-preparacao-retirada", workflow_contract_activated)],
     "TicketOpened.v1": [("workflow-ticket-resolution", handle_ticket_opened)],
+    "TicketEntitlementReconciled.v1": [("workflow-ticket-entitlement", handle_ticket_entitlement_reconciled)],
+    "TicketResolved.v1": [("workflow-ticket-resolution-complete", handle_ticket_resolved)],
     "CustomerUpdated.v1": [("contracts-customer-projection", ContractService.apply_customer_update)],
 })
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    if settings.public_demo and (not settings.demo_access_token or len(settings.demo_access_token) < 24 or settings.demo_access_token.startswith("demo-")):
+        raise RuntimeError("PUBLIC_DEMO exige DEMO_ACCESS_TOKEN aleatório com pelo menos 24 caracteres")
     Base.metadata.create_all(engine)
     yield
 
 
-app = FastAPI(title="ArchCorp Integração Cenário 4", version="1.0.0", description="API demonstrativa para CRM, contratos, financeiro, atendimento, workflow e integração.", lifespan=lifespan)
+app = FastAPI(title="Localiza Integração Cenário 4", version="1.0.0", description="API demonstrativa para CRM, reservas e contratos, financeiro e faturamento, atendimento e assistência 24h, workflow e integração.", lifespan=lifespan)
 app.middleware("http")(metrics_middleware)
 
 
@@ -444,7 +458,7 @@ def update_customer(customer_id: UUID, body: CustomerUpdate, session: Session = 
     "/api/v1/contracts/drafts",
     status_code=201,
     response_model=ContractDraftResponse,
-    tags=["Contratos"],
+    tags=["Reservas e contratos"],
     dependencies=[Depends(require_roles("commercial", "contracts", "admin"))],
     responses=CONTRACT_DRAFT_RESPONSES,
     openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
@@ -462,7 +476,7 @@ def create_contract_draft(
     try:
         result, replay = contracts.create_draft(session, draft_data, idempotency_key, correlation_id_var.get())
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise HTTPException(status_code=409 if "Idempotency-Key" in str(exc) else 422, detail=str(exc)) from exc
     response.headers["Idempotency-Replayed"] = str(replay).lower()
     return result
 
@@ -470,7 +484,7 @@ def create_contract_draft(
 @app.post(
     "/api/v1/contracts/{contract_id}/activate",
     response_model=ContractActivationResponse,
-    tags=["Contratos"],
+    tags=["Reservas e contratos"],
     dependencies=[Depends(require_roles("contracts", "admin"))],
     responses=CONTRACT_ACTIVATION_RESPONSES,
     openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
@@ -487,6 +501,8 @@ def activate_contract(
         result, replay = contracts.activate(session, str(contract_id), idempotency_key, correlation_id_var.get())
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     response.headers["Idempotency-Replayed"] = str(replay).lower()
     return result
 
@@ -494,7 +510,7 @@ def activate_contract(
 @app.get(
     "/api/v1/contracts/{contract_id}/entitlement",
     response_model=EntitlementResponse,
-    tags=["Contratos"],
+    tags=["Reservas e contratos"],
     dependencies=[Depends(require_roles("support", "admin"))],
     responses=ENTITLEMENT_RESPONSES,
     openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
@@ -507,7 +523,7 @@ def entitlement(contract_id: UUID, customerId: UUID, serviceCode: str, session: 
     "/api/v1/support/tickets",
     status_code=201,
     response_model=TicketResponse,
-    tags=["Atendimento"],
+    tags=["Atendimento e assistência 24h"],
     dependencies=[Depends(require_roles("support", "admin"))],
     responses=TICKET_RESPONSES,
     openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
@@ -524,7 +540,7 @@ def open_ticket(
     try:
         result, replay = tickets.open(session, ticket_data, idempotency_key, correlation_id_var.get())
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise HTTPException(status_code=409 if "Idempotency-Key" in str(exc) else 422, detail=str(exc)) from exc
     response.headers["Idempotency-Replayed"] = str(replay).lower()
     return result
 
@@ -532,7 +548,7 @@ def open_ticket(
 @app.post(
     "/api/v1/support/tickets/{ticket_id}/reconcile",
     response_model=TicketResponse,
-    tags=["Atendimento"],
+    tags=["Atendimento e assistência 24h"],
     dependencies=[Depends(require_roles("support", "operations", "admin"))],
     responses=RECONCILIATION_RESPONSES,
     openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
@@ -542,6 +558,8 @@ def reconcile_ticket(ticket_id: UUID, session: Session = Depends(get_session)) -
         return tickets.reconcile(session, str(ticket_id), correlation_id_var.get())
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @app.post(
@@ -584,6 +602,7 @@ def reprocess(event_id: UUID, session: Session = Depends(get_session)) -> dict:
     event.status = "PENDING"
     event.last_error = None
     audit(session, correlation_id_var.get(), "integration", "reprocess_event", "scheduled", event.event_id, previousAttempts=event.attempts)
+    event.attempts = 0
     session.commit()
     return {"eventId": event.event_id, "status": "PENDING"}
 
@@ -606,3 +625,66 @@ def operation_trace(correlation_id: UUID, session: Session = Depends(get_session
 @app.get("/api/v1/demo/state", tags=["Demonstração"], dependencies=[Depends(require_roles("admin"))])
 def demo_state(session: Session = Depends(get_session)) -> dict:
     return {"customers": session.query(Customer).count(), "contracts": session.query(Contract).count(), "invoices": session.query(Invoice).count(), "tickets": session.query(Ticket).count(), "processes": session.query(ProcessInstance).count(), "legacyMappings": session.query(LegacyIdMapping).count()}
+
+
+@app.post("/api/v1/contracts/reservations/{reservation_id}/draft", tags=["Reservas e contratos"], dependencies=[Depends(require_roles("commercial", "contracts", "admin"))])
+def draft_from_reservation(reservation_id: UUID, response: Response,
+                           idempotency_key: str = Header(alias="Idempotency-Key"),
+                           session: Session = Depends(get_session)) -> dict:
+    reservation = session.get(Reservation, str(reservation_id))
+    if not reservation:
+        raise HTTPException(404, "Reserva não encontrada")
+    if reservation.contract_id:
+        contract = session.get(Contract, reservation.contract_id)
+        response.headers["Idempotency-Replayed"] = "true"
+        return {"reservationId": reservation.reservation_id, "contract": contracts.to_dict(contract)}
+    data = {"customerId": reservation.customer_id, "serviceCode": reservation.service_code,
+            "startsOn": reservation.starts_on, "slaHours": reservation.sla_hours,
+            "billing": {"amount": reservation.amount, "currency": reservation.currency,
+                        "cycle": reservation.billing_cycle}}
+    try:
+        result, replay = contracts.create_draft(session, data, idempotency_key, correlation_id_var.get())
+    except ValueError as exc:
+        raise HTTPException(409 if "Idempotency-Key" in str(exc) else 422, str(exc)) from exc
+    reservation.contract_id = result["contractId"]
+    reservation.status = "DRAFTED"
+    session.commit()
+    response.headers["Idempotency-Replayed"] = str(replay).lower()
+    return {"reservationId": reservation.reservation_id, "contract": result}
+
+
+@app.post("/api/v1/contracts/reservations", status_code=201, tags=["Reservas e contratos"], dependencies=[Depends(require_roles("commercial", "contracts", "admin"))])
+def create_reservation(body: ReservationInput, session: Session = Depends(get_session)) -> dict:
+    customer = session.get(Customer, str(body.customerId))
+    if not customer:
+        raise HTTPException(404, "Cliente não encontrado")
+    if not customer.eligible or not customer.consent_service:
+        raise HTTPException(422, "Cliente inelegível ou sem consentimento")
+    item = Reservation(customer_id=str(body.customerId), vehicle_group=body.vehicleGroup,
+                       protection_code=body.protectionCode, service_code=body.serviceCode,
+                       starts_on=body.startsOn, ends_on=body.endsOn, amount=body.amount,
+                       currency=body.currency, billing_cycle=body.billingCycle, sla_hours=body.slaHours)
+    session.add(item)
+    session.commit()
+    return reservation_data(item)
+
+
+app.include_router(crm_router)
+app.include_router(contracts_router)
+app.include_router(finance_router)
+app.include_router(support_router)
+app.include_router(workflow_router)
+
+web_dist = Path(__file__).resolve().parents[2] / "web" / "dist"
+if web_dist.is_dir():
+    app.mount("/assets", StaticFiles(directory=web_dist / "assets"), name="assets")
+
+    @app.get("/", include_in_schema=False)
+    def web_home() -> FileResponse:
+        return FileResponse(web_dist / "index.html")
+
+    @app.get("/{path:path}", include_in_schema=False)
+    def web_fallback(path: str) -> FileResponse:
+        if path.startswith(("api/", "health/", "assets/")):
+            raise HTTPException(404, "Rota não encontrada")
+        return FileResponse(web_dist / "index.html")

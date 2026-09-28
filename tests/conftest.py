@@ -33,7 +33,7 @@ def integrated_contract(client, admin_headers):
     customer = client.post("/api/v1/crm/customers", headers=admin_headers, json={"name": "Empresa Teste", "email": "teste@example.com", "legacyId": "CRM-1"}).json()
     headers = {**admin_headers, "Idempotency-Key": "draft-1"}
     contract = client.post("/api/v1/contracts/drafts", headers=headers, json={
-        "customerId": customer["customerId"], "serviceCode": "SUPPORT-PREMIUM", "startsOn": "2026-10-01",
+        "customerId": customer["customerId"], "serviceCode": "RENTAL-FLEX", "startsOn": "2026-10-01",
         "billing": {"amount": 2500, "currency": "BRL", "cycle": "MONTHLY"}, "slaHours": 8,
     }).json()
     return customer, contract

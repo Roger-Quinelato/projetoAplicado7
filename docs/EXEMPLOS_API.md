@@ -1,5 +1,7 @@
 # Exemplos de APIs e eventos
 
+> Estado de execução em 27/09/2026: consulte [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
+
 Este documento apresenta exemplos coerentes para os três fluxos do Cenário 4.
 Os contratos executáveis permanecem em `docs/api/openapi.yaml` e
 `docs/events/asyncapi.yaml`. Os UUIDs abaixo são fictícios e permanecem fixos para
@@ -44,11 +46,11 @@ Content-Type: application/json
 X-Correlation-ID: 11111111-1111-4111-8111-111111111111
 
 {
-  "name": "Empresa Exemplo Ltda.",
-  "email": "contato@empresa-exemplo.test",
+  "name": "Cliente Frota Localiza Ltda.",
+  "email": "gestor.frota@cliente-localiza.test",
   "eligible": true,
   "consentService": true,
-  "legacyId": "CRM-1001"
+  "legacyId": "WEB-LOCALIZA-1001"
 }
 ```
 
@@ -61,13 +63,13 @@ X-Correlation-ID: 11111111-1111-4111-8111-111111111111
 ```json
 {
   "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-  "name": "Empresa Exemplo Ltda.",
-  "email": "contato@empresa-exemplo.test",
+  "name": "Cliente Frota Localiza Ltda.",
+  "email": "gestor.frota@cliente-localiza.test",
   "eligible": true
 }
 ```
 
-O CRM mantém o cadastro oficial. O identificador legado `CRM-1001` fica associado
+O CRM mantém o cadastro oficial. O identificador legado `WEB-LOCALIZA-1001` fica associado
 ao `customerId` global no contexto de integração.
 
 ### Criar o rascunho do contrato
@@ -83,7 +85,7 @@ Idempotency-Key: demo-contract-001
 
 {
   "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-  "serviceCode": "SUPPORT-PREMIUM",
+  "serviceCode": "RENTAL-FLEX",
   "startsOn": "2026-10-01",
   "billing": {
     "amount": 2500.00,
@@ -105,7 +107,7 @@ Idempotency-Replayed: false
 {
   "contractId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
   "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-  "serviceCode": "SUPPORT-PREMIUM",
+  "serviceCode": "RENTAL-FLEX",
   "startsOn": "2026-10-01",
   "billing": {
     "amount": 2500.00,
@@ -177,7 +179,7 @@ Cabeçalho de correlação inválido, resposta `400`:
 }
 ```
 
-## F2: ativação, cobrança e onboarding
+## F2: ativação da locação, cobrança e preparação de retirada
 
 ### Ativar o contrato
 
@@ -201,7 +203,7 @@ Idempotency-Replayed: false
 {
   "contractId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
   "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-  "serviceCode": "SUPPORT-PREMIUM",
+  "serviceCode": "RENTAL-FLEX",
   "startsOn": "2026-10-01",
   "billing": {
     "amount": 2500.00,
@@ -229,7 +231,7 @@ monta o seguinte envelope `ContractActivated.v1`:
   "payload": {
     "contractId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
     "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-    "serviceCode": "SUPPORT-PREMIUM",
+    "serviceCode": "RENTAL-FLEX",
     "startsOn": "2026-10-01",
     "billing": {
       "amount": 2500.00,
@@ -261,7 +263,7 @@ Resposta `200 OK` quando um evento é publicado:
 }
 ```
 
-Finance registra uma cobrança, Workflow inicia um onboarding e cada consumidor
+Finance registra uma cobrança, Workflow inicia uma preparação de retirada e cada consumidor
 registra o `eventId` na inbox. Um novo despacho sem eventos pendentes devolve
 `{"processed": 0, "failed": 0}`.
 
@@ -323,7 +325,7 @@ Contrato desconhecido na ativação, resposta `404`:
 }
 ```
 
-## F3: chamado com contrato e SLA
+## F3: chamado com contrato de locação e SLA
 
 ### Consultar a elegibilidade
 
@@ -331,7 +333,7 @@ Support usa a porta pública `ContractEntitlementPort`. A representação HTTP
 equivalente é:
 
 ```http
-GET /api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/entitlement?customerId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&serviceCode=SUPPORT-PREMIUM HTTP/1.1
+GET /api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/entitlement?customerId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&serviceCode=RENTAL-FLEX HTTP/1.1
 Authorization: Bearer demo-admin
 X-Correlation-ID: 11111111-1111-4111-8111-111111111111
 ```
@@ -362,7 +364,7 @@ Idempotency-Key: demo-ticket-001
 {
   "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   "contractId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-  "serviceCode": "SUPPORT-PREMIUM",
+  "serviceCode": "RENTAL-FLEX",
   "category": "OUTAGE",
   "description": "Serviço indisponível durante a demonstração"
 }
@@ -380,7 +382,7 @@ Idempotency-Replayed: false
   "ticketId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
   "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   "contractId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-  "serviceCode": "SUPPORT-PREMIUM",
+  "serviceCode": "RENTAL-FLEX",
   "category": "OUTAGE",
   "status": "OPEN",
   "priority": "HIGH",
@@ -404,7 +406,7 @@ A descrição permanece em Support e não aparece no evento. O dispatcher public
     "ticketId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
     "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     "contractId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-    "serviceCode": "SUPPORT-PREMIUM",
+    "serviceCode": "RENTAL-FLEX",
     "category": "OUTAGE",
     "status": "OPEN",
     "priority": "HIGH",
@@ -449,7 +451,7 @@ Quando o adaptador de Contracts está desabilitado, Support preserva a solicita�
   "ticketId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
   "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   "contractId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-  "serviceCode": "SUPPORT-PREMIUM",
+  "serviceCode": "RENTAL-FLEX",
   "category": "QUESTION",
   "status": "PENDING_ENTITLEMENT",
   "priority": "NORMAL",
@@ -520,4 +522,4 @@ correlação informada.
 - Não envie descrição de chamado, token, documento ou dado bancário em eventos e
   logs.
 - Trate os exemplos de falha como estados operacionais. Eles não substituem a
-  validação automática dos contratos e dos três fluxos.
+  validação automática dos contratos técnicos e dos três fluxos.

@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     rabbitmq_url: str | None = None
     contract_adapter_available: bool = True
     retry_limit: int = 3
+    public_demo: bool = False
+    demo_access_token: str | None = None
 
 
 settings = Settings()

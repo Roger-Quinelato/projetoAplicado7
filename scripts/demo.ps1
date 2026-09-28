@@ -10,7 +10,7 @@ $customer = Invoke-RestMethod -Method Post -Uri "$base/api/v1/crm/customers" -He
 
 $headers["Idempotency-Key"] = "demo-contract-001"
 $contract = Invoke-RestMethod -Method Post -Uri "$base/api/v1/contracts/drafts" -Headers $headers -Body (@{
-  customerId = $customer.customerId; serviceCode = "SUPPORT-PREMIUM"; startsOn = "2026-10-01"
+  customerId = $customer.customerId; serviceCode = "RENTAL-FLEX"; startsOn = "2026-10-01"
   billing = @{ amount = 2500.00; currency = "BRL"; cycle = "MONTHLY" }; slaHours = 8
 } | ConvertTo-Json -Depth 4)
 
@@ -20,7 +20,7 @@ Invoke-RestMethod -Method Post -Uri "$base/api/v1/integration/outbox/dispatch" -
 
 $headers["Idempotency-Key"] = "demo-ticket-001"
 $ticket = Invoke-RestMethod -Method Post -Uri "$base/api/v1/support/tickets" -Headers $headers -Body (@{
-  customerId = $customer.customerId; contractId = $contract.contractId; serviceCode = "SUPPORT-PREMIUM"
+  customerId = $customer.customerId; contractId = $contract.contractId; serviceCode = "RENTAL-FLEX"
   category = "OUTAGE"; description = "Serviço indisponível para a demonstração"
 } | ConvertTo-Json)
 Invoke-RestMethod -Method Post -Uri "$base/api/v1/integration/outbox/dispatch" -Headers $headers | Out-Null

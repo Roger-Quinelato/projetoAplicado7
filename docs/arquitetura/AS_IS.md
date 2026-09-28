@@ -1,84 +1,74 @@
-# Arquitetura atual AS IS
+# Arquitetura Atual AS-IS - Localiza
 
-## Escopo e origem das informações
+> Estado de execução em 27/09/2026: consulte [Estado da implementação](../ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](../CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
 
-O guia permite afirmar como **Confirmado pelo guia** que a organização do
-Cenário 4 possui CRM, sistema de contratos, sistema financeiro, sistema de
-atendimento e sistema de gestão de processos. O guia também confirma os
-problemas gerais de aplicações isoladas, duplicidade de informações,
-lançamentos manuais, dependência de sistemas antigos, falta de padronização,
-baixa escalabilidade e manutenção difícil.
+## Escopo e Origem das Informacoes
 
-O guia não identifica produtos, tecnologias, responsáveis, volumes, interfaces
-ou sequências operacionais reais. Esses detalhes aparecem neste documento como
-**Premissa a validar**. A classificação impede que a modelagem usada na
-demonstração seja apresentada como resultado de entrevistas ou observação da
-organização.
+O `Guia.pdf` confirma para o Cenario 4 cinco sistemas: CRM, contratos,
+financeiro, atendimento e gestao de processos. Para este projeto, esses sistemas
+foram contextualizados na Localiza como CRM/canais digitais, reservas e contratos
+de locacao, financeiro e faturamento, atendimento e assistencia 24h e gestao de
+processos operacionais.
 
-## Sistemas, setores, usuários e dados
+O guia tambem confirma problemas gerais: duplicidade de informacoes, sistemas
+sem comunicacao adequada, lancamentos manuais, dificuldade de integracao,
+dependencia de sistemas antigos, dificuldade de manutencao, baixa escalabilidade,
+falta de padronizacao e processos fragmentados.
 
-| Sistema | Setores e usuários | Dados produzidos | Dados consumidos | Classificação |
+Produtos internos, tecnologias, filas, bancos, APIs reais, volumes, SLAs e
+responsaveis nao foram fornecidos. Esses pontos sao **Premissa a validar**.
+
+## Sistemas, Setores, Usuarios e Dados
+
+| Sistema | Setores e usuarios | Dados produzidos | Dados consumidos | Classificacao |
 |---|---|---|---|---|
-| CRM | Comercial | Cliente, contato, consentimento e oportunidade | Histórico comercial e situação da oportunidade | Sistema: **Confirmado pelo guia**. Setor, usuários e dados: **Premissa a validar**. |
-| Sistema de contratos | Jurídico e equipe de contratos | Contrato, itens, vigência, plano e SLA | Cliente e serviço negociado | Sistema: **Confirmado pelo guia**. Setor, usuários e dados: **Premissa a validar**. |
-| Sistema financeiro | Financeiro | Cobrança, vencimento, pagamento e inadimplência | Contrato ativo, valor e ciclo de cobrança | Sistema: **Confirmado pelo guia**. Setor, usuários e dados: **Premissa a validar**. |
-| Sistema de atendimento | Agentes de atendimento e suporte | Chamado, prioridade, histórico e resolução | Cliente, contrato, serviço e SLA | Sistema: **Confirmado pelo guia**. Setor, usuários e dados: **Premissa a validar**. |
-| Sistema de gestão de processos | Operações e gestão | Instância, tarefa, responsável, prazo e estado | Contrato ativo e chamado aberto | Sistema: **Confirmado pelo guia**. Setor, usuários e dados: **Premissa a validar**. |
+| CRM e canais digitais | Comercial, clientes e gestores de frota | Cliente, contato, consentimento, perfil de locacao e oportunidade | Historico comercial e preferencias | Sistema confirmado pelo guia; dominio Localiza como premissa academica. |
+| Reservas e contratos de locacao | Operacao de reservas, loja/agencia e area de contratos | Reserva, contrato, grupo de veiculo, periodo, protecoes, condutor e SLA | Cliente e condicoes comerciais | Sistema confirmado pelo guia; detalhes reais a validar. |
+| Financeiro e faturamento | Financeiro, cobranca e contas a receber | Fatura, pagamento, caucao, multas, adicionais e inadimplencia | Contrato ativo, valor, periodo e cliente | Sistema confirmado pelo guia; regras reais a validar. |
+| Atendimento e assistencia 24h | Atendimento, assistencia e suporte operacional | Chamado, categoria, prioridade, historico e resolucao | Cliente, contrato, grupo de veiculo, protecoes e SLA | Sistema confirmado pelo guia; produtos reais a validar. |
+| Gestao de processos operacionais | Operacoes, loja/agencia, frota, manutencao e gestao | Tarefa, responsavel, prazo, retirada, devolucao, vistoria e manutencao | Contrato ativo e chamado aberto | Sistema confirmado pelo guia; workflow real a validar. |
 
-## Processos principais e dependências
+## Processos Principais e Dependencias
 
-O guia exige que o AS-IS identifique processos e dependências, mas não descreve
-como eles ocorrem no Cenário 4. A sequência abaixo constitui **Premissa a
-validar** para orientar os três fluxos da demonstração:
-
-1. O comercial cadastra o cliente e registra a oportunidade no CRM.
-2. A equipe de contratos recebe os dados da venda e recria ou localiza o
-   cliente no sistema de contratos.
-3. Após a ativação, o financeiro recebe os dados necessários para criar a
-   primeira cobrança.
-4. Operações recebe uma solicitação para iniciar o onboarding.
-5. O atendimento consulta contrato e SLA antes de classificar o chamado.
-
-Também é **Premissa a validar** que essas transferências usem digitação,
-planilhas ou integrações específicas sem contrato uniforme. A representação
-abaixo mostra essa hipótese de trabalho, não uma topologia confirmada.
+1. Cliente ou gestor de frota e cadastrado ou atualizado no CRM.
+2. Reserva/contrato de locacao e criada a partir da oportunidade ou solicitacao.
+3. Na ativacao/retirada, o financeiro precisa iniciar cobranca ou
+   pre-autorizacao.
+4. A operacao precisa preparar veiculo, retirada, devolucao e eventuais
+   vistorias.
+5. Atendimento e assistencia 24h precisam consultar contrato, protecoes e SLA
+   antes de classificar uma ocorrencia.
 
 ```mermaid
 flowchart LR
-  C[Comercial] --> CRM[CRM]
-  J[Contratos] --> CT[Sistema de contratos]
-  F[Financeiro] --> FI[Sistema financeiro]
-  A[Atendimento] --> AT[Sistema de atendimento]
-  O[Operações] --> BPM[Gestão de processos]
-  CRM -. planilha ou recadastro .-> CT
-  CT -. lançamento manual .-> FI
-  CT -. solicitação manual .-> BPM
-  AT -. consulta manual .-> CT
-  AT -. abertura manual .-> BPM
+  Cliente[Cliente ou gestor de frota] --> CRM[CRM e canais digitais]
+  Comercial[Comercial] --> CRM
+  CRM -. recadastro ou planilha .-> CT[Reservas e contratos]
+  CT -. lancamento manual .-> FI[Financeiro e faturamento]
+  CT -. solicitacao operacional .-> BPM[Gestao de processos]
+  Atendimento[Atendimento e assistencia 24h] -. consulta manual .-> CT
+  Atendimento -. abertura manual .-> BPM
+  Operacao[Loja, frota e manutencao] --> BPM
 ```
 
-## Problemas e limitações
+## Problemas e Limitacoes
 
-| Problema ou limitação | Origem | Consequência no Cenário 4 |
-|---|---|---|
-| Duplicidade de informações e lançamentos manuais | **Confirmado pelo guia** | **Premissa a validar:** um cliente pode receber cadastros e identificadores diferentes nos sistemas. |
-| Sistemas sem comunicação adequada e falta de padronização | **Confirmado pelo guia** | **Premissa a validar:** ativação, faturamento e onboarding podem ocorrer em momentos diferentes. |
-| Processos fragmentados | **Confirmado pelo guia** | **Premissa a validar:** o atendimento pode consultar contrato ou SLA desatualizado. |
-| Dependência de sistemas antigos e dificuldade de integração | **Confirmado pelo guia** | **Premissa a validar:** alterações de formato podem afetar várias integrações específicas. |
-| Dificuldade de manutenção e de incorporação de funcionalidades | **Confirmado pelo guia** | **Premissa a validar:** a ausência de contratos versionados dificulta testes e evolução gradual. |
-| Baixa escalabilidade | **Confirmado pelo guia** | Volumes e gargalos do Cenário 4 são **Premissa a validar** porque não há medição organizacional. |
+| Problema | Consequencia no caso Localiza |
+|---|---|
+| Duplicidade de informacoes | Cliente, empresa, contrato e atendimento podem usar identificadores diferentes. |
+| Lancamentos manuais | Ativacao da locacao pode nao disparar cobranca e preparacao de retirada no mesmo momento. |
+| Falta de padronizacao | Canais, reservas, faturas e chamados podem trocar dados com formatos diferentes. |
+| Processos fragmentados | Atendimento pode abrir ocorrencia sem confirmar contrato, protecao ou SLA. |
+| Dependencia de legados | Mudancas em formatos ou regras podem exigir manutencao em varios pontos. |
+| Baixa rastreabilidade | Falha entre reserva, faturamento e atendimento pode demorar a ser localizada. |
 
-## Necessidades de integração
+## Necessidades de Integracao
 
-A arquitetura proposta deve responder aos problemas confirmados por meio de:
-
-- identidade global com associação aos identificadores legados;
-- contratos de API e de eventos versionados;
-- comunicação síncrona para decisões que exigem resposta imediata;
-- eventos para propagar fatos confirmados;
-- idempotência, auditoria, correlação, tratamento de falhas e reprocessamento;
-- fronteiras que mantenham cada sistema como proprietário de seus dados.
-
-Essas necessidades orientam os requisitos e o TO-BE. Produtos, interfaces,
-responsáveis, volumes e SLAs reais continuam como **Premissa a validar** com o
-professor ou representante da organização.
+- Identidade global de cliente com mapeamento de IDs legados.
+- Contratos OpenAPI/AsyncAPI para REST e eventos.
+- REST para decisoes imediatas: criar reserva, consultar elegibilidade e
+  reconciliar chamado.
+- Eventos para fatos confirmados: cliente atualizado, contrato ativado e chamado
+  aberto.
+- Idempotencia, outbox, inbox, auditoria, correlacao e reprocessamento.
+- Fronteiras claras para que cada sistema continue dono de seus dados.

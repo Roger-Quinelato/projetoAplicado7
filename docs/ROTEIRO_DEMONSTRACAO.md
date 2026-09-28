@@ -1,5 +1,7 @@
 # Roteiro de demonstração
 
+> Estado de execução em 27/09/2026: consulte [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
+
 Este roteiro demonstra F1, F2 e F3, incluindo idempotência, correlação,
 indisponibilidade e recuperação. Consulte os [exemplos completos de API e
 eventos](EXEMPLOS_API.md) e os [diagramas de
@@ -34,7 +36,7 @@ sequência](arquitetura/FLUXOS_INTEGRACAO.md) durante a apresentação.
 
 ## Executar o caminho principal automaticamente
 
-Execute o script para criar cliente, contrato, cobrança, onboarding, chamado e
+Execute o script para criar cliente, contrato, cobrança, preparação de retirada, chamado e
 processo de resolução:
 
 ```powershell
@@ -76,8 +78,8 @@ $headers = @{
 
    ```powershell
    $customerBody = @{
-     name = "Empresa Demonstração"
-     email = "demonstracao@example.com"
+     name = "Cliente Demonstração Localiza"
+     email = "demo.localiza@example.com"
      eligible = $true
      consentService = $true
      legacyId = "CRM-$([guid]::NewGuid())"
@@ -99,7 +101,7 @@ $headers = @{
    $headers["Idempotency-Key"] = $draftKey
    $draftBody = @{
      customerId = $customerId
-     serviceCode = "SUPPORT-PREMIUM"
+     serviceCode = "RENTAL-FLEX"
      startsOn = "2026-10-01"
      billing = @{
        amount = 2500.00
@@ -135,7 +137,7 @@ $headers = @{
    Os resultados devem ser `true` para o cabeçalho de replay e `True` para a
    comparação do `contractId`. O banco continua com um rascunho para essa chave.
 
-## F2: ativar, cobrar e iniciar onboarding
+## F2: ativar, cobrar e iniciar preparação de retirada
 
 1. Registre o estado anterior, ative o contrato e capture o `eventId`:
 
@@ -187,7 +189,7 @@ $headers = @{
    ```
 
    O primeiro despacho deve processar um evento e o segundo deve processar zero.
-   As duas diferenças finais devem valer `1`: uma cobrança e um onboarding.
+   As duas diferenças finais devem valer `1`: uma cobrança e uma preparação de retirada.
 
 ## F3: abrir chamado com SLA
 
@@ -201,7 +203,7 @@ $headers = @{
    $ticketBody = @{
      customerId = $customerId
      contractId = $contractId
-     serviceCode = "SUPPORT-PREMIUM"
+     serviceCode = "RENTAL-FLEX"
      category = "OUTAGE"
      description = "Serviço indisponível durante a demonstração"
    } | ConvertTo-Json
@@ -269,7 +271,7 @@ execução. Use um contêiner temporário da API com a configuração documentad
    $pendingBody = @{
      customerId = $customerId
      contractId = $contractId
-     serviceCode = "SUPPORT-PREMIUM"
+     serviceCode = "RENTAL-FLEX"
      category = "QUESTION"
      description = "Consulta durante indisponibilidade de Contracts"
    } | ConvertTo-Json

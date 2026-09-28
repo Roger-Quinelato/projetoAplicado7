@@ -1,13 +1,15 @@
 # ADR-001 - SOA pragmática com APIs, eventos e monólito modular
 
+> Estado de execução em 27/09/2026: consulte [Estado da implementação](../ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](../CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
+
 - Status: Aceito para o protótipo acadêmico
 - Data: 2026-09-12
 - Decisores: equipe do Projeto Aplicado
-- Contexto: Cenário 4 - Empresa de serviços
+- Contexto: Cenário 4 - Localiza - locação de veículos e mobilidade corporativa
 
 ## Contexto
 
-A organização possui CRM, sistema de contratos, sistema financeiro, sistema de atendimento e sistema de gestão de processos. O enunciado relata problemas típicos de aplicações isoladas: duplicidade, lançamentos manuais, dependência de legados, baixa escalabilidade, manutenção difícil e processos fragmentados.
+A organização possui CRM, sistema de reservas e contratos, sistema financeiro e faturamento, sistema de atendimento e assistência 24h e sistema de gestão de processos operacionais. O enunciado relata problemas típicos de aplicações isoladas: duplicidade, lançamentos manuais, dependência de legados, baixa escalabilidade, manutenção difícil e processos fragmentados.
 
 A primeira entrega deve demonstrar arquitetura e integração, não substituir todos os sistemas. A equipe é júnior e precisa entregar pelo menos três fluxos executáveis, documentação de APIs, tratamento de erros, análise de qualidade, estratégia de evolução e justificativa técnica e de negócio.
 
@@ -51,7 +53,7 @@ Limitações: cria gargalo organizacional e técnico, concentra regras de negóc
 
 ### 4. SOA pragmática em monólito modular, com APIs e eventos
 
-Vantagens: separa capacidades e contratos, permite comunicação síncrona e assíncrona, mantém execução simples e prepara extrações futuras.
+Vantagens: separa capacidades e contratos técnicos, permite comunicação síncrona e assíncrona, mantém execução simples e prepara extrações futuras.
 
 Limitações: a implantação ainda é conjunta; fronteiras dependem de disciplina; o broker e a consistência eventual aumentam a complexidade conceitual.
 
@@ -61,9 +63,9 @@ Adotar a opção 4: uma arquitetura orientada a serviços em formato de monólit
 
 As regras são:
 
-1. CRM, contratos, financeiro, atendimento e BPM são contextos separados e têm responsabilidades e fontes oficiais definidas.
+1. CRM, reservas e contratos, financeiro e faturamento, atendimento e assistência 24h e BPM são contextos separados e têm responsabilidades e fontes oficiais definidas.
 2. Nenhum módulo lê ou escreve diretamente no esquema interno de outro módulo.
-3. REST/JSON é usado quando o solicitante precisa de resposta imediata, como criação de rascunho ou consulta de SLA.
+3. REST/JSON é usado quando o solicitante precisa de resposta imediata, como criação de reserva/rascunho ou consulta de SLA.
 4. Eventos são usados para fatos já confirmados que podem ter vários consumidores, como `ContractActivated.v1` e `TicketOpened.v1`.
 5. PostgreSQL é compartilhado somente como infraestrutura do protótipo, com separação lógica por módulo e acesso controlado pela própria aplicação.
 6. RabbitMQ é o broker de referência para execução local.
@@ -77,15 +79,15 @@ As regras são:
 
 ## Fluxos cobertos pela decisão
 
-- Cliente do CRM cria rascunho no sistema de contratos via REST.
-- Contrato ativado publica evento consumido por financeiro e BPM.
-- Atendimento consulta contrato/SLA via REST e publica a abertura para o BPM.
+- Cliente do CRM cria rascunho no sistema de reservas e contratos via REST.
+- Contrato ativado publica evento consumido por financeiro e faturamento e BPM.
+- Atendimento e assistência 24h consulta contrato/SLA via REST e publica a abertura para o BPM.
 
 ## Consequências positivas
 
 - O protótipo pode ser iniciado e demonstrado com baixo custo operacional.
-- As fronteiras e contratos tornam integrações compreensíveis e testáveis.
-- Eventos reduzem o acoplamento entre ativação, cobrança e onboarding.
+- As fronteiras e contratos técnicos tornam integrações compreensíveis e testáveis.
+- Eventos reduzem o acoplamento entre ativação da locação, cobrança e preparação de retirada.
 - Adaptadores isolam diferenças de tecnologia, formato e identificadores.
 - A mesma estrutura permite substituir simuladores por sistemas reais.
 - Módulos com demanda ou ritmo próprio podem ser extraídos posteriormente.
@@ -104,7 +106,7 @@ As regras são:
 - Lógica concentrada na integração: regras ficam no módulo proprietário; a camada de integração traduz, roteia e coordena.
 - Evento incompatível: validação de esquema e testes de contrato no pipeline.
 - Duplicidade: chaves idempotentes, restrições únicas e registro de eventos consumidos.
-- Dados pessoais em trânsito: minimização, TLS, RBAC, mascaramento de logs e auditoria.
+- Dados pessoais em trânsito: minimização, TLS, RBAC, mascaramento de logs e auditoria; no caso Localiza, evitar documento completo, CNH, placa completa, dados bancários e descrição sensível do chamado em eventos.
 
 ## Critérios para reconsiderar
 
@@ -120,6 +122,6 @@ Nesses casos, extrair primeiro o módulo que apresenta a necessidade, preservand
 
 ## Validação
 
-A decisão será considerada adequada quando os três fluxos funcionarem ponta a ponta; reentregas não duplicarem efeitos; falhas puderem ser rastreadas por `correlationId`; contratos forem validados automaticamente; e outra equipe conseguir executar a solução a partir da documentação.
+A decisão será considerada adequada quando os três fluxos funcionarem ponta a ponta; reentregas não duplicarem efeitos; falhas puderem ser rastreadas por `correlationId`; contratos OpenAPI/AsyncAPI forem validados automaticamente; e outra equipe conseguir executar a solução a partir da documentação.
 
-As evidências estão ligadas aos requisitos em `docs/MATRIZ_RASTREABILIDADE.md`. A suíte automatizada verifica os três fluxos, repetição, degradação, autorização, contratos e fronteiras entre módulos. A equipe deve reabrir esta decisão se a validação das premissas revelar integrações, restrições regulatórias ou volumes incompatíveis com os direcionadores registrados.
+As evidências estão ligadas aos requisitos em `docs/MATRIZ_RASTREABILIDADE.md`. A suíte automatizada verifica os três fluxos, repetição, degradação, autorização, contratos técnicos e fronteiras entre módulos. A equipe deve reabrir esta decisão se a validação das premissas revelar integrações, restrições regulatórias ou volumes incompatíveis com os direcionadores registrados.

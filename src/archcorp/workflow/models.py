@@ -17,3 +17,13 @@ class ProcessInstance(Base):
     owner: Mapped[str] = mapped_column(String(80), default="operations")
     due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     __table_args__ = (UniqueConstraint("process_type", "reference_id", name="uq_process_reference"),)
+
+
+class ProcessTask(Base):
+    __tablename__ = "workflow_tasks"
+    task_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    process_id: Mapped[str] = mapped_column(String(36), index=True)
+    title: Mapped[str] = mapped_column(String(150))
+    state: Mapped[str] = mapped_column(String(30), default="OPEN")
+    owner: Mapped[str] = mapped_column(String(80), default="operations")
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

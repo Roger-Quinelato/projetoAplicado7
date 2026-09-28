@@ -1,0 +1,12 @@
+.git
+.venv
+.pytest_cache
+.codex-remote-attachments
+.claude
+tmp
+output
+web/node_modules
+web/dist
+web/*.tsbuildinfo
+*.db
+*.pyc

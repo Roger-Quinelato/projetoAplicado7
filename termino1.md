@@ -1,9 +1,11 @@
 # Plano de conclusão da documentação do Cenário 4
 
+> Registro histórico da rodada de documentação de setembro. Os estados “Concluído” abaixo referem-se àquela rodada e não representam o aceite da entrega S14. Para a execução atual, consulte `docs/CRONOGRAMA_EXECUCAO.md` e `docs/ESTADO_IMPLEMENTACAO.md`; a suíte atual tem 17 testes e a hospedagem pública ainda não foi validada.
+
 ## Objetivo
 
 Concluir a documentação acadêmica do Cenário 4 a partir do `Guia.pdf`, do
-plano de implementação, do ADR vigente, dos contratos e do comportamento
+plano de implementação, do ADR vigente, dos contratos técnicos e do comportamento
 executável. O trabalho deve preencher lacunas, melhorar os documentos
 existentes e manter rastreabilidade entre requisito, documentação,
 implementação, teste e evidência.
@@ -33,7 +35,7 @@ devem permanecer identificadas como premissas a validar.
 - Cada entrega inclui arquivos alterados, dependências consumidas,
   verificações executadas, resultados e pendências.
 - Relatório e apresentação só podem ser atualizados depois que documentos,
-  contratos, roteiro e evidências estiverem estáveis.
+  reservas e contratos, roteiro e evidências estiverem estáveis.
 - README, matriz de rastreabilidade e backlog são atualizados por último.
 
 ## Responsabilidades
@@ -47,8 +49,8 @@ devem permanecer identificadas como premissas a validar.
 
 ## Convenções congeladas
 
-- Fluxos canônicos: F1 Cliente para contrato, F2 Ativação, cobrança e
-  onboarding, e F3 Chamado com SLA.
+- Fluxos canônicos: F1 Cliente para reserva/contrato, F2 Ativação, cobrança e
+  preparação de retirada, e F3 Chamado com SLA.
 - Eventos canônicos: `CustomerUpdated.v1`, `ContractActivated.v1` e
   `TicketOpened.v1`.
 - APIs permanecem sob `/api/v1`.
@@ -66,13 +68,13 @@ devem permanecer identificadas como premissas a validar.
 |---|---|---|---|---|
 | D1 | `docs/REQUISITOS.md` | Guia e plano | RFs, RNFs, prioridades, critérios e rastreabilidade documentados | Concluído |
 | D2 | Revisar AS-IS e TO-BE | D1, guia e ADR | Fatos e premissas separados; sistemas, componentes, consumidores, dados e fronteiras completos | Concluído |
-| D3 | `docs/EXEMPLOS_API.md` | Código, testes e contratos | Requisições, respostas, erros, replay e correlação válidos para F1-F3 | Concluído |
-| D4 | OpenAPI e AsyncAPI | D3 e regras do `AGENT.md` | Contratos válidos, exemplos sincronizados e envelope completo | Concluído |
+| D3 | `docs/EXEMPLOS_API.md` | Código, testes e reservas e contratos | Requisições, respostas, erros, replay e correlação válidos para F1-F3 | Concluído |
+| D4 | OpenAPI e AsyncAPI | D3 e regras do `AGENT.md` | Reservas e contratos válidos, exemplos sincronizados e envelope completo | Concluído |
 | D5 | Revisar `docs/INTEGRACOES.md` | D2-D4 | Cada fluxo contém todos os itens exigidos pelo guia | Concluído |
 | D6 | `docs/arquitetura/FLUXOS_INTEGRACAO.md` | D3-D5 | Diagramas Mermaid de F1-F3 e cenários alternativos renderizam sem erro | Concluído: sete diagramas renderizados sem erro |
 | D7 | Qualidade, evolução e visão de negócio | D2, D5, D6 | Metas, evidências, limitações e viabilidade estão separadas com clareza | Concluído |
 | D8 | Roteiro de demonstração | D3-D6 | Outra equipe executa F1-F3 e recuperação sem inferir payloads | Concluído |
-| D9 | Evidências atuais | D4, D6 e D8 | Testes, contratos e desempenho executados e registrados com data atual | Concluído: 13 testes e p95 de 6,36 ms |
+| D9 | Evidências atuais | D4, D6 e D8 | Testes, reservas e contratos e desempenho executados e registrados com data atual | Concluído: 13 testes e p95 de 6,36 ms |
 | D10 | Relatório técnico | D1-D9 e dados da equipe | DOCX entre 15 e 20 páginas e inspeção visual aprovada | Concluído: 18 páginas inspecionadas |
 | D11 | Apresentação técnica | D1-D9 e dados da equipe | Deck consistente, renderizado e inspecionado integralmente | Concluído: 15 slides inspecionados |
 | D12 | README, matriz e backlog | D10 e D11 | Nenhum item marcado como atendido sem evidência existente | Concluído |
@@ -169,14 +171,14 @@ correspondentes.
 flowchart TD
     R[Agente raiz define convenções ownership e termino1.md]
 
-    R --> A1[Agente A contratos exemplos e integrações]
+    R --> A1[Agente A reservas e contratos exemplos e integrações]
     R --> B1[Agente B requisitos arquitetura e qualidade]
 
-    A1 --> G1[Gate de contratos diagramas e consistência]
+    A1 --> G1[Gate de reservas e contratos diagramas e consistência]
     B1 --> G1
 
     G1 --> A2[Agente A atualiza roteiro de demonstração]
-    G1 --> T[Testes contratos e medição de desempenho]
+    G1 --> T[Testes reservas e contratos e medição de desempenho]
 
     T --> E[Agente raiz atualiza evidências]
     A2 --> G2[Fontes documentais estabilizadas]

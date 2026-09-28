@@ -14,15 +14,15 @@ EXAMPLE_TICKET_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd"
 
 EXAMPLE_CUSTOMER_RESPONSE = {
     "customerId": EXAMPLE_CUSTOMER_ID,
-    "name": "Empresa Exemplo Ltda.",
-    "email": "contato@empresa-exemplo.test",
+    "name": "Cliente Frota Localiza Ltda.",
+    "email": "gestor.frota@cliente-localiza.test",
     "eligible": True,
 }
 
 EXAMPLE_CONTRACT_DRAFT_RESPONSE = {
     "contractId": EXAMPLE_CONTRACT_ID,
     "customerId": EXAMPLE_CUSTOMER_ID,
-    "serviceCode": "SUPPORT-PREMIUM",
+    "serviceCode": "RENTAL-FLEX",
     "startsOn": "2026-10-01",
     "billing": {
         "amount": 2500.00,
@@ -43,7 +43,7 @@ EXAMPLE_TICKET_RESPONSE = {
     "ticketId": EXAMPLE_TICKET_ID,
     "customerId": EXAMPLE_CUSTOMER_ID,
     "contractId": EXAMPLE_CONTRACT_ID,
-    "serviceCode": "SUPPORT-PREMIUM",
+    "serviceCode": "RENTAL-FLEX",
     "category": "OUTAGE",
     "status": "OPEN",
     "priority": "HIGH",
@@ -66,11 +66,11 @@ class CustomerCreate(BaseModel):
         json_schema_extra={
             "examples": [
                 {
-                    "name": "Empresa Exemplo Ltda.",
-                    "email": "contato@empresa-exemplo.test",
+                    "name": "Cliente Frota Localiza Ltda.",
+                    "email": "gestor.frota@cliente-localiza.test",
                     "eligible": True,
                     "consentService": True,
-                    "legacyId": "CRM-1001",
+                    "legacyId": "WEB-LOCALIZA-1001",
                 }
             ]
         }
@@ -93,7 +93,7 @@ class CustomerUpdate(BaseModel):
 class Billing(BaseModel):
     amount: Decimal = Field(gt=0, decimal_places=2)
     currency: str = Field(pattern="^[A-Z]{3}$")
-    cycle: str = Field(pattern="^(MONTHLY|QUARTERLY|YEARLY)$")
+    cycle: str = Field(pattern="^(ONCE|MONTHLY|QUARTERLY|YEARLY)$")
 
 
 class ContractDraftCreate(BaseModel):
@@ -102,7 +102,7 @@ class ContractDraftCreate(BaseModel):
             "examples": [
                 {
                     "customerId": EXAMPLE_CUSTOMER_ID,
-                    "serviceCode": "SUPPORT-PREMIUM",
+                    "serviceCode": "RENTAL-FLEX",
                     "startsOn": "2026-10-01",
                     "billing": {
                         "amount": 2500.00,
@@ -129,7 +129,7 @@ class TicketCreate(BaseModel):
                 {
                     "customerId": EXAMPLE_CUSTOMER_ID,
                     "contractId": EXAMPLE_CONTRACT_ID,
-                    "serviceCode": "SUPPORT-PREMIUM",
+                    "serviceCode": "RENTAL-FLEX",
                     "category": "OUTAGE",
                     "description": "Serviço indisponível durante a demonstração",
                 }

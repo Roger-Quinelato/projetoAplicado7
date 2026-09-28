@@ -1,14 +1,16 @@
 # AGENT.md
 
+Estado em 27/09/2026: este arquivo contém diretrizes de evolução. Para comportamento já implementado e limites verificados, consulte `docs/ESTADO_IMPLEMENTACAO.md`; para demandas e prazos, `docs/CRONOGRAMA_EXECUCAO.md`. OIDC, tracing distribuído, fila de erro no broker e escalabilidade horizontal são metas, não funcionalidades comprovadas do protótipo.
+
 ## Missão do repositório
 
-Este repositório contém o Projeto Aplicado de Arquitetura de Sistemas Corporativos para o Cenário 4 - Empresa de serviços. O objetivo é demonstrar, de forma executável e documentada, a integração entre CRM, contratos, financeiro, atendimento e gestão de processos.
+Este repositório contém o Projeto Aplicado de Arquitetura de Sistemas Corporativos para o Cenário 4 - Localiza - locação de veículos e mobilidade corporativa. O objetivo é demonstrar, de forma executável e documentada, a integração entre CRM, reservas e contratos, financeiro e faturamento, atendimento e assistência 24h e gestão de processos operacionais.
 
 ## Fontes de verdade
 
 Antes de alterar o projeto, leia nesta ordem:
 
-1. `Projeto Aplicado – ArchCorp_ Arquitetura de Sistemas Corporativos.pdf` - requisitos acadêmicos.
+1. `Projeto Aplicado – Localiza_ Arquitetura de Sistemas Corporativos.pdf` - requisitos acadêmicos.
 2. `PLANO_IMPLEMENTACAO_CENARIO_4.md` - escopo, requisitos, fluxos e critérios de aceite.
 3. `docs/adr/ADR-001-integracao-empresa-de-servicos.md` - decisão arquitetural vigente.
 4. Demais ADRs, OpenAPI/AsyncAPI e documentação do módulo afetado.
@@ -37,15 +39,15 @@ Em caso de conflito, o enunciado tem precedência. Não transforme premissas do 
 | Contexto | Fonte oficial |
 |---|---|
 | CRM | Cliente, contatos, consentimentos e oportunidade |
-| Contracts | Contrato, itens, vigência, plano e SLA |
-| Finance | Cobrança, vencimento, pagamento e inadimplência |
-| Support | Chamado, prioridade, histórico e resolução |
-| Workflow | Instância, tarefa, responsável, prazo e estado do processo |
+| Contracts | Reserva, contrato de locação, grupo de veículo, vigência, proteções e SLA |
+| Finance | Pré-autorização, cobrança, fatura, pagamento, caução, multa e inadimplência |
+| Support | Chamado, assistência, prioridade, histórico e resolução |
+| Workflow | Instância, tarefa, responsável, prazo e estado operacional do processo |
 | Integration | Mapeamento de IDs legados, correlação, outbox/inbox e falhas |
 
 Cada entidade compartilhada usa UUID global e pode manter identificadores legados associados ao sistema de origem. Em divergências, não aplique estratégia de "última escrita vence" sem uma decisão explícita; preserve a fonte oficial e registre a inconsistência.
 
-## Contratos de integração
+## Reservas e contratos de integração
 
 - REST/JSON para comandos e consultas que exigem resposta imediata.
 - Eventos para fatos confirmados e efeitos desacoplados.
@@ -96,16 +98,16 @@ Uma correção de bug deve incluir teste que falha antes da correção. Não rem
 
 ## Fluxos mínimos que não podem regredir
 
-1. CRM cria rascunho de contrato sem recadastro.
-2. Ativação do contrato cria cobrança e inicia onboarding por evento, sem duplicidade.
-3. Atendimento consulta contrato/SLA, abre chamado e inicia processo de resolução.
+1. CRM cria rascunho de contrato de locação sem recadastro.
+2. Ativação do contrato cria cobrança e inicia preparação de retirada por evento, sem duplicidade.
+3. Atendimento e assistência 24h consulta contrato/SLA, abre chamado e inicia processo de resolução.
 
 ## Forma de trabalho
 
 1. Identifique o requisito e a fonte oficial afetados.
 2. Confirme se a mudança respeita o ADR vigente; se não, proponha novo ADR antes de implementar.
 3. Faça a menor mudança coerente e mantenha as fronteiras de módulo.
-4. Atualize contratos antes ou junto da implementação.
+4. Atualize reservas e contratos antes ou junto da implementação.
 5. Execute testes e verificações de contrato relevantes.
 6. Atualize diagramas, exemplos e rastreabilidade do requisito.
 7. Registre limitações, premissas e riscos ainda abertos.
@@ -117,7 +119,7 @@ Uma tarefa só está concluída quando:
 - comportamento e critérios de aceite estão atendidos;
 - testes relevantes passam;
 - logs não expõem dados sensíveis;
-- contratos e documentação estão atualizados;
+- reservas e contratos e documentação estão atualizados;
 - migrações são reproduzíveis e têm estratégia de compatibilidade;
 - falhas e reprocessamentos têm comportamento definido;
 - não foi criado acesso indevido entre módulos;

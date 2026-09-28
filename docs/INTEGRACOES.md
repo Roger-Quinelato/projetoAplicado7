@@ -1,5 +1,7 @@
 # Integrações do Cenário 4
 
+> Estado de execução em 27/09/2026: consulte [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
+
 Este documento detalha as três integrações obrigatórias do protótipo. Os diagramas
 de sequência estão em `docs/arquitetura/FLUXOS_INTEGRACAO.md`. Requisições,
 respostas e eventos completos estão em `docs/EXEMPLOS_API.md`.
@@ -8,8 +10,8 @@ respostas e eventos completos estão em `docs/EXEMPLOS_API.md`.
 
 | Fluxo | Origem | Destino | Comunicação principal | Resultado |
 |---|---|---|---|---|
-| F1 | CRM e Comercial | Contracts | REST síncrono e porta pública | Rascunho sem recadastro |
-| F2 | Contracts | Finance e Workflow | Evento assíncrono | Cobrança e onboarding |
+| F1 | CRM e canais digitais | Contracts | REST síncrono e porta pública | Reserva/contrato sem recadastro |
+| F2 | Contracts | Finance e Workflow | Evento assíncrono | Cobrança e preparação de retirada |
 | F3 | Support | Contracts e Workflow | Porta síncrona e evento assíncrono | Chamado com SLA e resolução |
 
 Os nomes CRM, Contracts, Finance, Support e Workflow representam contextos do
@@ -17,18 +19,18 @@ monólito modular e também as fronteiras dos sistemas corporativos simulados. C
 contexto mantém suas regras e seus dados. O contexto Integration mantém
 correlação, mapeamentos legados, idempotência, outbox, inbox, auditoria e falhas.
 
-## F1: cliente do CRM para contrato
+## F1: cliente do CRM para reserva/contrato
 
 | Item exigido | Definição |
 |---|---|
-| Sistema de origem | CRM, acionado pelo usuário do setor Comercial |
+| Sistema de origem | CRM, acionado por canais digitais ou equipe comercial |
 | Sistema de destino | Contracts |
-| Informação compartilhada | Identidade global do cliente e condições do serviço negociado |
-| Objetivo | Criar um rascunho de contrato a partir do cliente existente, sem recadastrar seus dados |
+| Informação compartilhada | Identidade global do cliente e condições da locação negociada |
+| Objetivo | Criar um rascunho de contrato de locação a partir do cliente existente, sem recadastrar seus dados |
 | Tipo de comunicação | Comando REST/JSON síncrono; consulta interna síncrona por porta pública |
 | API ou serviço utilizado | `POST /api/v1/contracts/drafts` e `CustomerReader` |
 | Dados enviados | `customerId`, `serviceCode`, `startsOn`, `billing.amount`, `billing.currency`, `billing.cycle` e `slaHours` |
-| Dados recebidos | `contractId`, `customerId`, serviço, início, cobrança, SLA e estado `DRAFT`; cabeçalhos `X-Correlation-ID` e `Idempotency-Replayed` |
+| Dados recebidos | `contractId`, `customerId`, produto de locação, início, cobrança, SLA e estado `DRAFT`; cabeçalhos `X-Correlation-ID` e `Idempotency-Replayed` |
 | Tratamento de erros | `400` para correlação inválida, `401` ou `403` para acesso; `422` com lista para validação estrutural ou com mensagem para cliente inexistente, inelegível ou sem consentimento; repetição segura por `Idempotency-Key` |
 
 Contracts consulta o CRM somente por `CustomerReader`. A porta confirma a
@@ -44,14 +46,14 @@ O protótipo executa `CustomerReader` dentro do mesmo processo. Ele não simula
 timeout ou indisponibilidade do CRM em F1. Esses controles devem entrar no
 adaptador quando o CRM real for conectado.
 
-## F2: contrato ativo para faturamento e onboarding
+## F2: contrato ativo para faturamento e preparação de retirada
 
 | Item exigido | Definição |
 |---|---|
 | Sistema de origem | Contracts |
 | Sistemas de destino | Finance e Workflow; RabbitMQ recebe uma cópia do evento quando configurado |
-| Informação compartilhada | Fato de ativação, identidade do cliente e do contrato, serviço, vigência, cobrança e SLA |
-| Objetivo | Criar a primeira cobrança e iniciar o processo de onboarding após a ativação confirmada |
+| Informação compartilhada | Fato de ativação, identidade do cliente e do contrato, grupo de veículo, vigência, cobrança e SLA |
+| Objetivo | Criar a primeira cobrança da locação e iniciar o processo de preparação de retirada após a ativação confirmada |
 | Tipo de comunicação | Comando REST síncrono para ativar; evento assíncrono para os efeitos desacoplados |
 | API ou serviço utilizado | `POST /api/v1/contracts/{contractId}/activate`, outbox, `ContractActivated.v1` e `POST /api/v1/integration/outbox/dispatch` |
 | Dados enviados | Envelope com `eventId`, tipo, versão, horário, correlação, causa, produtor e payload do contrato ativo |
@@ -81,14 +83,14 @@ continuam ativas durante o novo despacho. O contador acumulado de tentativas nã
 zerado; se o consumidor falhar novamente, o evento retorna imediatamente a
 `FAILED`.
 
-## F3: chamado com contrato e SLA
+## F3: chamado com contrato de locação e SLA
 
 | Item exigido | Definição |
 |---|---|
-| Sistema de origem | Support, acionado por agente do Atendimento |
+| Sistema de origem | Support, acionado por agente do atendimento e assistência 24h |
 | Sistemas de destino | Contracts para elegibilidade e Workflow para o processo de resolução |
-| Informação compartilhada | Identificadores de cliente, contrato e serviço; categoria, estado, prioridade, SLA e prazo do chamado |
-| Objetivo | Confirmar o direito ao atendimento, aplicar o SLA do contrato e iniciar a resolução |
+| Informação compartilhada | Identificadores de cliente, contrato e produto de locação; categoria, estado, prioridade, SLA e prazo do chamado |
+| Objetivo | Confirmar o direito à assistência, aplicar o SLA do contrato de locação e iniciar a resolução |
 | Tipo de comunicação | Comando REST, consulta síncrona por porta pública e evento assíncrono |
 | API ou serviço utilizado | `POST /api/v1/support/tickets`, `ContractEntitlementPort`, `TicketOpened.v1`, dispatcher e rota de reconciliação |
 | Dados enviados | Na abertura: `customerId`, `contractId`, `serviceCode`, `category` e `description`; no evento: dados do chamado sem a descrição |
@@ -96,7 +98,7 @@ zerado; se o consumidor falhar novamente, o evento retorna imediatamente a
 | Tratamento de erros | `400`, `401` ou `403` para acesso/correlação; `422` com lista para validação estrutural ou com mensagem para combinação inelegível; `PENDING_ENTITLEMENT` quando o adaptador está indisponível; reconciliação posterior; idempotência na abertura |
 
 Quando o adaptador está disponível, Support consulta Contracts por
-`ContractEntitlementPort`. Uma combinação ativa de contrato, cliente e serviço
+`ContractEntitlementPort`. Uma combinação ativa de contrato, cliente e produto de locação
 devolve elegibilidade e SLA. Uma combinação inelegível interrompe a abertura com
 `422`.
 
@@ -150,4 +152,4 @@ fictícios para demonstrar a continuidade entre os fluxos.
 Os cinco sistemas são contextos e simuladores do protótipo. Produtos, tecnologias,
 interfaces, responsáveis e volumes reais da organização não constam no enunciado
 e permanecem como premissas a validar. A troca por sistemas reais deve ocorrer por
-adaptadores, preservando os contratos e as fronteiras descritas neste documento.
+adaptadores, preservando os contratos técnicos e as fronteiras descritas neste documento.

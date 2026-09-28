@@ -62,8 +62,8 @@ function notes(slide, text) {
   textbox(slide, "Arquitetura de Integração\npara Empresa de Serviços", { left: 90, top: 170, width: 900, height: 190 }, 54, C.white, true);
   textbox(slide, "Projeto Aplicado  |  Cenário 4", { left: 94, top: 390, width: 600, height: 50 }, 27, "#C8DFE2");
   const accent = slide.shapes.add({ geometry: "rect", position: { left: 95, top: 130, width: 180, height: 10 }, fill: C.rust, line: { fill: "none", width: 0 } });
-  textbox(slide, "Equipe do Projeto Aplicado\n14 de setembro de 2026", { left: 94, top: 560, width: 520, height: 70 }, 20, C.white);
-  notes(slide, "Fonte principal: Projeto Aplicado ArchCorp, enunciado acadêmico fornecido ao projeto, 2026.");
+  textbox(slide, "Equipe do Projeto Aplicado\n27 de setembro de 2026 · em revisão", { left: 94, top: 560, width: 520, height: 70 }, 20, C.white);
+  notes(slide, "Fonte principal: Projeto Aplicado Localiza, enunciado acadêmico fornecido ao projeto, 2026.");
 }
 
 // 2
@@ -71,9 +71,9 @@ function notes(slide, text) {
   const slide = base("Cenário e problema");
   bullets(slide, ["Cinco sistemas corporativos com integrações insuficientes", "Duplicidade e lançamentos manuais entre áreas", "Falhas difíceis de rastrear e processos fragmentados", "Primeira entrega exige arquitetura e três fluxos funcionando"], { left: 80, top: 145, width: 590, height: 390 }, 27);
   box(slide, "CRM", { left: 760, top: 140, width: 180, height: 70 }, C.pale);
-  box(slide, "Contratos", { left: 960, top: 235, width: 190, height: 70 }, C.pale);
-  box(slide, "Financeiro", { left: 760, top: 330, width: 180, height: 70 }, C.pale);
-  box(slide, "Atendimento", { left: 960, top: 425, width: 190, height: 70 }, C.pale);
+  box(slide, "Reservas e contratos", { left: 960, top: 235, width: 190, height: 70 }, C.pale);
+  box(slide, "Financeiro e faturamento", { left: 760, top: 330, width: 180, height: 70 }, C.pale);
+  box(slide, "Atendimento e assistência 24h", { left: 960, top: 425, width: 190, height: 70 }, C.pale);
   box(slide, "Processos", { left: 760, top: 520, width: 180, height: 70 }, C.pale);
   notes(slide, "Fonte: enunciado acadêmico, páginas 1 a 3. Produtos, tecnologias e fluxos atuais específicos permanecem como premissas a validar.");
 }
@@ -83,9 +83,9 @@ function notes(slide, text) {
   const slide = base("Arquitetura atual AS IS");
   const nodes = [
     box(slide, "CRM", { left: 80, top: 210, width: 170, height: 85 }),
-    box(slide, "Contratos", { left: 320, top: 210, width: 180, height: 85 }),
-    box(slide, "Financeiro", { left: 570, top: 210, width: 180, height: 85 }),
-    box(slide, "Atendimento", { left: 820, top: 210, width: 180, height: 85 }),
+    box(slide, "Reservas e contratos", { left: 320, top: 210, width: 180, height: 85 }),
+    box(slide, "Financeiro e faturamento", { left: 570, top: 210, width: 180, height: 85 }),
+    box(slide, "Atendimento e assistência 24h", { left: 820, top: 210, width: 180, height: 85 }),
     box(slide, "Processos", { left: 1070, top: 210, width: 150, height: 85 }),
   ];
   for (let i = 0; i < nodes.length - 1; i++) slide.shapes.connect(nodes[i], nodes[i + 1], { kind: "straight", fromSide: "right", toSide: "left", line: { style: "dashed", fill: C.rust, width: 2 }, tail: { type: "arrow", width: "sm", length: "sm" } });
@@ -97,7 +97,7 @@ function notes(slide, text) {
 // 4
 {
   const slide = base("Requisitos prioritários");
-  bullets(slide, ["RF 01 a RF 02: identidade global e contrato sem recadastro", "RF 03: ativação cria cobrança e onboarding sem duplicidade", "RF 04: chamado consulta contrato, serviço e SLA", "RF 05 a RF 07: propagação cadastral, correlação e reprocessamento"], { left: 75, top: 145, width: 700, height: 380 }, 25);
+  bullets(slide, ["RF 01 a RF 02: identidade global e contrato sem recadastro", "RF 03: ativação cria cobrança e preparação de retirada sem duplicidade", "RF 04: chamado consulta contrato, grupo de veículo e SLA", "RF 05 a RF 07: propagação cadastral, correlação e reprocessamento"], { left: 75, top: 145, width: 700, height: 380 }, 25);
   textbox(slide, "Qualidade", { left: 860, top: 145, width: 250, height: 44 }, 28, C.teal, true);
   bullets(slide, ["Interoperabilidade", "Confiabilidade", "Segurança", "Observabilidade", "Manutenibilidade", "Disponibilidade", "Desempenho"], { left: 840, top: 205, width: 330, height: 360 }, 23);
   notes(slide, "Fonte: PLANO_IMPLEMENTACAO_CENARIO_4.md, seção 5, e docs/MATRIZ_RASTREABILIDADE.md.");
@@ -128,11 +128,11 @@ function notes(slide, text) {
 {
   const slide = base("Propriedade dos dados");
   const items = [
-    ["CRM", "Cliente, contato, consentimento e oportunidade"],
-    ["Contracts", "Contrato, itens, vigência, plano e SLA"],
-    ["Finance", "Cobrança, vencimento, pagamento e inadimplência"],
-    ["Support", "Chamado, prioridade, histórico e resolução"],
-    ["Workflow", "Instância, tarefa, responsável, prazo e estado"],
+    ["CRM", "Cliente, contato, consentimento, perfil de locação e oportunidade corporativa"],
+    ["Contracts", "Reserva, contrato de locação, grupo de veículo, vigência, proteções e SLA"],
+    ["Finance", "Pré-autorização, cobrança, fatura, pagamento, caução, multa e inadimplência"],
+    ["Support", "Chamado, assistência, prioridade, histórico e resolução"],
+    ["Workflow", "Instância, tarefa, responsável, prazo e estado operacional"],
     ["Integration", "IDs legados, correlação, outbox, inbox e falhas"],
   ];
   items.forEach(([name, data], i) => {
@@ -145,7 +145,7 @@ function notes(slide, text) {
 
 // 8
 {
-  const slide = base("Fluxo F1 Cliente para contrato");
+  const slide = base("Fluxo F1 Cliente para reserva/contrato");
   const crm = box(slide, "CRM\ncliente elegível", { left: 100, top: 245, width: 220, height: 110 }, C.pale);
   const api = box(slide, "POST\n/contracts/drafts", { left: 430, top: 245, width: 250, height: 110 }, C.navy, C.white);
   const ct = box(slide, "Contracts\nrascunho DRAFT", { left: 800, top: 245, width: 250, height: 110 }, "#E7F2EF");
@@ -158,16 +158,16 @@ function notes(slide, text) {
 
 // 9
 {
-  const slide = base("Fluxo F2 Ativação cobrança e onboarding", "Projeto Aplicado Cenário 4", 36);
+  const slide = base("Fluxo F2 Ativação cobrança e preparação de retirada", "Projeto Aplicado Cenário 4", 36);
   const ct = box(slide, "Contracts\nACTIVE", { left: 80, top: 260, width: 200, height: 100 }, C.pale);
   const outbox = box(slide, "Outbox\nContractActivated", { left: 370, top: 260, width: 260, height: 100 }, C.navy, C.white);
   const finance = box(slide, "Finance\n1 cobrança", { left: 770, top: 180, width: 220, height: 90 }, "#E7F2EF");
-  const workflow = box(slide, "Workflow\n1 onboarding", { left: 770, top: 360, width: 220, height: 90 }, "#E7F2EF");
+  const workflow = box(slide, "Workflow\n1 preparação de retirada", { left: 770, top: 360, width: 220, height: 90 }, "#E7F2EF");
   slide.shapes.connect(ct, outbox, { fromSide: "right", toSide: "left", kind: "straight", line: { style: "solid", fill: C.teal, width: 3 }, tail: { type: "arrow", width: "med", length: "med" } });
   slide.shapes.connect(outbox, finance, { fromSide: "right", toSide: "left", kind: "elbow", line: { style: "solid", fill: C.teal, width: 3 }, tail: { type: "arrow", width: "med", length: "med" } });
   slide.shapes.connect(outbox, workflow, { fromSide: "right", toSide: "left", kind: "elbow", line: { style: "solid", fill: C.teal, width: 3 }, tail: { type: "arrow", width: "med", length: "med" } });
   textbox(slide, "Inbox e restrições únicas impedem efeitos duplicados", { left: 280, top: 530, width: 760, height: 55 }, 26, C.rust, true);
-  notes(slide, "Fonte: docs/INTEGRACOES.md e teste test_f2_ativacao_cria_uma_cobranca_e_um_onboarding.");
+  notes(slide, "Fonte: docs/INTEGRACOES.md e teste test_f2_ativacao_cria_uma_cobranca_e_uma_preparacao_de_retirada.");
 }
 
 // 10
@@ -186,7 +186,7 @@ function notes(slide, text) {
 
 // 11
 {
-  const slide = base("Interoperabilidade e contratos");
+  const slide = base("Interoperabilidade e reservas e contratos");
   bullets(slide, ["UUID global com identificadores legados associados", "JSON UTF 8, UTC ISO 8601 e moeda explícita", "OpenAPI para REST e AsyncAPI para eventos", "Fonte oficial vence; divergência fica auditada", "Mudança incompatível cria uma nova versão"], { left: 95, top: 145, width: 720, height: 410 }, 26);
   box(slide, "eventId\neventType\neventVersion\noccurredAt\ncorrelationId\ncausationId\nproducer\npayload", { left: 900, top: 140, width: 250, height: 390 }, C.navy, C.white);
   textbox(slide, "Envelope obrigatório", { left: 920, top: 555, width: 250, height: 40 }, 23, C.teal, true);
@@ -199,7 +199,7 @@ function notes(slide, text) {
   textbox(slide, "Confiabilidade", { left: 90, top: 145, width: 300, height: 45 }, 27, C.teal, true);
   bullets(slide, ["Outbox e inbox", "Idempotency Key", "Fila de falha e reprocessamento"], { left: 85, top: 210, width: 340, height: 220 }, 22);
   textbox(slide, "Segurança", { left: 475, top: 145, width: 260, height: 45 }, 27, C.teal, true);
-  bullets(slide, ["OIDC simulado e RBAC", "Validação na fronteira", "Dados mínimos em logs e eventos"], { left: 470, top: 210, width: 340, height: 220 }, 22);
+  bullets(slide, ["Tokens locais ou segredo público e RBAC", "Validação na fronteira", "Dados mínimos em logs e eventos"], { left: 470, top: 210, width: 340, height: 220 }, 22);
   textbox(slide, "Observabilidade", { left: 850, top: 145, width: 300, height: 45 }, 27, C.teal, true);
   bullets(slide, ["Correlação ponta a ponta", "Logs JSON e métricas", "Health checks e auditoria"], { left: 845, top: 210, width: 340, height: 220 }, 22);
   textbox(slide, "Falha permanente testada após três tentativas e reprocessamento auditado", { left: 170, top: 505, width: 930, height: 70 }, 26, C.rust, true);
@@ -218,9 +218,9 @@ function notes(slide, text) {
 // 14
 {
   const slide = base("Demonstração e resultados");
-  textbox(slide, "13 testes aprovados", { left: 105, top: 145, width: 380, height: 60 }, 34, C.green, true);
+  textbox(slide, "Suíte ampliada", { left: 105, top: 145, width: 380, height: 60 }, 34, C.green, true);
   textbox(slide, "p95  6,36 ms", { left: 800, top: 145, width: 330, height: 60 }, 34, C.green, true);
-  bullets(slide, ["F1 cria rascunho sem recadastro", "F2 cria uma cobrança e um onboarding", "F3 registra SLA e inicia resolução", "Falha controlada preserva e reconcilia o chamado", "Rastreabilidade reúne auditoria e eventos"], { left: 170, top: 250, width: 900, height: 300 }, 28);
+  bullets(slide, ["F1 cria rascunho sem recadastro", "F2 cria uma cobrança e uma preparação de retirada", "F3 registra SLA e inicia resolução", "Falha controlada preserva e reconcilia o chamado", "Rastreabilidade reúne auditoria e eventos"], { left: 170, top: 250, width: 900, height: 300 }, 28);
   textbox(slide, "Premissas do AS IS seguem para validação com a organização", { left: 250, top: 590, width: 800, height: 42 }, 23, C.rust, true);
   notes(slide, "Fonte: docs/EVIDENCIAS_VALIDACAO.md. Medição local em 13 de setembro de 2026 com 200 consultas de prontidão.");
 }
@@ -229,9 +229,9 @@ function notes(slide, text) {
 {
   const slide = base("Conclusões e próximos passos");
   textbox(slide, "Conclusões", { left: 90, top: 145, width: 430, height: 48 }, 29, C.teal, true);
-  bullets(slide, ["A arquitetura integrou os três fluxos obrigatórios", "Contratos e fronteiras permitem evolução incremental", "Outbox, inbox e correlação tornam falhas recuperáveis"], { left: 85, top: 215, width: 520, height: 255 }, 24);
+  bullets(slide, ["A arquitetura integrou os três fluxos obrigatórios", "Reservas e contratos e fronteiras permitem evolução incremental", "Outbox, inbox e correlação tornam falhas recuperáveis"], { left: 85, top: 215, width: 520, height: 255 }, 24);
   textbox(slide, "Limites e evolução", { left: 700, top: 145, width: 430, height: 48 }, 29, C.teal, true);
-  bullets(slide, ["Validar premissas e interfaces do AS IS", "Conectar OIDC, TLS e sistemas reais por adaptadores", "Automatizar retentativas e sincronizar o prazo do Workflow"], { left: 695, top: 215, width: 500, height: 255 }, 24);
+  bullets(slide, ["Validar premissas e interfaces do AS IS", "Publicar e testar a demo gratuita com dados sintéticos", "Adicionar identidade individual e retentativas com atraso"], { left: 695, top: 215, width: 500, height: 255 }, 24);
   textbox(slide, "Próxima ação: validar a solução com dados, volumes e responsáveis reais", { left: 165, top: 545, width: 950, height: 62 }, 25, C.rust, true);
   notes(slide, "Fonte: relatório técnico, seção 12, e docs/EVOLUCAO_MANUTENCAO.md. Inserir nomes e contribuições individuais antes da submissão.");
 }

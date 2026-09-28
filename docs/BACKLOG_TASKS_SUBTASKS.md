@@ -1,5 +1,7 @@
 # Tasks e subtasks do Cenário 4
 
+> Estado de execução em 27/09/2026: consulte [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
+
 ## Task 1 Descoberta e baseline
 
 - [x] Subtask 1.1 Inventariar sistemas, atores, dados e processos.
@@ -10,9 +12,10 @@
 
 ## Task 2 Requisitos e rastreabilidade
 
+- [x] Subtask 2.0 Adaptar PRD do projeto ao domínio Localiza.
 - [x] Subtask 2.1 Definir requisitos funcionais RF-01 a RF-07.
 - [x] Subtask 2.2 Definir requisitos não funcionais e metas.
-- [x] Subtask 2.3 Ligar requisitos a componentes, contratos, testes e evidências.
+- [x] Subtask 2.3 Ligar requisitos a componentes, contratos técnicos, testes e evidências.
 
 ## Task 3 Arquitetura e decisões
 
@@ -21,8 +24,9 @@
 - [x] Subtask 3.3 Definir propriedade de dados e portas públicas.
 - [x] Subtask 3.4 Comparar opções e registrar a decisão no ADR.
 - [x] Subtask 3.5 Registrar consequências, riscos e critérios de revisão.
+- [x] Subtask 3.6 Registrar DDD e TDD do domínio Localiza.
 
-## Task 4 Contratos e fundação
+## Task 4 Contratos técnicos e fundação
 
 - [x] Subtask 4.1 Criar API REST v1 documentada em OpenAPI.
 - [x] Subtask 4.2 Criar contratos de eventos em AsyncAPI.
@@ -32,9 +36,9 @@
 
 ## Task 5 Fluxos integrados
 
-- [x] Subtask 5.1 Implementar F1, cliente para contrato.
-- [x] Subtask 5.2 Implementar F2, ativação para cobrança e onboarding.
-- [x] Subtask 5.3 Implementar F3, chamado com contrato e SLA.
+- [x] Subtask 5.1 Implementar F1, cliente para reserva/contrato.
+- [x] Subtask 5.2 Implementar F2, ativação para cobrança e preparação de retirada.
+- [x] Subtask 5.3 Implementar F3, chamado com contrato de locação e SLA.
 - [x] Subtask 5.4 Implementar propagação cadastral.
 - [x] Subtask 5.5 Implementar degradação e reconciliação.
 
@@ -50,7 +54,7 @@
 
 - [x] Subtask 7.1 Testar os três fluxos ponta a ponta.
 - [x] Subtask 7.2 Testar reentrega, indisponibilidade e autorização.
-- [x] Subtask 7.3 Testar contratos e fronteiras arquiteturais.
+- [x] Subtask 7.3 Testar contratos técnicos e fronteiras arquiteturais.
 - [x] Subtask 7.4 Criar medição básica de desempenho.
 
 ## Task 8 Entrega acadêmica
@@ -61,6 +65,7 @@
   - [x] Subtask 8.1.3 Criar diagramas de sequência dos três fluxos.
   - [x] Subtask 8.1.4 Revisar AS-IS, TO-BE, integrações, qualidade, evolução e viabilidade.
   - [x] Subtask 8.1.5 Validar OpenAPI, AsyncAPI, exemplos, links e diagramas.
+  - [x] Subtask 8.1.6 Conferir cronograma de entregas do guia na matriz de rastreabilidade.
 - [x] Subtask 8.2 Criar roteiro de demonstração.
 - [x] Subtask 8.3 Criar relatório técnico de 15 a 20 páginas.
 - [x] Subtask 8.4 Criar apresentação técnica.
@@ -69,7 +74,7 @@
 ## Task 9 Revisão final da entrega
 
 - [x] Subtask 9.1 Atualizar o roteiro após estabilizar fluxos e exemplos.
-- [x] Subtask 9.2 Executar testes, contratos e medição de desempenho.
+- [x] Subtask 9.2 Executar testes, contratos técnicos e medição de desempenho.
 - [x] Subtask 9.3 Regenerar e inspecionar o relatório técnico.
 - [x] Subtask 9.4 Regenerar e inspecionar a apresentação.
 - [x] Subtask 9.5 Revisar a entrega contra o guia e atualizar a rastreabilidade.

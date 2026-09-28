@@ -22,3 +22,20 @@ class Contract(Base):
     sla_hours: Mapped[int] = mapped_column(default=8)
     status: Mapped[str] = mapped_column(String(20), default="DRAFT")
     __table_args__ = (UniqueConstraint("customer_id", "service_code", "starts_on", name="uq_contract_business_key"),)
+
+
+class Reservation(Base):
+    __tablename__ = "contracts_reservations"
+    reservation_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    customer_id: Mapped[str] = mapped_column(String(36), index=True)
+    vehicle_group: Mapped[str] = mapped_column(String(50))
+    protection_code: Mapped[str] = mapped_column(String(50))
+    service_code: Mapped[str] = mapped_column(String(80))
+    starts_on: Mapped[date] = mapped_column(Date)
+    ends_on: Mapped[date] = mapped_column(Date)
+    amount: Mapped[Decimal] = mapped_column(Numeric(14, 2))
+    currency: Mapped[str] = mapped_column(String(3), default="BRL")
+    billing_cycle: Mapped[str] = mapped_column(String(20), default="MONTHLY")
+    sla_hours: Mapped[int] = mapped_column(default=8)
+    status: Mapped[str] = mapped_column(String(30), default="REQUESTED")
+    contract_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
