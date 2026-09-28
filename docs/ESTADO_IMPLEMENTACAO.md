@@ -10,7 +10,7 @@ Data: 27/09/2026. Este registro separa o que o código local executa, o que a do
 | Atendimento | Abertura, SLA, atribuição, resolução e reconciliação de elegibilidade | Sem central de atendimento externa |
 | Workflow | Processo e tarefa por evento, proprietário, prazo e transições | Sem motor BPM externo |
 | Integração | Outbox/inbox, correlação, auditoria, despacho, falhas e reprocessamento | Consumidores internos são invocados pelo despachante; RabbitMQ recebe cópia opcional, não entrega aos consumidores |
-| Segurança | Papéis por token local; no modo público, segredo aleatório em variável de ambiente | Sem OIDC/OAuth ou contas individuais; credencial pública compartilhada |
+| Segurança | Papéis por token local; no modo público, segredo aleatório em variável de ambiente; inicialização PostgreSQL ativa RLS e revoga acesso Data API `anon`/`authenticated` às tabelas do protótipo | Sem OIDC/OAuth ou contas individuais; credencial pública compartilhada; RLS ainda não verificada em Supabase real |
 | Observabilidade | Logs, métricas básicas, trilha por correlação e health checks | Sem tracing distribuído ou painel externo |
 | Interface | React/TypeScript com telas e ações dos cinco contextos; build e inspeção local de cadastro aprovados | Falta teste na URL HTTPS pública |
 | Hospedagem | Dockerfile único, `render.yaml`, URL relativa e banco configurável | Contas Render/Supabase e teste HTTPS ainda pendentes |

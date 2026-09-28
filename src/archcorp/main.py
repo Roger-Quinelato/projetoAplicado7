@@ -17,7 +17,7 @@ from archcorp.crm.routes import router as crm_router
 from archcorp.finance.models import Invoice
 from archcorp.finance.service import handle_contract_activated as finance_contract_activated
 from archcorp.finance.routes import router as finance_router
-from archcorp.infrastructure.db import Base, engine, get_session
+from archcorp.infrastructure.db import Base, engine, get_session, protect_public_demo_tables
 from archcorp.integration.models import AuditLog, LegacyIdMapping, OutboxEvent
 from archcorp.integration.service import EventDispatcher, audit
 from archcorp.observability import correlation_id_var, logger, metrics_middleware, render_metrics
@@ -388,7 +388,9 @@ dispatcher = EventDispatcher({
 async def lifespan(_: FastAPI):
     if settings.public_demo and (not settings.demo_access_token or len(settings.demo_access_token) < 24 or settings.demo_access_token.startswith("demo-")):
         raise RuntimeError("PUBLIC_DEMO exige DEMO_ACCESS_TOKEN aleatório com pelo menos 24 caracteres")
-    Base.metadata.create_all(engine)
+    with engine.begin() as connection:
+        Base.metadata.create_all(connection)
+        protect_public_demo_tables(connection)
     yield
 
 
