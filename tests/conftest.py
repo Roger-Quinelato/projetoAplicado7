@@ -1,5 +1,7 @@
 import os
+from pathlib import Path
 
+Path("tmp").mkdir(parents=True, exist_ok=True)
 os.environ["DATABASE_URL"] = "sqlite:///./tmp/test-archcorp.db"
 os.environ.pop("RABBITMQ_URL", None)
 
