@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from sqlalchemy import Boolean, String, Text
+from sqlalchemy import Boolean, String, Text, true
 from sqlalchemy.orm import Mapped, mapped_column
 
 from archcorp.infrastructure.db import Base
@@ -13,6 +13,7 @@ class Customer(Base):
     email: Mapped[str] = mapped_column(String(254), unique=True)
     eligible: Mapped[bool] = mapped_column(Boolean, default=True)
     consent_service: Mapped[bool] = mapped_column(Boolean, default=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
 
 
 class Contact(Base):

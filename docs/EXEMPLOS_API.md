@@ -628,6 +628,11 @@ Content-Type: application/json
 As duas respostas `201 Created` devolvem o identificador gerado (`contactId` ou
 `opportunityId`). Um `customerId` inexistente recebe `404`.
 
+`PATCH /api/v1/crm/opportunities/{opportunityId}` com `{"status": "WON"}` fecha a
+oportunidade. `WON` e `LOST` são finais: uma nova mudança recebe `409` com código
+`INVALID_STATE`. `POST /api/v1/crm/customers/{customerId}/deactivate` inativa o
+cliente sem apagar o histórico; a partir daí ele não origina reserva nem contrato.
+
 ### Identificador legado
 
 ```http

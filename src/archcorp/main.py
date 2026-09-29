@@ -36,15 +36,11 @@ from archcorp.schemas import (
     EXAMPLE_CONTRACT_EVENT_ID,
     EXAMPLE_CONTRACT_ID,
     EXAMPLE_CORRELATION_ID,
-    EXAMPLE_CUSTOMER_RESPONSE,
     EXAMPLE_PENDING_TICKET_RESPONSE,
     EXAMPLE_TICKET_RESPONSE,
     ContractActivationResponse,
     ContractDraftCreate,
     ContractDraftResponse,
-    CustomerCreate,
-    CustomerResponse,
-    CustomerUpdate,
     DemoStateResponse,
     DispatchResponse,
     HealthResponse,
@@ -111,14 +107,6 @@ COMMON_API_ERRORS = {
     403: {
         "description": "Papel sem permissão para a operação.",
         "content": problem_content(problem_example(403, "Papel sem permissão para esta operação", "/api/v1/contracts/drafts")),
-    },
-}
-CUSTOMER_CREATE_RESPONSES = {
-    **COMMON_API_ERRORS,
-    201: {
-        "description": "Cliente criado no CRM com identificador global.",
-        "headers": {"X-Correlation-ID": CORRELATION_RESPONSE_HEADER},
-        "content": {"application/json": {"example": EXAMPLE_CUSTOMER_RESPONSE}},
     },
 }
 CONTRACT_DRAFT_RESPONSES = {
@@ -432,40 +420,6 @@ def ready(session: Session = Depends(get_session)) -> dict:
 )
 def metrics() -> str:
     return render_metrics()
-
-
-@app.post(
-    "/api/v1/crm/customers",
-    status_code=201,
-    response_model=CustomerResponse,
-    tags=["CRM"],
-    dependencies=[Depends(require_roles("commercial", "admin"))],
-    responses=CUSTOMER_CREATE_RESPONSES,
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
-)
-def create_customer(body: CustomerCreate, session: Session = Depends(get_session)) -> dict:
-    customer = customers.create(session, body.model_dump(mode="json"), correlation_id_var.get())
-    return {"customerId": customer.customer_id, "name": customer.name, "email": customer.email, "eligible": customer.eligible,
-            "consentService": customer.consent_service, "legacyId": body.legacyId}
-
-
-@app.patch(
-    "/api/v1/crm/customers/{customer_id}",
-    response_model=CustomerResponse,
-    tags=["CRM"],
-    dependencies=[Depends(require_roles("commercial", "admin"))],
-    responses={
-        404: {"description": "Cliente não encontrado."},
-        409: {"description": "E-mail já cadastrado para outro cliente."},
-    },
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
-)
-def update_customer(customer_id: UUID, body: CustomerUpdate, session: Session = Depends(get_session)) -> dict:
-    customer = customers.update(session, str(customer_id), body.model_dump(exclude_unset=True, mode="json"), correlation_id_var.get())
-    if not customer:
-        raise HTTPException(status_code=404, detail="Cliente não encontrado")
-    return {"customerId": customer.customer_id, "name": customer.name, "email": customer.email, "eligible": customer.eligible,
-            "consentService": customer.consent_service, "legacyId": customers.legacy_id(session, customer.customer_id)}
 
 
 @app.post(

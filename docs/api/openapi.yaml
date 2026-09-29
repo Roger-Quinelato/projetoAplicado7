@@ -65,363 +65,6 @@ paths:
 
                 '
       parameters: []
-  /api/v1/crm/customers:
-    post:
-      tags:
-      - CRM
-      summary: Create Customer
-      operationId: create_customer_api_v1_crm_customers_post
-      security:
-      - HTTPBearer: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CustomerCreate'
-      responses:
-        '201':
-          description: Cliente criado no CRM com identificador global.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CustomerResponse'
-              example:
-                customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
-                name: Cliente Frota Localiza Ltda.
-                email: gestor.frota@cliente-sintetico.example.com
-                eligible: true
-                consentService: true
-                legacyId: WEB-LOCALIZA-1001
-          headers:
-            X-Correlation-ID:
-              description: UUID usado para correlacionar a requisição, os logs e os
-                eventos.
-              schema:
-                type: string
-                format: uuid
-              example: 11111111-1111-4111-8111-111111111111
-        '400':
-          description: Cabeçalho de correlação inválido.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: urn:archcorp:problem:bad-request
-                title: Requisição inválida
-                status: 400
-                detail: X-Correlation-ID deve ser UUID
-                instance: /api/v1/contracts/drafts
-                code: BAD_REQUEST
-                correlationId: 11111111-1111-4111-8111-111111111111
-        '401':
-          description: Token ausente ou inválido.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: urn:archcorp:problem:unauthorized
-                title: Não autenticado
-                status: 401
-                detail: Token ausente ou inválido
-                instance: /api/v1/contracts/drafts
-                code: UNAUTHORIZED
-                correlationId: 11111111-1111-4111-8111-111111111111
-        '403':
-          description: Papel sem permissão para a operação.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: urn:archcorp:problem:forbidden
-                title: Acesso negado
-                status: 403
-                detail: Papel sem permissão para esta operação
-                instance: /api/v1/contracts/drafts
-                code: FORBIDDEN
-                correlationId: 11111111-1111-4111-8111-111111111111
-        '422':
-          description: Entrada inválida.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: urn:archcorp:problem:validation-error
-                title: Entrada inválida
-                status: 422
-                detail:
-                - &id001
-                  type: missing
-                  loc:
-                  - body
-                  - name
-                  msg: Field required
-                  input: {}
-                instance: /api/v1/crm/customers
-                code: VALIDATION_ERROR
-                correlationId: 11111111-1111-4111-8111-111111111111
-                errors:
-                - *id001
-      parameters:
-      - name: X-Correlation-ID
-        in: header
-        required: false
-        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
-        schema:
-          type: string
-          format: uuid
-        example: 11111111-1111-4111-8111-111111111111
-    get:
-      tags:
-      - CRM
-      summary: List Customers
-      operationId: list_customers_api_v1_crm_customers_get
-      security:
-      - HTTPBearer: []
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/CustomerResponse'
-                title: Response List Customers Api V1 Crm Customers Get
-        '401':
-          description: Token ausente ou inválido.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: urn:archcorp:problem:unauthorized
-                title: Não autenticado
-                status: 401
-                detail: Token ausente ou inválido
-                instance: /api/v1/crm/customers
-                code: UNAUTHORIZED
-                correlationId: 11111111-1111-4111-8111-111111111111
-        '403':
-          description: Papel sem permissão para a operação.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: urn:archcorp:problem:forbidden
-                title: Acesso negado
-                status: 403
-                detail: Papel sem permissão para esta operação
-                instance: /api/v1/crm/customers
-                code: FORBIDDEN
-                correlationId: 11111111-1111-4111-8111-111111111111
-      parameters:
-      - &id002
-        name: X-Correlation-ID
-        in: header
-        required: false
-        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
-        schema:
-          type: string
-          format: uuid
-        example: 11111111-1111-4111-8111-111111111111
-  /api/v1/crm/customers/{customer_id}:
-    patch:
-      tags:
-      - CRM
-      summary: Update Customer
-      operationId: update_customer_api_v1_crm_customers__customer_id__patch
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: customer_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-          title: Customer Id
-      - name: X-Correlation-ID
-        in: header
-        required: false
-        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
-        schema:
-          type: string
-          format: uuid
-        example: 11111111-1111-4111-8111-111111111111
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CustomerUpdate'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CustomerResponse'
-        '401':
-          description: Token ausente ou inválido.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: urn:archcorp:problem:unauthorized
-                title: Não autenticado
-                status: 401
-                detail: Token ausente ou inválido
-                instance: /api/v1/crm/customers/{customer_id}
-                code: UNAUTHORIZED
-                correlationId: 11111111-1111-4111-8111-111111111111
-        '403':
-          description: Papel sem permissão para a operação.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: urn:archcorp:problem:forbidden
-                title: Acesso negado
-                status: 403
-                detail: Papel sem permissão para esta operação
-                instance: /api/v1/crm/customers/{customer_id}
-                code: FORBIDDEN
-                correlationId: 11111111-1111-4111-8111-111111111111
-        '404':
-          description: Cliente não encontrado.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: urn:archcorp:problem:not-found
-                title: Recurso não encontrado
-                status: 404
-                detail: Cliente não encontrado
-                instance: /api/v1/crm/customers/{customer_id}
-                code: NOT_FOUND
-                correlationId: 11111111-1111-4111-8111-111111111111
-        '409':
-          description: E-mail já cadastrado para outro cliente.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: urn:archcorp:problem:conflict
-                title: Conflito de estado
-                status: 409
-                detail: E-mail já cadastrado para outro cliente
-                instance: /api/v1/crm/customers/{customer_id}
-                code: CONFLICT
-                correlationId: 11111111-1111-4111-8111-111111111111
-        '422':
-          description: Entrada inválida.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: urn:archcorp:problem:validation-error
-                title: Entrada inválida
-                status: 422
-                detail:
-                - *id001
-                instance: /api/v1/crm/customers/{customer_id}
-                code: VALIDATION_ERROR
-                correlationId: 11111111-1111-4111-8111-111111111111
-                errors:
-                - *id001
-    get:
-      tags:
-      - CRM
-      summary: Get Customer
-      operationId: get_customer_api_v1_crm_customers__customer_id__get
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: customer_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-          title: Customer Id
-      - *id002
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CustomerResponse'
-        '401':
-          description: Token ausente ou inválido.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: urn:archcorp:problem:unauthorized
-                title: Não autenticado
-                status: 401
-                detail: Token ausente ou inválido
-                instance: /api/v1/crm/customers/{customer_id}
-                code: UNAUTHORIZED
-                correlationId: 11111111-1111-4111-8111-111111111111
-        '403':
-          description: Papel sem permissão para a operação.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: urn:archcorp:problem:forbidden
-                title: Acesso negado
-                status: 403
-                detail: Papel sem permissão para esta operação
-                instance: /api/v1/crm/customers/{customer_id}
-                code: FORBIDDEN
-                correlationId: 11111111-1111-4111-8111-111111111111
-        '404':
-          description: Cliente não encontrado.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: urn:archcorp:problem:not-found
-                title: Recurso não encontrado
-                status: 404
-                detail: Cliente não encontrado
-                instance: /api/v1/crm/customers/{customer_id}
-                code: NOT_FOUND
-                correlationId: 11111111-1111-4111-8111-111111111111
-        '422':
-          description: Entrada inválida.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: urn:archcorp:problem:validation-error
-                title: Entrada inválida
-                status: 422
-                detail:
-                - *id001
-                instance: /api/v1/crm/customers/{customer_id}
-                code: VALIDATION_ERROR
-                correlationId: 11111111-1111-4111-8111-111111111111
-                errors:
-                - *id001
   /api/v1/contracts/drafts:
     post:
       tags:
@@ -766,7 +409,13 @@ paths:
                 title: Entrada inválida
                 status: 422
                 detail:
-                - *id001
+                - &id001
+                  type: missing
+                  loc:
+                  - body
+                  - name
+                  msg: Field required
+                  input: {}
                 instance: /api/v1/contracts/{contract_id}/activate
                 code: VALIDATION_ERROR
                 correlationId: 11111111-1111-4111-8111-111111111111
@@ -1138,7 +787,15 @@ paths:
                 code: FORBIDDEN
                 correlationId: 11111111-1111-4111-8111-111111111111
       parameters:
-      - *id002
+      - &id002
+        name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
   /api/v1/support/tickets/{ticket_id}/reconcile:
     post:
       tags:
@@ -2111,6 +1768,473 @@ paths:
                 correlationId: 11111111-1111-4111-8111-111111111111
                 errors:
                 - *id001
+  /api/v1/crm/customers:
+    post:
+      tags:
+      - CRM
+      summary: Create Customer
+      operationId: create_customer_api_v1_crm_customers_post
+      security:
+      - HTTPBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerCreate'
+      responses:
+        '201':
+          description: Cliente criado no CRM com identificador global.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerResponse'
+              example:
+                customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                name: Cliente Frota Localiza Ltda.
+                email: gestor.frota@cliente-sintetico.example.com
+                eligible: true
+                consentService: true
+                active: true
+                legacyId: WEB-LOCALIZA-1001
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/crm/customers
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/crm/customers
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '409':
+          description: E-mail ou identificador legado já cadastrado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:conflict
+                title: Conflito de estado
+                status: 409
+                detail: E-mail ou identificador legado já cadastrado
+                instance: /api/v1/crm/customers
+                code: CONFLICT
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          description: Entrada inválida.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/crm/customers
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
+      parameters:
+      - *id002
+    get:
+      tags:
+      - CRM
+      summary: List Customers
+      operationId: list_customers_api_v1_crm_customers_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: email
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: email
+          - type: 'null'
+          title: Email
+      - name: legacyId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 100
+          - type: 'null'
+          title: Legacyid
+      - name: active
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Active
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 200
+          title: Limit
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+          title: Offset
+      - *id002
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomerResponse'
+                title: Response List Customers Api V1 Crm Customers Get
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/crm/customers
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/crm/customers
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          description: Entrada inválida.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/crm/customers
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
+  /api/v1/crm/customers/{customer_id}:
+    get:
+      tags:
+      - CRM
+      summary: Get Customer
+      operationId: get_customer_api_v1_crm_customers__customer_id__get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: customer_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Customer Id
+      - *id002
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerResponse'
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/crm/customers/{customer_id}
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/crm/customers/{customer_id}
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '404':
+          description: Cliente não encontrado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:not-found
+                title: Recurso não encontrado
+                status: 404
+                detail: Cliente não encontrado
+                instance: /api/v1/crm/customers/{customer_id}
+                code: NOT_FOUND
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          description: Entrada inválida.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/crm/customers/{customer_id}
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
+    patch:
+      tags:
+      - CRM
+      summary: Update Customer
+      operationId: update_customer_api_v1_crm_customers__customer_id__patch
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: customer_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Customer Id
+      - *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerResponse'
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/crm/customers/{customer_id}
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/crm/customers/{customer_id}
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '404':
+          description: Cliente não encontrado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:not-found
+                title: Recurso não encontrado
+                status: 404
+                detail: Cliente não encontrado
+                instance: /api/v1/crm/customers/{customer_id}
+                code: NOT_FOUND
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '409':
+          description: E-mail já cadastrado para outro cliente.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:conflict
+                title: Conflito de estado
+                status: 409
+                detail: E-mail já cadastrado para outro cliente
+                instance: /api/v1/crm/customers/{customer_id}
+                code: CONFLICT
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          description: Entrada inválida.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/crm/customers/{customer_id}
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
+  /api/v1/crm/customers/{customer_id}/deactivate:
+    post:
+      tags:
+      - CRM
+      summary: Deactivate Customer
+      description: Inativa o cliente sem apagar o histórico; cliente inativo não origina
+        reserva nem contrato.
+      operationId: deactivate_customer_api_v1_crm_customers__customer_id__deactivate_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: customer_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Customer Id
+      - *id002
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerResponse'
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/crm/customers/{customer_id}/deactivate
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/crm/customers/{customer_id}/deactivate
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '404':
+          description: Cliente não encontrado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:not-found
+                title: Recurso não encontrado
+                status: 404
+                detail: Cliente não encontrado
+                instance: /api/v1/crm/customers/{customer_id}/deactivate
+                code: NOT_FOUND
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          description: Entrada inválida.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/crm/customers/{customer_id}/deactivate
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/crm/contacts:
     post:
       tags:
@@ -2173,6 +2297,20 @@ paths:
                 detail: Cliente não encontrado
                 instance: /api/v1/crm/contacts
                 code: NOT_FOUND
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '409':
+          description: Contato com este e-mail já cadastrado para o cliente.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:conflict
+                title: Conflito de estado
+                status: 409
+                detail: Contato com este e-mail já cadastrado para o cliente
+                instance: /api/v1/crm/contacts
+                code: CONFLICT
                 correlationId: 11111111-1111-4111-8111-111111111111
         '422':
           description: Entrada inválida.
@@ -2262,6 +2400,269 @@ paths:
                 detail:
                 - *id001
                 instance: /api/v1/crm/contacts
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
+  /api/v1/crm/contacts/{contact_id}:
+    get:
+      tags:
+      - CRM
+      summary: Get Contact
+      operationId: get_contact_api_v1_crm_contacts__contact_id__get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: contact_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Contact Id
+      - *id002
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactResponse'
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/crm/contacts/{contact_id}
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/crm/contacts/{contact_id}
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '404':
+          description: Contato não encontrado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:not-found
+                title: Recurso não encontrado
+                status: 404
+                detail: Contato não encontrado
+                instance: /api/v1/crm/contacts/{contact_id}
+                code: NOT_FOUND
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          description: Entrada inválida.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/crm/contacts/{contact_id}
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
+    patch:
+      tags:
+      - CRM
+      summary: Update Contact
+      operationId: update_contact_api_v1_crm_contacts__contact_id__patch
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: contact_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Contact Id
+      - *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactResponse'
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/crm/contacts/{contact_id}
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/crm/contacts/{contact_id}
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '404':
+          description: Contato não encontrado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:not-found
+                title: Recurso não encontrado
+                status: 404
+                detail: Contato não encontrado
+                instance: /api/v1/crm/contacts/{contact_id}
+                code: NOT_FOUND
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '409':
+          description: Contato com este e-mail já cadastrado para o cliente.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:conflict
+                title: Conflito de estado
+                status: 409
+                detail: Contato com este e-mail já cadastrado para o cliente
+                instance: /api/v1/crm/contacts/{contact_id}
+                code: CONFLICT
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          description: Entrada inválida.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/crm/contacts/{contact_id}
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
+    delete:
+      tags:
+      - CRM
+      summary: Delete Contact
+      operationId: delete_contact_api_v1_crm_contacts__contact_id__delete
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: contact_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Contact Id
+      - *id002
+      responses:
+        '204':
+          description: Successful Response
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/crm/contacts/{contact_id}
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/crm/contacts/{contact_id}
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '404':
+          description: Contato não encontrado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:not-found
+                title: Recurso não encontrado
+                status: 404
+                detail: Contato não encontrado
+                instance: /api/v1/crm/contacts/{contact_id}
+                code: NOT_FOUND
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          description: Entrada inválida.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/crm/contacts/{contact_id}
                 code: VALIDATION_ERROR
                 correlationId: 11111111-1111-4111-8111-111111111111
                 errors:
@@ -2365,6 +2766,18 @@ paths:
             format: uuid
           - type: 'null'
           title: Customerid
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - OPEN
+            - WON
+            - LOST
+            type: string
+          - type: 'null'
+          title: Status
       - *id002
       responses:
         '200':
@@ -2422,11 +2835,11 @@ paths:
                 errors:
                 - *id001
   /api/v1/crm/opportunities/{opportunity_id}:
-    patch:
+    get:
       tags:
       - CRM
-      summary: Update Opportunity
-      operationId: update_opportunity_api_v1_crm_opportunities__opportunity_id__patch
+      summary: Get Opportunity
+      operationId: get_opportunity_api_v1_crm_opportunities__opportunity_id__get
       security:
       - HTTPBearer: []
       parameters:
@@ -2438,12 +2851,6 @@ paths:
           format: uuid
           title: Opportunity Id
       - *id002
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/OpportunityStatus'
       responses:
         '200':
           description: Successful Response
@@ -2492,6 +2899,108 @@ paths:
                 detail: Oportunidade não encontrada
                 instance: /api/v1/crm/opportunities/{opportunity_id}
                 code: NOT_FOUND
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          description: Entrada inválida.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/crm/opportunities/{opportunity_id}
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
+    patch:
+      tags:
+      - CRM
+      summary: Update Opportunity
+      operationId: update_opportunity_api_v1_crm_opportunities__opportunity_id__patch
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: opportunity_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Opportunity Id
+      - *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpportunityUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpportunityResponse'
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/crm/opportunities/{opportunity_id}
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/crm/opportunities/{opportunity_id}
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '404':
+          description: Oportunidade não encontrada.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:not-found
+                title: Recurso não encontrado
+                status: 404
+                detail: Oportunidade não encontrada
+                instance: /api/v1/crm/opportunities/{opportunity_id}
+                code: NOT_FOUND
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '409':
+          description: Oportunidade ganha ou perdida não muda de estado nem é editada.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:conflict
+                title: Conflito de estado
+                status: 409
+                detail: Oportunidade ganha ou perdida não muda de estado nem é editada
+                instance: /api/v1/crm/opportunities/{opportunity_id}
+                code: CONFLICT
                 correlationId: 11111111-1111-4111-8111-111111111111
         '422':
           description: Entrada inválida.
@@ -3964,9 +4473,10 @@ components:
         phone:
           anyOf:
           - type: string
-            maxLength: 30
+            pattern: ^\+[1-9]\d{7,14}$
           - type: 'null'
           title: Phone
+          description: Telefone no formato E.164.
       type: object
       required:
       - customerId
@@ -4014,6 +4524,32 @@ components:
         email: gestora@cliente-sintetico.example.com
         name: Pessoa Gestora Sintética
         phone: '+5531999990000'
+    ContactUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+            maxLength: 150
+            minLength: 2
+          - type: 'null'
+          title: Name
+        email:
+          anyOf:
+          - type: string
+            format: email
+          - type: 'null'
+          title: Email
+        phone:
+          anyOf:
+          - type: string
+            pattern: ^\+[1-9]\d{7,14}$
+          - type: 'null'
+          title: Phone
+          description: Telefone E.164; null remove o telefone.
+      type: object
+      title: ContactUpdate
+      examples:
+      - phone: '+5531988880000'
     ContractActivationResponse:
       properties:
         contractId:
@@ -4204,6 +4740,7 @@ components:
           anyOf:
           - type: string
             maxLength: 100
+            minLength: 1
           - type: 'null'
           title: Legacyid
       type: object
@@ -4236,6 +4773,10 @@ components:
         consentService:
           type: boolean
           title: Consentservice
+        active:
+          type: boolean
+          title: Active
+          default: true
         legacyId:
           anyOf:
           - type: string
@@ -4250,7 +4791,8 @@ components:
       - consentService
       title: CustomerResponse
       examples:
-      - consentService: true
+      - active: true
+        consentService: true
         customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
         eligible: true
         email: gestor.frota@cliente-sintetico.example.com
@@ -4537,6 +5079,7 @@ components:
         notes:
           anyOf:
           - type: string
+            maxLength: 2000
           - type: 'null'
           title: Notes
       type: object
@@ -4587,21 +5130,38 @@ components:
         opportunityId: 17171717-1717-4171-8171-171717171717
         status: OPEN
         title: Renovação de frota 2027
-    OpportunityStatus:
+    OpportunityUpdate:
       properties:
         status:
-          type: string
-          enum:
-          - OPEN
-          - WON
-          - LOST
+          anyOf:
+          - type: string
+            enum:
+            - OPEN
+            - WON
+            - LOST
+          - type: 'null'
           title: Status
+        title:
+          anyOf:
+          - type: string
+            maxLength: 150
+            minLength: 2
+          - type: 'null'
+          title: Title
+        notes:
+          anyOf:
+          - type: string
+            maxLength: 2000
+          - type: 'null'
+          title: Notes
       type: object
-      required:
-      - status
-      title: OpportunityStatus
+      title: OpportunityUpdate
+      description: Altera estado, título ou notas. OPEN pode ir para WON ou LOST;
+        WON e LOST são finais.
       examples:
       - status: WON
+      - notes: Revisar volume
+        title: Renovação de frota 2027 - fase 2
     PaymentInput:
       properties:
         amount:

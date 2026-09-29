@@ -24,7 +24,7 @@ class ContractService:
                 raise IdempotencyConflictError("Idempotency-Key já utilizada com outro contrato")
             return stored.response, True
         customer = self.customers.get(session, data["customerId"])
-        if not customer or not customer.eligible or not customer.consent_service:
+        if not customer or not customer.active or not customer.eligible or not customer.consent_service:
             raise BusinessRuleError("Cliente inexistente ou inelegível")
         contract = Contract(
             customer_id=customer.customer_id, customer_name=customer.name, customer_email=customer.email,

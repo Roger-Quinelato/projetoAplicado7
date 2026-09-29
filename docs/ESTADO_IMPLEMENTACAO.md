@@ -4,7 +4,7 @@ Data: 27/09/2026. Este registro separa o que o código local executa, o que a do
 
 | Área | Existe no repositório | Limite verificado |
 |---|---|---|
-| CRM | Clientes, contatos, oportunidades, elegibilidade e consentimento | Dados sintéticos; sem CRM externo |
+| CRM | Clientes (criação, consulta com filtros e paginação, alteração e inativação), contatos (CRUD) e oportunidades com transições `OPEN` para `WON`/`LOST`; validação, auditoria e matriz de papéis testadas | Dados sintéticos; sem CRM externo; remoção física de cliente não é oferecida |
 | Reservas/contratos | Reserva, rascunho, ativação idempotente, consulta e encerramento | Sem disponibilidade real de frota, assinatura ou preço externo |
 | Financeiro | Primeira fatura por evento, pagamento simulado, saldo e vencimento | Sem PSP, conciliação bancária, nota fiscal ou cobrança real |
 | Atendimento | Abertura, SLA, atribuição, resolução e reconciliação de elegibilidade | Sem central de atendimento externa |

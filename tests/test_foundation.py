@@ -1,11 +1,13 @@
 import importlib.util
+from io import StringIO
 from pathlib import Path
 
+from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
 from sqlalchemy import create_engine, inspect
 
-from archcorp.infrastructure.migrate import BASELINE_REVISION, load_models, upgrade_to_head
+from archcorp.infrastructure.migrate import BASELINE_REVISION, alembic_config, load_models, upgrade_to_head
 
 PROBLEM_FIELDS = {"type", "title", "status", "detail", "instance", "code", "correlationId"}
 
@@ -99,6 +101,16 @@ def test_banco_criado_antes_das_migracoes_recebe_carimbo_sem_recriar_tabelas(tmp
         revision = MigrationContext.configure(connection).get_current_revision()
     assert revision is not None
     assert BASELINE_REVISION <= revision
+
+
+def test_migracoes_geram_sql_valido_para_postgresql():
+    config = alembic_config()
+    config.set_main_option("sqlalchemy.url", "postgresql+psycopg://migracao@localhost/archcorp")
+    config.output_buffer = StringIO()
+    command.upgrade(config, "head", sql=True)
+    sql = config.output_buffer.getvalue()
+    assert "CREATE TABLE crm_customers" in sql
+    assert "ALTER TABLE crm_customers ADD COLUMN active BOOLEAN DEFAULT true NOT NULL" in sql
 
 
 def test_migracoes_sao_aditivas():

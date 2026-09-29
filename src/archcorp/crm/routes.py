@@ -1,21 +1,28 @@
 from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 from sqlalchemy.orm import Session
 
 from archcorp.crm.models import Contact, Customer, Opportunity
-from archcorp.crm.service import CustomerService
+from archcorp.crm.service import MAX_PAGE_SIZE, ContactService, CustomerService, OpportunityService
 from archcorp.infrastructure.db import get_session
-from archcorp.schemas import EXAMPLE_CUSTOMER_ID, CustomerResponse
+from archcorp.observability import correlation_id_var
+from archcorp.schemas import EXAMPLE_CUSTOMER_ID, EXAMPLE_CUSTOMER_RESPONSE, CustomerCreate, CustomerResponse, CustomerUpdate, Name
 from archcorp.security import require_roles
 
 
 router = APIRouter(prefix="/api/v1/crm", tags=["CRM"])
+customers = CustomerService()
+contacts = ContactService()
+opportunities = OpportunityService()
 
+# Matriz de autorização do CRM (docs/TDD_LOCALIZA.md).
+CUSTOMER_READERS = require_roles("commercial", "contracts", "support", "admin")
+CRM_WRITERS = require_roles("commercial", "admin")
 
+PHONE_PATTERN = r"^\+[1-9]\d{7,14}$"
 EXAMPLE_CONTACT = {
     "contactId": "16161616-1616-4161-8161-161616161616",
     "customerId": EXAMPLE_CUSTOMER_ID,
@@ -31,29 +38,61 @@ EXAMPLE_OPPORTUNITY = {
     "notes": "Proposta de 20 veículos compactos",
 }
 CUSTOMER_NOT_FOUND = {404: {"description": "Cliente não encontrado."}}
+CONTACT_NOT_FOUND = {404: {"description": "Contato não encontrado."}}
+OPPORTUNITY_NOT_FOUND = {404: {"description": "Oportunidade não encontrada."}}
 
 
 class ContactInput(BaseModel):
     model_config = ConfigDict(json_schema_extra={"examples": [{k: v for k, v in EXAMPLE_CONTACT.items() if k != "contactId"}]})
 
     customerId: UUID
-    name: str = Field(min_length=2, max_length=150)
+    name: Name
     email: EmailStr
-    phone: str | None = Field(default=None, max_length=30)
+    phone: str | None = Field(default=None, pattern=PHONE_PATTERN, description="Telefone no formato E.164.")
+
+
+class ContactUpdate(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [{"phone": "+5531988880000"}]})
+
+    name: Name | None = None
+    email: EmailStr | None = None
+    phone: str | None = Field(default=None, pattern=PHONE_PATTERN, description="Telefone E.164; null remove o telefone.")
+
+    @model_validator(mode="after")
+    def at_least_one_value(self):
+        provided = self.model_dump(exclude_unset=True)
+        if not provided:
+            raise ValueError("Informe ao menos um campo para atualizar")
+        if provided.get("name", "") is None or provided.get("email", "") is None:
+            raise ValueError("Nome e e-mail do contato não aceitam null")
+        return self
 
 
 class OpportunityInput(BaseModel):
     model_config = ConfigDict(json_schema_extra={"examples": [{"customerId": EXAMPLE_CUSTOMER_ID, "title": EXAMPLE_OPPORTUNITY["title"], "notes": EXAMPLE_OPPORTUNITY["notes"]}]})
 
     customerId: UUID
-    title: str = Field(min_length=2, max_length=150)
-    notes: str | None = None
+    title: Name
+    notes: str | None = Field(default=None, max_length=2000)
 
 
-class OpportunityStatus(BaseModel):
-    model_config = ConfigDict(json_schema_extra={"examples": [{"status": "WON"}]})
+class OpportunityUpdate(BaseModel):
+    """Altera estado, título ou notas. OPEN pode ir para WON ou LOST; WON e LOST são finais."""
 
-    status: Literal["OPEN", "WON", "LOST"]
+    model_config = ConfigDict(json_schema_extra={"examples": [{"status": "WON"}, {"title": "Renovação de frota 2027 - fase 2", "notes": "Revisar volume"}]})
+
+    status: Literal["OPEN", "WON", "LOST"] | None = None
+    title: Name | None = None
+    notes: str | None = Field(default=None, max_length=2000)
+
+    @model_validator(mode="after")
+    def at_least_one_value(self):
+        provided = self.model_dump(exclude_unset=True)
+        if not provided:
+            raise ValueError("Informe ao menos um campo para atualizar")
+        if provided.get("status", "") is None or provided.get("title", "") is None:
+            raise ValueError("Estado e título da oportunidade não aceitam null")
+        return self
 
 
 class ContactResponse(BaseModel):
@@ -76,9 +115,10 @@ class OpportunityResponse(BaseModel):
     notes: str | None
 
 
-def customer_data(item: Customer) -> dict:
+def customer_data(session: Session, item: Customer) -> dict:
     return {"customerId": item.customer_id, "name": item.name, "email": item.email,
-            "eligible": item.eligible, "consentService": item.consent_service}
+            "eligible": item.eligible, "consentService": item.consent_service, "active": item.active,
+            "legacyId": CustomerService.legacy_id(session, item.customer_id)}
 
 
 def contact_data(item: Contact) -> dict:
@@ -91,60 +131,107 @@ def opportunity_data(item: Opportunity) -> dict:
             "title": item.title, "status": item.status, "notes": item.notes}
 
 
-@router.get("/customers", response_model=list[CustomerResponse], dependencies=[Depends(require_roles("commercial", "contracts", "support", "admin"))])
-def list_customers(session: Session = Depends(get_session)) -> list[dict]:
-    return [customer_data(x) for x in session.scalars(select(Customer).order_by(Customer.name).limit(200))]
+@router.post(
+    "/customers",
+    status_code=201,
+    response_model=CustomerResponse,
+    responses={
+        201: {"description": "Cliente criado no CRM com identificador global.",
+              "content": {"application/json": {"example": EXAMPLE_CUSTOMER_RESPONSE}}},
+        409: {"description": "E-mail ou identificador legado já cadastrado."},
+    },
+    dependencies=[Depends(CRM_WRITERS)],
+)
+def create_customer(body: CustomerCreate, session: Session = Depends(get_session)) -> dict:
+    customer = customers.create(session, body.model_dump(mode="json"), correlation_id_var.get())
+    return customer_data(session, customer)
 
 
-@router.get("/customers/{customer_id}", response_model=CustomerResponse, responses=CUSTOMER_NOT_FOUND, dependencies=[Depends(require_roles("commercial", "contracts", "support", "admin"))])
+@router.get("/customers", response_model=list[CustomerResponse], dependencies=[Depends(CUSTOMER_READERS)])
+def list_customers(
+    email: EmailStr | None = None,
+    legacyId: str | None = Query(default=None, max_length=100),
+    active: bool | None = None,
+    limit: int = Query(default=MAX_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
+    offset: int = Query(default=0, ge=0),
+    session: Session = Depends(get_session),
+) -> list[dict]:
+    items = customers.list(session, email=email, legacy_id=legacyId, active=active, limit=limit, offset=offset)
+    return [customer_data(session, x) for x in items]
+
+
+@router.get("/customers/{customer_id}", response_model=CustomerResponse, responses=CUSTOMER_NOT_FOUND, dependencies=[Depends(CUSTOMER_READERS)])
 def get_customer(customer_id: UUID, session: Session = Depends(get_session)) -> dict:
-    item = session.get(Customer, str(customer_id))
-    if not item:
-        raise HTTPException(404, "Cliente não encontrado")
-    return {**customer_data(item), "legacyId": CustomerService.legacy_id(session, item.customer_id)}
+    return customer_data(session, CustomerService.require(session, str(customer_id)))
 
 
-@router.post("/contacts", status_code=201, response_model=ContactResponse, responses=CUSTOMER_NOT_FOUND, dependencies=[Depends(require_roles("commercial", "admin"))])
+@router.patch(
+    "/customers/{customer_id}",
+    response_model=CustomerResponse,
+    responses={**CUSTOMER_NOT_FOUND, 409: {"description": "E-mail já cadastrado para outro cliente."}},
+    dependencies=[Depends(CRM_WRITERS)],
+)
+def update_customer(customer_id: UUID, body: CustomerUpdate, session: Session = Depends(get_session)) -> dict:
+    customer = customers.update(session, str(customer_id), body.model_dump(exclude_unset=True, mode="json"), correlation_id_var.get())
+    if not customer:
+        raise HTTPException(status_code=404, detail="Cliente não encontrado")
+    return customer_data(session, customer)
+
+
+@router.post("/customers/{customer_id}/deactivate", response_model=CustomerResponse, responses=CUSTOMER_NOT_FOUND, dependencies=[Depends(CRM_WRITERS)])
+def deactivate_customer(customer_id: UUID, session: Session = Depends(get_session)) -> dict:
+    """Inativa o cliente sem apagar o histórico; cliente inativo não origina reserva nem contrato."""
+    return customer_data(session, customers.deactivate(session, str(customer_id), correlation_id_var.get()))
+
+
+@router.post("/contacts", status_code=201, response_model=ContactResponse,
+             responses={**CUSTOMER_NOT_FOUND, 409: {"description": "Contato com este e-mail já cadastrado para o cliente."}},
+             dependencies=[Depends(CRM_WRITERS)])
 def create_contact(body: ContactInput, session: Session = Depends(get_session)) -> dict:
-    if not session.get(Customer, str(body.customerId)):
-        raise HTTPException(404, "Cliente não encontrado")
-    item = Contact(customer_id=str(body.customerId), name=body.name, email=str(body.email), phone=body.phone)
-    session.add(item)
-    session.commit()
-    return contact_data(item)
+    return contact_data(contacts.create(session, body.model_dump(mode="json"), correlation_id_var.get()))
 
 
-@router.get("/contacts", response_model=list[ContactResponse], dependencies=[Depends(require_roles("commercial", "admin"))])
+@router.get("/contacts", response_model=list[ContactResponse], dependencies=[Depends(CRM_WRITERS)])
 def list_contacts(customerId: UUID | None = None, session: Session = Depends(get_session)) -> list[dict]:
-    query = select(Contact).order_by(Contact.name).limit(200)
-    if customerId:
-        query = query.where(Contact.customer_id == str(customerId))
-    return [contact_data(x) for x in session.scalars(query)]
+    return [contact_data(x) for x in contacts.list(session, str(customerId) if customerId else None)]
 
 
-@router.post("/opportunities", status_code=201, response_model=OpportunityResponse, responses=CUSTOMER_NOT_FOUND, dependencies=[Depends(require_roles("commercial", "admin"))])
+@router.get("/contacts/{contact_id}", response_model=ContactResponse, responses=CONTACT_NOT_FOUND, dependencies=[Depends(CRM_WRITERS)])
+def get_contact(contact_id: UUID, session: Session = Depends(get_session)) -> dict:
+    return contact_data(contacts.get(session, str(contact_id)))
+
+
+@router.patch("/contacts/{contact_id}", response_model=ContactResponse,
+              responses={**CONTACT_NOT_FOUND, 409: {"description": "Contato com este e-mail já cadastrado para o cliente."}},
+              dependencies=[Depends(CRM_WRITERS)])
+def update_contact(contact_id: UUID, body: ContactUpdate, session: Session = Depends(get_session)) -> dict:
+    return contact_data(contacts.update(session, str(contact_id), body.model_dump(exclude_unset=True, mode="json"), correlation_id_var.get()))
+
+
+@router.delete("/contacts/{contact_id}", status_code=204, response_class=Response, responses=CONTACT_NOT_FOUND, dependencies=[Depends(CRM_WRITERS)])
+def delete_contact(contact_id: UUID, session: Session = Depends(get_session)) -> Response:
+    contacts.delete(session, str(contact_id), correlation_id_var.get())
+    return Response(status_code=204)
+
+
+@router.post("/opportunities", status_code=201, response_model=OpportunityResponse, responses=CUSTOMER_NOT_FOUND, dependencies=[Depends(CRM_WRITERS)])
 def create_opportunity(body: OpportunityInput, session: Session = Depends(get_session)) -> dict:
-    if not session.get(Customer, str(body.customerId)):
-        raise HTTPException(404, "Cliente não encontrado")
-    item = Opportunity(customer_id=str(body.customerId), title=body.title, notes=body.notes)
-    session.add(item)
-    session.commit()
-    return opportunity_data(item)
+    return opportunity_data(opportunities.create(session, body.model_dump(mode="json"), correlation_id_var.get()))
 
 
-@router.get("/opportunities", response_model=list[OpportunityResponse], dependencies=[Depends(require_roles("commercial", "admin"))])
-def list_opportunities(customerId: UUID | None = None, session: Session = Depends(get_session)) -> list[dict]:
-    query = select(Opportunity).order_by(Opportunity.title).limit(200)
-    if customerId:
-        query = query.where(Opportunity.customer_id == str(customerId))
-    return [opportunity_data(x) for x in session.scalars(query)]
+@router.get("/opportunities", response_model=list[OpportunityResponse], dependencies=[Depends(CRM_WRITERS)])
+def list_opportunities(customerId: UUID | None = None, status: Literal["OPEN", "WON", "LOST"] | None = None,
+                       session: Session = Depends(get_session)) -> list[dict]:
+    return [opportunity_data(x) for x in opportunities.list(session, str(customerId) if customerId else None, status)]
 
 
-@router.patch("/opportunities/{opportunity_id}", response_model=OpportunityResponse, responses={404: {"description": "Oportunidade não encontrada."}}, dependencies=[Depends(require_roles("commercial", "admin"))])
-def update_opportunity(opportunity_id: UUID, body: OpportunityStatus, session: Session = Depends(get_session)) -> dict:
-    item = session.get(Opportunity, str(opportunity_id))
-    if not item:
-        raise HTTPException(404, "Oportunidade não encontrada")
-    item.status = body.status
-    session.commit()
-    return opportunity_data(item)
+@router.get("/opportunities/{opportunity_id}", response_model=OpportunityResponse, responses=OPPORTUNITY_NOT_FOUND, dependencies=[Depends(CRM_WRITERS)])
+def get_opportunity(opportunity_id: UUID, session: Session = Depends(get_session)) -> dict:
+    return opportunity_data(opportunities.get(session, str(opportunity_id)))
+
+
+@router.patch("/opportunities/{opportunity_id}", response_model=OpportunityResponse,
+              responses={**OPPORTUNITY_NOT_FOUND, 409: {"description": "Oportunidade ganha ou perdida não muda de estado nem é editada."}},
+              dependencies=[Depends(CRM_WRITERS)])
+def update_opportunity(opportunity_id: UUID, body: OpportunityUpdate, session: Session = Depends(get_session)) -> dict:
+    return opportunity_data(opportunities.update(session, str(opportunity_id), body.model_dump(exclude_unset=True), correlation_id_var.get()))
