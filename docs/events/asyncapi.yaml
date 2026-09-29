@@ -2,7 +2,12 @@ asyncapi: 3.0.0
 info:
   title: Eventos Localiza Cenário 4
   version: 1.0.0
-  description: Contratos de eventos da outbox. O protótipo executa consumidores internos no despacho e pode publicar uma cópia no RabbitMQ local; não consome do broker.
+  description: >-
+    Contratos de eventos da outbox. O protótipo executa consumidores internos no
+    despacho e pode publicar uma cópia no RabbitMQ local, na exchange topic
+    `archcorp.events`, com routing key igual ao `eventType`. O protótipo não
+    consome do broker; as operações `receive` descrevem os consumidores internos
+    chamados pelo despachante, cada um com deduplicação por `eventId` na inbox.
 servers:
   localRabbitMQ:
     host: rabbitmq:5672
@@ -10,76 +15,115 @@ servers:
 channels:
   contractActivated:
     address: ContractActivated.v1
+    bindings:
+      $ref: '#/components/channelBindings/archcorpEvents'
     messages:
       contractActivated:
         $ref: '#/components/messages/ContractActivated'
   ticketOpened:
     address: TicketOpened.v1
+    bindings:
+      $ref: '#/components/channelBindings/archcorpEvents'
     messages:
       ticketOpened:
         $ref: '#/components/messages/TicketOpened'
   customerUpdated:
     address: CustomerUpdated.v1
+    bindings:
+      $ref: '#/components/channelBindings/archcorpEvents'
     messages:
       customerUpdated:
         $ref: '#/components/messages/CustomerUpdated'
   ticketEntitlementReconciled:
     address: TicketEntitlementReconciled.v1
+    bindings:
+      $ref: '#/components/channelBindings/archcorpEvents'
     messages:
       ticketEntitlementReconciled:
         $ref: '#/components/messages/TicketEntitlementReconciled'
   ticketResolved:
     address: TicketResolved.v1
+    bindings:
+      $ref: '#/components/channelBindings/archcorpEvents'
     messages:
       ticketResolved:
         $ref: '#/components/messages/TicketResolved'
 operations:
   publishContractActivated:
     action: send
+    summary: 'Publicado pelo contexto `contracts` na outbox transacional.'
     channel:
       $ref: '#/channels/contractActivated'
   receiveContractActivated:
     action: receive
+    summary: 'Consumidores: `finance` (primeira fatura) e `workflow-preparacao-retirada` (processo ONBOARDING).'
     channel:
       $ref: '#/channels/contractActivated'
   publishTicketOpened:
     action: send
+    summary: 'Publicado pelo contexto `support` na outbox transacional.'
     channel:
       $ref: '#/channels/ticketOpened'
   receiveTicketOpened:
     action: receive
+    summary: 'Consumidor: `workflow-ticket-resolution` (processo TICKET_RESOLUTION).'
     channel:
       $ref: '#/channels/ticketOpened'
   publishCustomerUpdated:
     action: send
+    summary: 'Publicado pelo contexto `crm` na outbox transacional.'
     channel:
       $ref: '#/channels/customerUpdated'
   receiveCustomerUpdated:
     action: receive
+    summary: 'Consumidor: `contracts-customer-projection` (projeção de nome e e-mail nos contratos).'
     channel:
       $ref: '#/channels/customerUpdated'
   publishTicketEntitlementReconciled:
     action: send
+    summary: 'Publicado pelo contexto `support` na outbox transacional.'
     channel:
       $ref: '#/channels/ticketEntitlementReconciled'
   receiveTicketEntitlementReconciled:
     action: receive
+    summary: 'Consumidor: `workflow-ticket-entitlement` (ajuste de prazo ou cancelamento do processo).'
     channel:
       $ref: '#/channels/ticketEntitlementReconciled'
   publishTicketResolved:
     action: send
+    summary: 'Publicado pelo contexto `support` na outbox transacional.'
     channel:
       $ref: '#/channels/ticketResolved'
   receiveTicketResolved:
     action: receive
+    summary: 'Consumidor: `workflow-ticket-resolution-complete` (conclusão do processo e das tarefas).'
     channel:
       $ref: '#/channels/ticketResolved'
 components:
+  channelBindings:
+    archcorpEvents:
+      amqp:
+        is: routingKey
+        exchange:
+          name: archcorp.events
+          type: topic
+          durable: true
+          autoDelete: false
+          vhost: /
+        bindingVersion: 0.3.0
+  messageBindings:
+    persistentJson:
+      amqp:
+        contentEncoding: utf-8
+        messageType: event
+        bindingVersion: 0.3.0
   messages:
     ContractActivated:
       name: ContractActivated.v1
       title: Contrato ativado
       contentType: application/json
+      bindings:
+        $ref: '#/components/messageBindings/persistentJson'
       payload:
         allOf:
           - $ref: '#/components/schemas/EventEnvelope'
@@ -114,6 +158,8 @@ components:
       name: TicketOpened.v1
       title: Chamado aberto
       contentType: application/json
+      bindings:
+        $ref: '#/components/messageBindings/persistentJson'
       payload:
         allOf:
           - $ref: '#/components/schemas/EventEnvelope'
@@ -147,6 +193,8 @@ components:
       name: CustomerUpdated.v1
       title: Cliente atualizado
       contentType: application/json
+      bindings:
+        $ref: '#/components/messageBindings/persistentJson'
       payload:
         allOf:
           - $ref: '#/components/schemas/EventEnvelope'
@@ -174,6 +222,8 @@ components:
       name: TicketEntitlementReconciled.v1
       title: Elegibilidade do chamado reconciliada
       contentType: application/json
+      bindings:
+        $ref: '#/components/messageBindings/persistentJson'
       payload:
         allOf:
           - $ref: '#/components/schemas/EventEnvelope'
@@ -184,6 +234,7 @@ components:
               payload: { $ref: '#/components/schemas/TicketStatusPayload' }
       examples:
         - name: ticketEntitlementReconciled
+          summary: Chamado pendente reconciliado após Contracts voltar a responder
           payload:
             eventId: aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa
             eventType: TicketEntitlementReconciled.v1
@@ -206,6 +257,8 @@ components:
       name: TicketResolved.v1
       title: Chamado resolvido
       contentType: application/json
+      bindings:
+        $ref: '#/components/messageBindings/persistentJson'
       payload:
         allOf:
           - $ref: '#/components/schemas/EventEnvelope'
@@ -216,6 +269,7 @@ components:
               payload: { $ref: '#/components/schemas/TicketStatusPayload' }
       examples:
         - name: ticketResolved
+          summary: Chamado resolvido encerra o processo de resolução
           payload:
             eventId: aaaaaaaa-2222-4222-8222-aaaaaaaaaaaa
             eventType: TicketResolved.v1

@@ -86,6 +86,8 @@ class CustomerCreate(BaseModel):
 
 
 class CustomerUpdate(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [{"name": "Cliente Frota Sintética Atualizada", "consentService": True}]})
+
     name: str | None = Field(default=None, min_length=2, max_length=150)
     email: EmailStr | None = None
     eligible: bool | None = None
@@ -151,6 +153,8 @@ class ApiModel(BaseModel):
 
 
 class CustomerResponse(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [EXAMPLE_CUSTOMER_RESPONSE]})
+
     customerId: UUID
     name: str
     email: EmailStr
@@ -177,6 +181,26 @@ class LegacyIdResponse(BaseModel):
     globalId: UUID
     sourceSystem: str
     legacyId: str
+
+
+class HealthResponse(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [{"status": "UP", "database": "UP"}]})
+
+    status: Literal["UP"]
+    database: Literal["UP"] | None = None
+
+
+class DemoStateResponse(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [{
+        "customers": 3, "contracts": 2, "invoices": 1, "tickets": 1, "processes": 2, "legacyMappings": 3,
+    }]})
+
+    customers: int
+    contracts: int
+    invoices: int
+    tickets: int
+    processes: int
+    legacyMappings: int
 
 
 class ContractDraftResponse(BaseModel):

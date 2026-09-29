@@ -9,7 +9,7 @@ from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from archcorp.contracts.models import Contract, Reservation
-from archcorp.contracts.routes import ReservationInput, reservation_data, router as contracts_router
+from archcorp.contracts.routes import ReservationDraftResponse, ReservationInput, ReservationResponse, reservation_data, router as contracts_router
 from archcorp.contracts.service import ContractService
 from archcorp.crm.models import Customer
 from archcorp.crm.service import CustomerService
@@ -26,6 +26,7 @@ from archcorp.finance.service import handle_contract_activated as finance_contra
 from archcorp.finance.routes import router as finance_router
 from archcorp.infrastructure.db import engine, get_session, protect_public_demo_tables
 from archcorp.infrastructure.migrate import upgrade_to_head
+from archcorp.exceptions import BusinessRuleError
 from archcorp.integration.models import AuditLog, LegacyIdMapping, OutboxEvent
 from archcorp.integration.service import EventDispatcher, LegacyIdService, audit
 from archcorp.observability import correlation_id_var, logger, metrics_middleware, render_metrics
@@ -44,7 +45,9 @@ from archcorp.schemas import (
     CustomerCreate,
     CustomerResponse,
     CustomerUpdate,
+    DemoStateResponse,
     DispatchResponse,
+    HealthResponse,
     LegacyIdResponse,
     EntitlementResponse,
     FailureResponse,
@@ -401,12 +404,17 @@ async def correlation_middleware(request: Request, call_next):
         correlation_id_var.reset(token)
 
 
-@app.get("/health/live", tags=["Operação"])
+@app.get("/health/live", response_model=HealthResponse, response_model_exclude_none=True, tags=["Operação"])
 def live() -> dict:
     return {"status": "UP"}
 
 
-@app.get("/health/ready", tags=["Operação"])
+@app.get(
+    "/health/ready",
+    response_model=HealthResponse,
+    tags=["Operação"],
+    responses={503: {"description": "Banco indisponível."}},
+)
 def ready(session: Session = Depends(get_session)) -> dict:
     try:
         session.execute(text("SELECT 1"))
@@ -415,7 +423,13 @@ def ready(session: Session = Depends(get_session)) -> dict:
         raise HTTPException(status_code=503, detail="Banco indisponível") from exc
 
 
-@app.get("/metrics", response_class=PlainTextResponse, tags=["Operação"])
+@app.get(
+    "/metrics",
+    response_class=PlainTextResponse,
+    tags=["Operação"],
+    responses={200: {"description": "Contadores e latência no formato de texto do Prometheus.",
+                     "content": {"text/plain": {"example": "archcorp_requests_total{operation=\"GET_/health/live\",status=\"200\"} 1\n"}}}},
+)
 def metrics() -> str:
     return render_metrics()
 
@@ -435,12 +449,23 @@ def create_customer(body: CustomerCreate, session: Session = Depends(get_session
             "consentService": customer.consent_service, "legacyId": body.legacyId}
 
 
-@app.patch("/api/v1/crm/customers/{customer_id}", tags=["CRM"], dependencies=[Depends(require_roles("commercial", "admin"))])
+@app.patch(
+    "/api/v1/crm/customers/{customer_id}",
+    response_model=CustomerResponse,
+    tags=["CRM"],
+    dependencies=[Depends(require_roles("commercial", "admin"))],
+    responses={
+        404: {"description": "Cliente não encontrado."},
+        409: {"description": "E-mail já cadastrado para outro cliente."},
+    },
+    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
+)
 def update_customer(customer_id: UUID, body: CustomerUpdate, session: Session = Depends(get_session)) -> dict:
     customer = customers.update(session, str(customer_id), body.model_dump(exclude_unset=True, mode="json"), correlation_id_var.get())
     if not customer:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
-    return {"customerId": customer.customer_id, "name": customer.name, "email": customer.email}
+    return {"customerId": customer.customer_id, "name": customer.name, "email": customer.email, "eligible": customer.eligible,
+            "consentService": customer.consent_service, "legacyId": customers.legacy_id(session, customer.customer_id)}
 
 
 @app.post(
@@ -616,12 +641,22 @@ def operation_trace(correlation_id: UUID, session: Session = Depends(get_session
     return {"correlationId": correlation_value, "audit": [{"occurredAt": a.occurred_at, "module": a.module, "operation": a.operation, "result": a.result, "entityId": a.entity_id, "details": a.details} for a in entries], "events": [{"eventId": e.event_id, "eventType": e.event_type, "status": e.status, "attempts": e.attempts} for e in events]}
 
 
-@app.get("/api/v1/demo/state", tags=["Demonstração"], dependencies=[Depends(require_roles("admin"))])
+@app.get("/api/v1/demo/state", response_model=DemoStateResponse, tags=["Demonstração"], dependencies=[Depends(require_roles("admin"))])
 def demo_state(session: Session = Depends(get_session)) -> dict:
     return {"customers": session.query(Customer).count(), "contracts": session.query(Contract).count(), "invoices": session.query(Invoice).count(), "tickets": session.query(Ticket).count(), "processes": session.query(ProcessInstance).count(), "legacyMappings": session.query(LegacyIdMapping).count()}
 
 
-@app.post("/api/v1/contracts/reservations/{reservation_id}/draft", tags=["Reservas e contratos"], dependencies=[Depends(require_roles("commercial", "contracts", "admin"))])
+@app.post(
+    "/api/v1/contracts/reservations/{reservation_id}/draft",
+    response_model=ReservationDraftResponse,
+    tags=["Reservas e contratos"],
+    responses={
+        200: {"headers": IDEMPOTENCY_RESPONSE_HEADERS},
+        404: {"description": "Reserva não encontrada."},
+        409: {"description": "Idempotency-Key reutilizada com outro contrato."},
+        422: {"description": "Cliente inelegível, sem consentimento ou entrada inválida."},
+    },
+    dependencies=[Depends(require_roles("commercial", "contracts", "admin"))])
 def draft_from_reservation(reservation_id: UUID, response: Response,
                            idempotency_key: str = Header(alias="Idempotency-Key"),
                            session: Session = Depends(get_session)) -> dict:
@@ -644,13 +679,22 @@ def draft_from_reservation(reservation_id: UUID, response: Response,
     return {"reservationId": reservation.reservation_id, "contract": result}
 
 
-@app.post("/api/v1/contracts/reservations", status_code=201, tags=["Reservas e contratos"], dependencies=[Depends(require_roles("commercial", "contracts", "admin"))])
+@app.post(
+    "/api/v1/contracts/reservations",
+    status_code=201,
+    response_model=ReservationResponse,
+    tags=["Reservas e contratos"],
+    responses={
+        404: {"description": "Cliente não encontrado."},
+        422: {"description": "Cliente inelegível, sem consentimento ou datas fora de ordem."},
+    },
+    dependencies=[Depends(require_roles("commercial", "contracts", "admin"))])
 def create_reservation(body: ReservationInput, session: Session = Depends(get_session)) -> dict:
     customer = session.get(Customer, str(body.customerId))
     if not customer:
         raise HTTPException(404, "Cliente não encontrado")
     if not customer.eligible or not customer.consent_service:
-        raise HTTPException(422, "Cliente inelegível ou sem consentimento")
+        raise BusinessRuleError("Cliente inelegível ou sem consentimento")
     item = Reservation(customer_id=str(body.customerId), vehicle_group=body.vehicleGroup,
                        protection_code=body.protectionCode, service_code=body.serviceCode,
                        starts_on=body.startsOn, ends_on=body.endsOn, amount=body.amount,

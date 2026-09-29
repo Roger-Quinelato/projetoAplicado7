@@ -19,7 +19,7 @@
 | PAD-01 | Seleção e justificativa do estilo | ADR-001 | Opções, consequências e critérios de revisão | Atendido |
 | INT-01 | Pelo menos três integrações detalhadas | `docs/INTEGRACOES.md` e `docs/arquitetura/FLUXOS_INTEGRACAO.md` | F1, F2, F3 e ramificações alternativas | Atendido |
 | CORP-01 | Papel dos sistemas corporativos | AS-IS e TO-BE | Tabelas de responsabilidade | Atendido |
-| INTEROP-01 | Padronização, contratos técnicos, IDs, sincronização e inconsistência | OpenAPI, AsyncAPI, `docs/EXEMPLOS_API.md` e plano | Testes de contrato, esquemas de resposta, UUID e exemplos F1-F3 | Atendido |
+| INTEROP-01 | Padronização, contratos técnicos, IDs, sincronização e inconsistência | OpenAPI, AsyncAPI, `docs/EXEMPLOS_API.md` e plano | `test_openapi_valido_com_exemplos_e_erros_problem_json`, `test_exemplos_asyncapi_validam_contra_os_schemas` e `test_envelopes_publicados_validam_contra_asyncapi` | Atendido |
 | ERR-01 | Contrato único de erro | `src/archcorp/errors.py`, `ProblemDetails` no OpenAPI e seção "Contrato de erro" em `docs/INTEGRACOES.md` | `test_contrato_de_erro_problem_json_para_status_comuns` e `test_conflitos_de_unicidade_retornam_409_e_nao_500` | Atendido |
 | DATA-01 | Dados sintéticos e migração aditiva | `docs/DADOS_SINTETICOS.md`, `scripts/seed_sintetico.py`, ADR-002 e migrações Alembic | `test_carga_sintetica_e_idempotente`, `test_migracoes_criam_esquema_sem_divergencia_dos_modelos` e `test_migracoes_sao_aditivas` | Atendido em SQLite; PostgreSQL publicado pendente |
 | QUA-01 | Pelo menos cinco atributos de qualidade | `docs/ATRIBUTOS_QUALIDADE.md` | Matriz com nove atributos | Atendido |
@@ -27,7 +27,7 @@
 | NEG-01 | Público, problema, valor, benefícios e viabilidade | `docs/VISAO_NEGOCIO.md` | Revisão do eixo de empreendedorismo | Atendido |
 | DEMO-01 | Três fluxos funcionando | API e `scripts/demo.ps1` | Testes F1, F2 e F3 | Atendido |
 | DOC-01 | Diagramas atual e proposto, componentes, integração e comunicação | arquivos em `docs/arquitetura` e relatório | Sete blocos Mermaid renderizados sem erro e figuras do relatório inspecionadas | Atendido |
-| DOC-02 | APIs e exemplos de requisição e resposta | `docs/api/openapi.yaml`, `docs/events/asyncapi.yaml` e `docs/EXEMPLOS_API.md` | Parse dos contratos, igualdade com `app.openapi()` e testes automatizados | Atendido |
+| DOC-02 | APIs e exemplos de requisição e resposta | `docs/api/openapi.yaml` (gerado por `tools/export_openapi.py`), `docs/events/asyncapi.yaml` e `docs/EXEMPLOS_API.md` | Igualdade com `app.openapi()`, validação OpenAPI 3.1, exemplo em toda resposta 2xx JSON, erros em problem+json e exemplos AsyncAPI validados contra os schemas | Atendido |
 | DOC-03 | Relatório técnico de 15 a 20 páginas | `output/Relatorio_Tecnico_Cenario_4.docx` | 18 páginas renderizadas e inspecionadas integralmente | Atendido; regenerar após revisão Localiza |
 | DOC-04 | Apresentação técnica | `output/Apresentacao_Cenario_4.pptx` | Pacote validado e 15 slides renderizados e inspecionados | Atendido; regenerar após revisão Localiza |
 | SEC-01 | OIDC/OAuth 2.0, papéis e privacidade | adaptador bearer local, RBAC e minimização | teste 403 e revisão de payload/log | Atendido no escopo simulado |

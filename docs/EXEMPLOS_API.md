@@ -366,11 +366,11 @@ Resposta `200 OK`:
 }
 ```
 
-O reprocessamento preserva o número anterior de tentativas na auditoria. Ele altera
-o estado de entrega, mas não zera o contador acumulado nem desativa inbox,
-idempotência ou restrições de negócio. Portanto, uma nova falha após o
-reprocessamento devolve o evento imediatamente a `FAILED`; uma nova janela de três
-tentativas exigiria uma mudança explícita na política e na implementação.
+O reprocessamento registra o número anterior de tentativas na auditoria
+(`previousAttempts`), zera o contador `attempts` e devolve o evento a `PENDING`.
+O evento ganha uma nova janela de três tentativas. Inbox, idempotência e restrições
+de negócio continuam ativas, portanto consumidores que já processaram o `eventId`
+não repetem o efeito.
 
 Contrato desconhecido na ativação, resposta `404`:
 
@@ -561,6 +561,90 @@ X-Correlation-ID: 11111111-1111-4111-8111-111111111111
 Se a elegibilidade for confirmada, a resposta `200 OK` muda o estado para `OPEN`,
 preenche `slaHours` e recalcula `dueAt`. Se a combinação continuar inelegível, o
 estado passa para `REJECTED_ENTITLEMENT` e os campos de SLA permanecem nulos.
+
+## Operações complementares
+
+Estas operações apoiam os fluxos e seguem os mesmos cabeçalhos comuns. O OpenAPI
+traz o schema e um exemplo de resposta para cada uma.
+
+### Reserva e rascunho a partir da reserva
+
+```http
+POST /api/v1/contracts/reservations HTTP/1.1
+Authorization: Bearer demo-admin
+Content-Type: application/json
+X-Correlation-ID: 11111111-1111-4111-8111-111111111111
+
+{
+  "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "vehicleGroup": "SUV-COMPACTO",
+  "protectionCode": "BASICA",
+  "serviceCode": "RENTAL-FLEX",
+  "startsOn": "2027-01-04",
+  "endsOn": "2027-01-08",
+  "amount": 750.00,
+  "currency": "BRL",
+  "billingCycle": "ONCE",
+  "slaHours": 8
+}
+```
+
+Resposta `201 Created` com `reservationId`, os mesmos campos e `status`
+`REQUESTED`. Um cliente sem consentimento recebe `422` com código
+`BUSINESS_RULE_VIOLATION`.
+
+`POST /api/v1/contracts/reservations/{reservationId}/draft` com
+`Idempotency-Key` cria o rascunho do contrato usando os dados da reserva e devolve
+`{"reservationId": "...", "contract": {...}}`. A reserva passa a `DRAFTED` e
+acompanha a ativação (`ACTIVE`) e o encerramento (`CLOSED`) do contrato.
+
+### Contatos e oportunidades do CRM
+
+```http
+POST /api/v1/crm/contacts HTTP/1.1
+Authorization: Bearer demo-admin
+Content-Type: application/json
+
+{
+  "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "name": "Pessoa Gestora Sintética",
+  "email": "gestora@cliente-sintetico.example.com",
+  "phone": "+5531999990000"
+}
+```
+
+```http
+POST /api/v1/crm/opportunities HTTP/1.1
+Authorization: Bearer demo-admin
+Content-Type: application/json
+
+{
+  "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "title": "Renovação de frota 2027",
+  "notes": "Proposta de 20 veículos compactos"
+}
+```
+
+As duas respostas `201 Created` devolvem o identificador gerado (`contactId` ou
+`opportunityId`). Um `customerId` inexistente recebe `404`.
+
+### Identificador legado
+
+```http
+GET /api/v1/integration/legacy-ids/CRM/WEB-LOCALIZA-1001 HTTP/1.1
+Authorization: Bearer demo-admin
+```
+
+Resposta `200 OK`:
+
+```json
+{
+  "entityType": "customer",
+  "globalId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "sourceSystem": "CRM",
+  "legacyId": "WEB-LOCALIZA-1001"
+}
+```
 
 ## Consultar a correlação
 

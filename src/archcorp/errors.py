@@ -159,10 +159,7 @@ def install_problem_openapi(app: FastAPI) -> None:
             schemas.pop(name, None)
         for path, operations in schema.get("paths", {}).items():
             for operation in operations.values():
-                response = operation.get("responses", {}).get("422")
-                if response and "application/json" in response.get("content", {}):
-                    response["description"] = "Entrada inválida."
-                    response["content"] = problem_content(problem_example(422, [VALIDATION_ERROR_EXAMPLE], path) | {"errors": [VALIDATION_ERROR_EXAMPLE]})
+                document_problem_responses(path, operation)
         app.openapi_schema = schema
         return schema
 
@@ -175,3 +172,46 @@ VALIDATION_ERROR_EXAMPLE = {
     "msg": "Field required",
     "input": {},
 }
+
+
+CORRELATION_PARAMETER = {
+    "name": "X-Correlation-ID",
+    "in": "header",
+    "required": False,
+    "description": "UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.",
+    "schema": {"type": "string", "format": "uuid"},
+    "example": "11111111-1111-4111-8111-111111111111",
+}
+DEFAULT_PROBLEMS = {
+    "401": ("Token ausente ou inválido.", "Token ausente ou inválido"),
+    "403": ("Papel sem permissão para a operação.", "Papel sem permissão para esta operação"),
+    "404": ("Recurso não encontrado.", "Recurso não encontrado"),
+}
+
+
+def document_problem_responses(path: str, operation: dict) -> None:
+    """Completa cada operação com as respostas de erro que ela pode produzir."""
+    responses = operation.setdefault("responses", {})
+    parameters = operation.setdefault("parameters", [])
+    if path.startswith("/api/") and not any(p.get("name") == "X-Correlation-ID" for p in parameters):
+        parameters.append(CORRELATION_PARAMETER)
+    expected = []
+    if operation.get("security"):
+        expected += ["401", "403"]
+    if any(p.get("in") == "path" for p in parameters):
+        expected.append("404")
+    for status in expected:
+        if status not in responses:
+            description, detail = DEFAULT_PROBLEMS[status]
+            responses[status] = {"description": description, "content": problem_content(problem_example(int(status), detail, path))}
+    for status, response in responses.items():
+        if not status.isdigit() or int(status) < 400:
+            continue
+        content = response.get("content", {})
+        if status == "422" and "application/json" in content and PROBLEM_MEDIA_TYPE not in content:
+            response["description"] = "Entrada inválida."
+            response["content"] = problem_content(problem_example(422, [VALIDATION_ERROR_EXAMPLE], path) | {"errors": [VALIDATION_ERROR_EXAMPLE]})
+        elif not content:
+            detail = response.get("description", "Erro").rstrip(".")
+            response["content"] = problem_content(problem_example(int(status), detail, path))
+    operation["responses"] = dict(sorted(responses.items()))

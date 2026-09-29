@@ -79,9 +79,9 @@ exponencial ou jitter.
 O operador consulta `GET /api/v1/integration/failures` e, depois de corrigir a
 causa, usa `POST /api/v1/integration/failures/{eventId}/reprocess`. O comando muda
 o evento para `PENDING` e registra a ação na auditoria. Inbox e restrições únicas
-continuam ativas durante o novo despacho. O contador acumulado de tentativas não é
-zerado; se o consumidor falhar novamente, o evento retorna imediatamente a
-`FAILED`.
+continuam ativas durante o novo despacho. A auditoria guarda o número anterior de
+tentativas e o contador `attempts` volta a zero, o que abre uma nova janela de três
+tentativas.
 
 ## F3: chamado com contrato de locação e SLA
 
@@ -145,8 +145,12 @@ ou F3 entre as três integrações avaliadas.
 - A fonte oficial de cada contexto prevalece. Divergências devem ser registradas
   para análise, sem sobrescrita silenciosa.
 
-O OpenAPI contém as operações e os exemplos REST. O AsyncAPI contém os três
-eventos e exemplos de envelope. Os exemplos narrativos reutilizam os mesmos UUIDs
+O OpenAPI contém as operações, os exemplos REST e as respostas de erro em
+`application/problem+json`; ele é gerado por `tools/export_openapi.py` a partir
+da aplicação. O AsyncAPI contém todos os eventos publicados pela outbox, os
+exemplos de envelope, os consumidores internos e o binding AMQP da exchange
+`archcorp.events`. Os testes validam os dois documentos contra seus schemas e
+validam os envelopes realmente gravados na outbox contra o AsyncAPI. Os exemplos narrativos reutilizam os mesmos UUIDs
 fictícios para demonstrar a continuidade entre os fluxos.
 
 ## Contrato de erro
