@@ -1,5 +1,7 @@
 # Arquitetura proposta TO BE
 
+> Estado de execução em 27/09/2026: consulte [Estado da implementação](../ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](../CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
+
 ## Escopo da proposta
 
 O TO-BE aplica a decisão do ADR-001: uma SOA pragmática entregue inicialmente
@@ -17,10 +19,10 @@ direcionadores do ADR exige nova decisão arquitetural.
 
 | Consumidor | Necessidade atendida | Acesso proposto |
 |---|---|---|
-| Comercial | Cadastrar cliente e criar contrato sem recadastro | API CRM e criação de rascunho |
-| Contratos | Elaborar, ativar e consultar contrato e SLA | API Contracts |
-| Financeiro | Receber contrato ativo e criar cobrança | Consumidor de evento |
-| Atendimento | Abrir chamado com elegibilidade e SLA | API Support e consulta pública de Contracts |
+| Comercial e canais digitais | Cadastrar cliente e criar contrato sem recadastro | API CRM e criação de reserva/rascunho |
+| Reservas e contratos de locação | Elaborar, ativar e consultar contrato de locação, grupo de veículo, proteções e SLA | API Contracts |
+| Financeiro e faturamento | Receber contrato ativo e criar cobrança | Consumidor de evento |
+| Atendimento e assistência 24h | Abrir chamado com elegibilidade e SLA | API Support e consulta pública de Contracts |
 | Operações e gestão | Iniciar e acompanhar processos e falhas | Consumidores de eventos e APIs operacionais |
 | Sistemas externos | Integrar capacidades sem conhecer tabelas internas | Adaptadores, REST/JSON e eventos versionados |
 
@@ -48,7 +50,11 @@ flowchart TB
   API --> AUD[Auditoria e correlação]
 ```
 
-CRM, Contracts, Finance, Support e Workflow mantêm regras de negócio. Integration
+CRM, Contracts, Finance, Support e Workflow mantêm regras de negócio. No domínio
+Localiza, Contracts representa reservas e contratos de locação; Finance
+representa faturamento e cobranças; Support representa atendimento e assistência
+24h; Workflow representa processos operacionais de retirada, devolução, vistoria
+e resolução. Integration
 traduz, roteia, correlaciona e controla a entrega, mas não decide elegibilidade,
 SLA, cobrança, prioridade ou estado dos processos.
 
@@ -56,11 +62,11 @@ SLA, cobrança, prioridade ou estado dos processos.
 
 | Contexto | Serviços e casos de uso | Interface pública | Dados oficiais | Persistência do protótipo |
 |---|---|---|---|---|
-| CRM | Cadastro, atualização, elegibilidade e consentimento | API CRM e `CustomerReader` | Cliente, contatos, consentimentos e oportunidade | `crm_customers` |
-| Contracts | Rascunho, ativação, plano, vigência e SLA | API Contracts e `ContractEntitlementPort` | Contrato, itens, vigência, plano e SLA | `contracts_contracts` |
-| Finance | Criação da primeira cobrança | Consumidor de `ContractActivated.v1` | Cobrança, vencimento, pagamento e inadimplência | `finance_invoices` |
-| Support | Abertura, prioridade, prazo e reconciliação de chamado | API Support | Chamado, prioridade, histórico e resolução | `support_tickets` |
-| Workflow | Onboarding e processo de resolução | Consumidores de eventos | Instância, tarefa, responsável, prazo e estado | `workflow_instances` |
+| CRM | Cadastro, atualização, elegibilidade e consentimento | API CRM e `CustomerReader` | Cliente, contatos, consentimentos, perfil de locação e oportunidade | `crm_customers` |
+| Contracts | Rascunho, ativação, plano, vigência e SLA | API Contracts e `ContractEntitlementPort` | Reserva, contrato de locação, grupo de veículo, vigência, proteções e SLA | `contracts_contracts` |
+| Finance | Criação da primeira cobrança da locação | Consumidor de `ContractActivated.v1` | Pré-autorização, cobrança, fatura, pagamento, caução, multa e inadimplência | `finance_invoices` |
+| Support | Abertura, prioridade, prazo e reconciliação de chamado | API Support | Chamado, assistência, prioridade, histórico e resolução | `support_tickets` |
+| Workflow | Preparação de retirada e processo de resolução | Consumidores de eventos | Instância, tarefa, responsável, prazo e estado operacional | `workflow_instances` |
 | Integration | IDs legados, correlação, outbox, inbox, auditoria e falhas | APIs operacionais e dispatcher | Mapeamentos, correlação e registros de entrega | tabelas `integration_*` |
 
 A API pública usa o prefixo `/api/v1`. O OpenAPI documenta as operações HTTP,
@@ -70,9 +76,9 @@ incompatíveis criam nova versão.
 
 ## Fluxo de informações
 
-1. **F1 — cliente para contrato:** o CRM fornece o `customerId` global e
+1. **F1 — cliente para reserva/contrato:** o CRM fornece o `customerId` global e
    Contracts cria o rascunho por uma operação REST idempotente.
-2. **F2 — ativação, cobrança e onboarding:** Contracts registra a ativação e a
+2. **F2 — ativação da locação, cobrança e preparação de retirada:** Contracts registra a ativação e a
    outbox na mesma transação. Finance e Workflow consomem o evento com inbox e
    restrições contra duplicidade.
 3. **F3 — chamado com SLA:** Support consulta a porta pública de Contracts,
@@ -135,8 +141,9 @@ disponibilidade, tecnologia ou ritmo de mudança.
 O adaptador local simula tokens OIDC e aplica papéis por rota. A substituição por
 um provedor real preserva a porta de autenticação. A API valida entradas,
 minimiza dados compartilhados e não inclui a descrição do chamado nos eventos.
-Logs não devem registrar tokens, senhas, documentos completos, dados bancários
-ou conteúdo sensível. TLS é obrigatório fora da demonstração local.
+Logs não devem registrar tokens, senhas, documentos completos, CNH, placa
+completa, dados bancários ou conteúdo sensível. TLS é obrigatório fora da
+demonstração local.
 
 Health checks distinguem processo vivo de dependências prontas. Logs
 estruturados, métricas, auditoria e correlação permitem localizar falhas. Após o

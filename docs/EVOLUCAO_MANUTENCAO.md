@@ -1,5 +1,7 @@
 # Estratégia de escalabilidade manutenção e evolução
 
+> Estado de execução em 27/09/2026: consulte [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
+
 ## Princípios
 
 A evolução preserva a SOA pragmática, as fronteiras do monólito modular e a
@@ -20,7 +22,7 @@ porta ou eventos documentados, sem importar modelos internos ou consultar suas
 tabelas. O módulo entra no monólito enquanto essa implantação atender às metas.
 
 Antes da inclusão, a equipe registra proprietário dos dados, requisitos,
-contratos, falhas esperadas, observabilidade e testes. Uma nova decisão
+reservas e contratos, falhas esperadas, observabilidade e testes. Uma nova decisão
 estrutural recebe ADR próprio.
 
 ## 2. Como integrar novos sistemas
@@ -81,7 +83,7 @@ explícito.
 
 A equipe executa a atualização em etapas:
 
-1. Publica contratos compatíveis e estruturas de persistência aditivas.
+1. Publica reservas e contratos compatíveis e estruturas de persistência aditivas.
 2. Implanta produtores capazes de manter o formato anterior.
 3. Atualiza consumidores e acompanha erros, latência, fila e divergências.
 4. Ativa o novo comportamento por feature flag ou troca controlada de

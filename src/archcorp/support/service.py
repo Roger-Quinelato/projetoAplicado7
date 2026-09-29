@@ -16,6 +16,8 @@ class TicketService:
     def open(self, session: Session, data: dict, idempotency_key: str, correlation_id: str) -> tuple[dict, bool]:
         stored = session.get(IdempotencyRecord, {"key": idempotency_key, "operation": "open_ticket"})
         if stored:
+            if any(stored.response[field] != data[field] for field in ("customerId", "contractId", "serviceCode", "category")):
+                raise ValueError("Idempotency-Key já utilizada com outro chamado")
             return stored.response, True
         if settings.contract_adapter_available:
             entitlement = self.contracts.entitlement(session, data["contractId"], data["customerId"], data["serviceCode"])
@@ -44,6 +46,8 @@ class TicketService:
         ticket = session.get(Ticket, ticket_id)
         if not ticket:
             raise LookupError("Chamado não encontrado")
+        if ticket.status != "PENDING_ENTITLEMENT":
+            raise ValueError("Somente chamado pendente pode ser reconciliado")
         entitlement = self.contracts.entitlement(session, ticket.contract_id, ticket.customer_id, ticket.service_code)
         if entitlement["eligible"]:
             ticket.status = "OPEN"
@@ -53,6 +57,7 @@ class TicketService:
         else:
             ticket.status = "REJECTED_ENTITLEMENT"
             audit(session, correlation_id, "support", "reconcile_entitlement", "rejected", ticket.ticket_id)
+        enqueue(session, "TicketEntitlementReconciled.v1", "support", self.as_dict(ticket), correlation_id)
         session.commit()
         return self.as_dict(ticket)
 

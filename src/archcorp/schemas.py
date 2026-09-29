@@ -1,5 +1,7 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
+from typing import Any, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -12,15 +14,15 @@ EXAMPLE_TICKET_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd"
 
 EXAMPLE_CUSTOMER_RESPONSE = {
     "customerId": EXAMPLE_CUSTOMER_ID,
-    "name": "Empresa Exemplo Ltda.",
-    "email": "contato@empresa-exemplo.test",
+    "name": "Cliente Frota Localiza Ltda.",
+    "email": "gestor.frota@cliente-localiza.test",
     "eligible": True,
 }
 
 EXAMPLE_CONTRACT_DRAFT_RESPONSE = {
     "contractId": EXAMPLE_CONTRACT_ID,
     "customerId": EXAMPLE_CUSTOMER_ID,
-    "serviceCode": "SUPPORT-PREMIUM",
+    "serviceCode": "RENTAL-FLEX",
     "startsOn": "2026-10-01",
     "billing": {
         "amount": 2500.00,
@@ -41,7 +43,7 @@ EXAMPLE_TICKET_RESPONSE = {
     "ticketId": EXAMPLE_TICKET_ID,
     "customerId": EXAMPLE_CUSTOMER_ID,
     "contractId": EXAMPLE_CONTRACT_ID,
-    "serviceCode": "SUPPORT-PREMIUM",
+    "serviceCode": "RENTAL-FLEX",
     "category": "OUTAGE",
     "status": "OPEN",
     "priority": "HIGH",
@@ -64,11 +66,11 @@ class CustomerCreate(BaseModel):
         json_schema_extra={
             "examples": [
                 {
-                    "name": "Empresa Exemplo Ltda.",
-                    "email": "contato@empresa-exemplo.test",
+                    "name": "Cliente Frota Localiza Ltda.",
+                    "email": "gestor.frota@cliente-localiza.test",
                     "eligible": True,
                     "consentService": True,
-                    "legacyId": "CRM-1001",
+                    "legacyId": "WEB-LOCALIZA-1001",
                 }
             ]
         }
@@ -91,7 +93,7 @@ class CustomerUpdate(BaseModel):
 class Billing(BaseModel):
     amount: Decimal = Field(gt=0, decimal_places=2)
     currency: str = Field(pattern="^[A-Z]{3}$")
-    cycle: str = Field(pattern="^(MONTHLY|QUARTERLY|YEARLY)$")
+    cycle: str = Field(pattern="^(ONCE|MONTHLY|QUARTERLY|YEARLY)$")
 
 
 class ContractDraftCreate(BaseModel):
@@ -100,7 +102,7 @@ class ContractDraftCreate(BaseModel):
             "examples": [
                 {
                     "customerId": EXAMPLE_CUSTOMER_ID,
-                    "serviceCode": "SUPPORT-PREMIUM",
+                    "serviceCode": "RENTAL-FLEX",
                     "startsOn": "2026-10-01",
                     "billing": {
                         "amount": 2500.00,
@@ -113,7 +115,7 @@ class ContractDraftCreate(BaseModel):
         }
     )
 
-    customerId: str
+    customerId: UUID
     serviceCode: str = Field(min_length=2, max_length=80)
     startsOn: date
     billing: Billing
@@ -127,7 +129,7 @@ class TicketCreate(BaseModel):
                 {
                     "customerId": EXAMPLE_CUSTOMER_ID,
                     "contractId": EXAMPLE_CONTRACT_ID,
-                    "serviceCode": "SUPPORT-PREMIUM",
+                    "serviceCode": "RENTAL-FLEX",
                     "category": "OUTAGE",
                     "description": "Serviço indisponível durante a demonstração",
                 }
@@ -135,8 +137,8 @@ class TicketCreate(BaseModel):
         }
     )
 
-    customerId: str
-    contractId: str
+    customerId: UUID
+    contractId: UUID
     serviceCode: str
     category: str = Field(min_length=2, max_length=80)
     description: str = Field(min_length=3, max_length=2000)
@@ -144,3 +146,88 @@ class TicketCreate(BaseModel):
 
 class ApiModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+
+
+class CustomerResponse(BaseModel):
+    customerId: UUID
+    name: str
+    email: EmailStr
+    eligible: bool
+
+
+class ContractDraftResponse(BaseModel):
+    contractId: UUID
+    customerId: UUID
+    serviceCode: str
+    startsOn: date
+    billing: Billing
+    slaHours: int
+    status: Literal["DRAFT"]
+
+
+class ContractActivationResponse(BaseModel):
+    contractId: UUID
+    customerId: UUID
+    serviceCode: str
+    startsOn: date
+    billing: Billing
+    slaHours: int
+    status: Literal["ACTIVE"]
+    eventId: UUID
+
+
+class EntitlementResponse(BaseModel):
+    eligible: bool
+    slaHours: int | None
+
+
+class TicketResponse(BaseModel):
+    ticketId: UUID
+    customerId: UUID
+    contractId: UUID
+    serviceCode: str
+    category: str
+    status: Literal["OPEN", "PENDING_ENTITLEMENT", "REJECTED_ENTITLEMENT"]
+    priority: Literal["NORMAL", "HIGH"]
+    slaHours: int | None
+    dueAt: datetime | None
+
+
+class DispatchResponse(BaseModel):
+    processed: int
+    failed: int
+
+
+class FailureResponse(BaseModel):
+    eventId: UUID
+    eventType: str
+    attempts: int
+    reason: str | None
+    correlationId: UUID
+
+
+class ReprocessResponse(BaseModel):
+    eventId: UUID
+    status: Literal["PENDING"]
+
+
+class AuditEntryResponse(BaseModel):
+    occurredAt: datetime
+    module: str
+    operation: str
+    result: str
+    entityId: str | None
+    details: dict[str, Any]
+
+
+class OperationEventResponse(BaseModel):
+    eventId: UUID
+    eventType: str
+    status: str
+    attempts: int
+
+
+class OperationTraceResponse(BaseModel):
+    correlationId: UUID
+    audit: list[AuditEntryResponse]
+    events: list[OperationEventResponse]

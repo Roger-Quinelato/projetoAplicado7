@@ -19,3 +19,9 @@ class Ticket(Base):
     priority: Mapped[str] = mapped_column(String(20))
     sla_hours: Mapped[int | None] = mapped_column(nullable=True)
     due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class TicketAssignment(Base):
+    __tablename__ = "support_assignments"
+    ticket_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    owner: Mapped[str] = mapped_column(String(80))

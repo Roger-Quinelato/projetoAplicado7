@@ -1,7 +1,7 @@
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
-from archcorp.contracts.models import Contract
+from archcorp.contracts.models import Contract, Reservation
 from archcorp.crm.public import CustomerReader
 from archcorp.integration.models import IdempotencyRecord
 from archcorp.integration.service import audit, enqueue
@@ -14,6 +14,13 @@ class ContractService:
     def create_draft(self, session: Session, data: dict, idempotency_key: str, correlation_id: str) -> tuple[dict, bool]:
         stored = session.get(IdempotencyRecord, {"key": idempotency_key, "operation": "create_contract_draft"})
         if stored:
+            if (stored.response["customerId"] != data["customerId"] or
+                    stored.response["serviceCode"] != data["serviceCode"] or
+                    stored.response["startsOn"] != data["startsOn"].isoformat() or
+                    stored.response["billing"]["cycle"] != data["billing"]["cycle"] or
+                    stored.response["billing"]["currency"] != data["billing"]["currency"] or
+                    stored.response["billing"]["amount"] != float(data["billing"]["amount"])):
+                raise ValueError("Idempotency-Key já utilizada com outro contrato")
             return stored.response, True
         customer = self.customers.get(session, data["customerId"])
         if not customer or not customer.eligible or not customer.consent_service:
@@ -38,7 +45,19 @@ class ContractService:
         contract = session.get(Contract, contract_id)
         if not contract:
             raise LookupError("Contrato não encontrado")
+        if contract.status == "ACTIVE":
+            previous = session.scalar(select(IdempotencyRecord).where(
+                IdempotencyRecord.operation == f"activate_contract:{contract_id}"
+            ))
+            if previous:
+                return previous.response, True
+            raise ValueError("Contrato já ativo sem registro da ativação original")
+        if contract.status != "DRAFT":
+            raise ValueError("Somente contrato em rascunho pode ser ativado")
         contract.status = "ACTIVE"
+        reservation = session.scalar(select(Reservation).where(Reservation.contract_id == contract_id))
+        if reservation:
+            reservation.status = "ACTIVE"
         payload = self.to_dict(contract)
         event = enqueue(session, "ContractActivated.v1", "contracts", payload, correlation_id)
         session.flush()

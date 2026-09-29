@@ -1,1 +1,1 @@
-"""Contexto de gestão de processos."""
+"""Contexto de gestão de processos operacionais."""

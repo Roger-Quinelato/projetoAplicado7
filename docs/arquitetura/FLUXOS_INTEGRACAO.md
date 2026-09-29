@@ -1,7 +1,9 @@
 # Fluxos de integração
 
+> Estado de execução em 27/09/2026: consulte [Estado da implementação](../ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](../CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
+
 Os diagramas abaixo representam o comportamento implementado para F1, F2 e F3.
-Eles complementam `docs/INTEGRACOES.md` e usam os contratos de
+Eles complementam `docs/INTEGRACOES.md` e usam os reservas e contratos de
 `docs/api/openapi.yaml` e `docs/events/asyncapi.yaml`. Os payloads completos estão
 em `docs/EXEMPLOS_API.md`.
 
@@ -22,14 +24,14 @@ porta pública `CustomerReader`, sem acesso ao banco ou ao modelo interno do CRM
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Comercial
+    actor Comercial e canais digitais
     participant API as API REST v1
     participant Contracts
     participant Integration
     participant CRM
     participant DB as PostgreSQL
 
-    Comercial->>API: POST /contracts/drafts<br/>Idempotency-Key e X-Correlation-ID
+    Comercial e canais digitais->>API: POST /contracts/drafts<br/>Idempotency-Key e X-Correlation-ID
     API->>API: Validar token, papel, correlação e JSON
     API->>Contracts: create_draft(dados, chave, correlação)
     Contracts->>Integration: Buscar chave da operação create_contract_draft
@@ -37,20 +39,20 @@ sequenceDiagram
     alt Chave já registrada
         Integration-->>Contracts: Resposta armazenada
         Contracts-->>API: Mesmo contrato
-        API-->>Comercial: 201 e Idempotency-Replayed true
+        API-->>Comercial e canais digitais: 201 e Idempotency-Replayed true
     else Nova solicitação
         Contracts->>CRM: CustomerReader.get(customerId)
         CRM-->>Contracts: Cliente, elegibilidade e consentimento
         alt Cliente inexistente, inelegível ou sem consentimento
             Contracts-->>API: Erro de negócio
-            API-->>Comercial: 422
+            API-->>Comercial e canais digitais: 422
         else Cliente elegível
             Contracts->>DB: Gravar contrato DRAFT
             Contracts->>Integration: Gravar idempotência e auditoria
             Integration->>DB: Confirmar a mesma transação
             DB-->>Contracts: Commit
             Contracts-->>API: contractId e contrato canônico
-            API-->>Comercial: 201 e Idempotency-Replayed false
+            API-->>Comercial e canais digitais: 201 e Idempotency-Replayed false
         end
     end
 ```
@@ -59,7 +61,7 @@ Erros de autenticação, autorização ou correlação são encerrados na API co
 `403` ou `400`, antes de Contracts executar o caso de uso. O adaptador interno de
 CRM não simula indisponibilidade ou timeout neste fluxo.
 
-## F2: ativação, cobrança e onboarding
+## F2: ativação da locação, cobrança e preparação de retirada
 
 O fluxo separa a confirmação síncrona da ativação dos efeitos assíncronos em
 Finance e Workflow. A ativação e o registro da outbox pertencem à mesma transação.
@@ -67,31 +69,35 @@ Finance e Workflow. A ativação e o registro da outbox pertencem à mesma trans
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Contratos as Usuário de contratos
+    actor Reservas e contratos as Usuário de reservas e contratos
     actor Operador
     participant API as API REST v1
     participant Contracts
+    participant Idempotency as Registro de idempotência
     participant Outbox
+    participant Audit as Auditoria
     participant Dispatcher
     participant Inbox
     participant Finance
     participant Workflow
     participant MQ as RabbitMQ
 
-    Contratos->>API: POST /contracts/{id}/activate<br/>Idempotency-Key e X-Correlation-ID
+    Reservas e contratos->>API: POST /contracts/{id}/activate<br/>Idempotency-Key e X-Correlation-ID
     API->>Contracts: activate(contractId, chave, correlação)
-    Contracts->>Outbox: Buscar chave da operação
+    Contracts->>Idempotency: Buscar chave da operação
 
     alt Ativação repetida
-        Outbox-->>Contracts: Resposta armazenada
+        Idempotency-->>Contracts: Resposta armazenada
         Contracts-->>API: Mesmo contrato e eventId
-        API-->>Contratos: 200 e Idempotency-Replayed true
+        API-->>Reservas e contratos: 200 e Idempotency-Replayed true
     else Primeira ativação
         Contracts->>Contracts: Alterar estado para ACTIVE
-        Contracts->>Outbox: Gravar ContractActivated.v1 e auditoria
+        Contracts->>Outbox: Gravar ContractActivated.v1
+        Contracts->>Idempotency: Gravar resposta da operação
+        Contracts->>Audit: Gravar ativação e correlação
         Outbox-->>Contracts: eventId na mesma transação
         Contracts-->>API: Contrato ativo e eventId
-        API-->>Contratos: 200 e Idempotency-Replayed false
+        API-->>Reservas e contratos: 200 e Idempotency-Replayed false
     end
 
     Operador->>API: POST /integration/outbox/dispatch
@@ -104,10 +110,10 @@ sequenceDiagram
             Inbox-->>Dispatcher: Ignorar efeito repetido
         else Primeiro consumo
             alt Consumidor Finance
-                Dispatcher->>Finance: Criar primeira cobrança
+                Dispatcher->>Finance: Criar primeira cobrança da locação
                 Finance-->>Dispatcher: Cobrança única por contractId
             else Consumidor Workflow
-                Dispatcher->>Workflow: Iniciar onboarding
+                Dispatcher->>Workflow: Iniciar preparação de retirada
                 Workflow-->>Dispatcher: Processo único por tipo e referência
             end
             Dispatcher->>Inbox: Registrar eventId e consumidor
@@ -144,7 +150,7 @@ agendador, atraso exponencial ou jitter. O operador precisa chamar o despacho
 novamente após corrigir a causa. A inbox e as restrições únicas permanecem ativas
 no reprocessamento.
 
-## F3: chamado com contrato e SLA
+## F3: chamado com contrato de locação e SLA
 
 Support consulta o contrato pela porta `ContractEntitlementPort`. O estado
 pendente preserva a solicitação quando o adaptador está indisponível.
@@ -152,7 +158,7 @@ pendente preserva a solicitação quando o adaptador está indisponível.
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Atendimento
+    actor Atendimento e assistência 24h
     actor Operador
     participant API as API REST v1
     participant Support
@@ -163,7 +169,7 @@ sequenceDiagram
     participant Inbox
     participant Workflow
 
-    Atendimento->>API: POST /support/tickets<br/>Idempotency-Key e X-Correlation-ID
+    Atendimento e assistência 24h->>API: POST /support/tickets<br/>Idempotency-Key e X-Correlation-ID
     API->>API: Validar token, papel, correlação e JSON
     API->>Support: open(dados, chave, correlação)
     Support->>Integration: Buscar chave da operação open_ticket
@@ -171,24 +177,24 @@ sequenceDiagram
     alt Chave já registrada
         Integration-->>Support: Resposta armazenada
         Support-->>API: Mesmo ticketId
-        API-->>Atendimento: 201 e Idempotency-Replayed true
+        API-->>Atendimento e assistência 24h: 201 e Idempotency-Replayed true
     else Nova solicitação
         alt Adaptador de Contracts indisponível
             Support->>Support: Definir PENDING_ENTITLEMENT<br/>sem SLA e sem dueAt
             Support->>Outbox: Gravar TicketOpened.v1, auditoria e idempotência
             Support-->>API: Chamado pendente
-            API-->>Atendimento: 201
+            API-->>Atendimento e assistência 24h: 201
         else Adaptador disponível
             Support->>Contracts: ContractEntitlementPort.entitlement(...)
             Contracts-->>Support: eligible e slaHours
             alt Contrato, cliente ou serviço inelegível
                 Support-->>API: Erro de negócio
-                API-->>Atendimento: 422
+                API-->>Atendimento e assistência 24h: 422
             else Elegibilidade confirmada
                 Support->>Support: Calcular prioridade e dueAt
                 Support->>Outbox: Gravar TicketOpened.v1, auditoria e idempotência
                 Support-->>API: Chamado OPEN com SLA
-                API-->>Atendimento: 201
+                API-->>Atendimento e assistência 24h: 201
             end
         end
     end

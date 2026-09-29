@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: archcorp-projeto-aplicado-7
+    runtime: docker
+    plan: free
+    healthCheckPath: /health/ready
+    envVars:
+      - key: PUBLIC_DEMO
+        value: "true"
+      - key: DATABASE_URL
+        sync: false
+      - key: DEMO_ACCESS_TOKEN
+        sync: false

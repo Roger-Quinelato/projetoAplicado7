@@ -18,3 +18,12 @@ class Invoice(Base):
     due_date: Mapped[date] = mapped_column(Date)
     status: Mapped[str] = mapped_column(String(20), default="OPEN")
     __table_args__ = (UniqueConstraint("contract_id", name="uq_invoice_contract"),)
+
+
+class Payment(Base):
+    __tablename__ = "finance_payments"
+    payment_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    invoice_id: Mapped[str] = mapped_column(String(36), index=True)
+    amount: Mapped[Decimal] = mapped_column(Numeric(14, 2))
+    currency: Mapped[str] = mapped_column(String(3))
+    reference: Mapped[str] = mapped_column(String(100), unique=True)

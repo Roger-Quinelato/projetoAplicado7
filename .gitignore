@@ -223,3 +223,9 @@ tmp/
 tools/node_modules/
 .tlc/
 *.db
+web/node_modules/
+web/*.tsbuildinfo
+.codex-remote-attachments/
+docs/*_SYNC.json
+docs/JIRA_LINKS.json
+docs/JIRA_STATUS.json

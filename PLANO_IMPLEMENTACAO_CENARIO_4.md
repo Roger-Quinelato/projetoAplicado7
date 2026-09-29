@@ -1,8 +1,10 @@
-# Plano de implementação - Cenário 4: Empresa de serviços
+# Plano de implementação - Cenário 4: Localiza - locação de veículos e mobilidade corporativa
+
+> Plano arquitetural de referência, com opções e metas ainda não implementadas. A execução por S1–S14, o catálogo T01–T22 e o status verificável estão em [Cronograma executável](docs/CRONOGRAMA_EXECUCAO.md) e [Estado da implementação](docs/ESTADO_IMPLEMENTACAO.md). O protótipo acadêmico não tem OIDC, tracing distribuído nem consumidores RabbitMQ; esses itens abaixo descrevem evolução possível.
 
 ## 1. Objetivo
 
-Construir um protótipo arquitetural que demonstre a integração entre CRM, contratos, financeiro, atendimento e gestão de processos, reduzindo recadastro, divergência de informações e acoplamento ponto a ponto.
+Construir um protótipo arquitetural que demonstre a integração entre CRM, reservas e contratos, financeiro e faturamento, atendimento e assistência 24h e gestão de processos operacionais, reduzindo recadastro, divergência de informações e acoplamento ponto a ponto.
 
 O plano atende ao enunciado do projeto, especialmente aos itens de análise AS-IS, requisitos, arquitetura TO-BE, padrões arquiteturais, APIs e integração, sistemas corporativos, interoperabilidade, atributos de qualidade, evolução, viabilidade e demonstração prática de pelo menos três fluxos integrados.
 
@@ -34,9 +36,9 @@ O PDF informa quais sistemas existem, mas não descreve produtos, tecnologias ne
 - Cada sistema possui seu próprio cadastro e identificador de cliente.
 - Há recadastro manual e troca de planilhas/arquivos entre áreas.
 - O CRM é a fonte oficial de dados cadastrais do cliente.
-- O sistema de contratos é a fonte oficial de contratos, vigências e SLA contratado.
-- O financeiro é a fonte oficial de cobranças, títulos e pagamentos.
-- O atendimento é a fonte oficial de chamados e seu histórico.
+- O sistema de reservas e contratos é a fonte oficial de reservas e contratos, vigências e SLA contratado.
+- O financeiro e faturamento é a fonte oficial de cobranças, títulos e pagamentos.
+- O atendimento e assistência 24h é a fonte oficial de chamados e seu histórico.
 - O BPM é a fonte oficial de instâncias, tarefas e estados dos processos.
 - Sistemas legados podem não publicar eventos; adaptadores serão usados para traduzir seus formatos.
 
@@ -44,18 +46,18 @@ O PDF informa quais sistemas existem, mas não descreve produtos, tecnologias ne
 
 ### Atores
 
-- Comercial: prospecta, cadastra clientes e acompanha oportunidades no CRM.
-- Jurídico/Contratos: elabora, aprova, ativa e encerra contratos.
-- Financeiro: gera cobranças, baixa pagamentos e trata inadimplência.
-- Atendimento: registra e resolve chamados conforme o SLA.
+- Comercial e canais digitais: prospecta, cadastra clientes e acompanha oportunidades no CRM.
+- Jurídico/Reservas e contratos: elabora, aprova, ativa e encerra reservas e contratos.
+- Financeiro e faturamento: gera cobranças, baixa pagamentos e trata inadimplência.
+- Atendimento e assistência 24h: registra e resolve chamados conforme o SLA.
 - Operações/Gestão: acompanha processos, prazos, filas e indicadores.
-- Cliente: contrata o serviço, recebe cobrança e solicita atendimento.
+- Cliente: contrata o serviço, recebe cobrança e solicita atendimento e assistência 24h.
 
 ### Problemas prováveis
 
 - Cliente duplicado, com chaves e campos diferentes em cada sistema.
-- Ativação de contrato sem criação automática da cobrança ou do onboarding.
-- Atendimento sem acesso confiável ao plano e ao SLA contratado.
+- Ativação de contrato sem criação automática da cobrança ou do preparação de retirada.
+- Atendimento e assistência 24h sem acesso confiável ao plano e ao SLA contratado.
 - Mudanças de cadastro propagadas manualmente e em momentos diferentes.
 - Integrações ponto a ponto, sem contrato, rastreabilidade ou tratamento uniforme de erros.
 - Baixa visibilidade sobre falhas e transações que atravessam vários sistemas.
@@ -71,9 +73,9 @@ Um diagrama de contexto deve mostrar os cinco sistemas isolados, os usuários, a
 | ID | Requisito | Critério de aceite |
 |---|---|---|
 | RF-01 | Manter uma referência única de cliente entre os sistemas. | Todo registro integrado carrega `customerId` global e os identificadores legados associados. |
-| RF-02 | Criar contrato a partir de um cliente existente no CRM. | Um cliente elegível origina um rascunho de contrato sem recadastro manual. |
-| RF-03 | Ativar o contrato e iniciar faturamento e onboarding. | A ativação cria uma cobrança e uma instância de processo, sem duplicar efeitos em reprocessamentos. |
-| RF-04 | Abrir chamado considerando contrato, serviço e SLA válidos. | O atendimento consulta a elegibilidade e registra o SLA aplicável. |
+| RF-02 | Criar contrato a partir de um cliente existente no CRM. | Um cliente elegível origina um rascunho de contrato de locação sem recadastro manual. |
+| RF-03 | Ativar o contrato e iniciar faturamento e preparação de retirada. | A ativação cria uma cobrança e uma instância de processo, sem duplicar efeitos em reprocessamentos. |
+| RF-04 | Abrir chamado considerando contrato, grupo de veículo e SLA válidos. | O atendimento e assistência 24h consulta a elegibilidade e registra o SLA aplicável. |
 | RF-05 | Propagar alterações cadastrais relevantes. | Alteração publicada pelo CRM chega aos consumidores e fica auditável. |
 | RF-06 | Consultar o estado consolidado de uma operação. | É possível rastrear uma transação pelo `correlationId`. |
 | RF-07 | Reprocessar integrações com falha. | Operador identifica a falha, consulta o motivo e reprocessa a mensagem com segurança. |
@@ -96,15 +98,15 @@ flowchart LR
     G --> I[Orquestração e consultas]
 
     I --> ACRM[Adaptador CRM]
-    I --> ACT[Adaptador Contratos]
-    I --> AFI[Adaptador Financeiro]
-    I --> AAT[Adaptador Atendimento]
+    I --> ACT[Adaptador Reservas e contratos]
+    I --> AFI[Adaptador Financeiro e faturamento]
+    I --> AAT[Adaptador Atendimento e assistência 24h]
     I --> ABPM[Adaptador BPM]
 
     ACRM --> CRM[(CRM)]
-    ACT --> CT[(Contratos)]
-    AFI --> FI[(Financeiro)]
-    AAT --> AT[(Atendimento)]
+    ACT --> CT[(Reservas e contratos)]
+    AFI --> FI[(Financeiro e faturamento)]
+    AAT --> AT[(Atendimento e assistência 24h)]
     ABPM --> BPM[(BPM)]
 
     I --> DB[(PostgreSQL)]
@@ -127,11 +129,11 @@ flowchart LR
 
 | Sistema/módulo | Responsabilidade | Dados oficiais |
 |---|---|---|
-| CRM | Relacionamento e cadastro comercial | Cliente, contatos, consentimentos, oportunidade |
-| Contratos | Ciclo de vida contratual | Contrato, itens, vigência, plano e SLA |
-| Financeiro | Cobrança e recebimento | Fatura/título, vencimento, pagamento, inadimplência |
-| Atendimento | Gestão de solicitações | Chamado, prioridade, histórico e resolução |
-| BPM | Coordenação de processos | Instância, tarefa, responsável, prazo e estado |
+| CRM | Relacionamento e cadastro comercial e canais digitais | Cliente, contatos, consentimentos, oportunidade |
+| Reservas e contratos | Ciclo de vida contratual | Reserva, contrato de locação, grupo de veículo, vigência, proteções e SLA |
+| Financeiro e faturamento | Cobrança e recebimento | Fatura/título, vencimento, pagamento, inadimplência |
+| Atendimento e assistência 24h | Gestão de solicitações | Chamado, assistência, prioridade, histórico e resolução |
+| BPM | Coordenação de processos | Instância, tarefa, responsável, prazo e estado operacional |
 | Integração | Tradução, roteamento e rastreabilidade | Mapeamentos de IDs, outbox, inbox, falhas e correlação |
 
 ## 7. Modelo de interoperabilidade
@@ -139,7 +141,7 @@ flowchart LR
 - Identificadores globais: UUID para `customerId`, `contractId`, `invoiceId`, `ticketId` e `processId`.
 - Identificadores legados: mantidos em tabela de mapeamento por sistema de origem.
 - Envelope de evento: `eventId`, `eventType`, `eventVersion`, `occurredAt`, `correlationId`, `causationId`, `producer` e `payload`.
-- Contratos: OpenAPI para REST e AsyncAPI ou JSON Schema para eventos.
+- Reservas e contratos: OpenAPI para REST e AsyncAPI ou JSON Schema para eventos.
 - Versionamento: versão maior na URL REST (`/api/v1`) e no tipo/esquema do evento; mudanças compatíveis são aditivas.
 - Consistência: forte dentro de uma transação do módulo e eventual entre sistemas.
 - Conflitos: a fonte oficial vence; divergências são registradas e enviadas para análise, sem sobrescrever silenciosamente.
@@ -147,24 +149,24 @@ flowchart LR
 
 ### Exemplo de problema e solução
 
-Problema: o CRM identifica um cliente pelo e-mail, enquanto contratos usa um código numérico e atendimento cria outro cadastro pelo CPF. Isso gera duplicidade e chamados vinculados ao contrato errado.
+Problema: o CRM identifica um cliente pelo e-mail, enquanto reservas e contratos usa um código numérico e atendimento e assistência 24h cria outro cadastro pelo CPF. Isso gera duplicidade e chamados vinculados ao contrato errado.
 
-Solução: ao integrar o primeiro registro, o serviço de integração gera um `customerId` global e guarda a relação com cada identificador legado. Os contratos REST e eventos carregam o identificador global. Regras de correspondência só sugerem vínculos; casos ambíguos seguem para conciliação manual e ficam auditados.
+Solução: ao integrar o primeiro registro, o serviço de integração gera um `customerId` global e guarda a relação com cada identificador legado. Os reservas e contratos REST e eventos carregam o identificador global. Regras de correspondência só sugerem vínculos; casos ambíguos seguem para conciliação manual e ficam auditados.
 
 ## 8. Fluxos integrados da demonstração
 
 | Fluxo | Origem -> destino | Comunicação | Informação | Tratamento de erro |
 |---|---|---|---|---|
-| F1 - Cliente para contrato | CRM -> Integração -> Contratos | REST síncrono | Cliente, contatos, serviço negociado | Validação 4xx; timeout/retry limitado; idempotência; erro rastreado |
-| F2 - Ativação e onboarding | Contratos -> Broker -> Financeiro e BPM | Evento assíncrono | Contrato ativo, itens, valor, vigência, cliente | Outbox, retry exponencial, consumidor idempotente e fila de erro |
-| F3 - Chamado com SLA | Atendimento -> Integração -> Contratos; Atendimento -> Broker -> BPM | REST + evento | Cliente, contrato, serviço, SLA, chamado | Circuit breaker/timeout; abertura em estado pendente se consulta indisponível; posterior reconciliação |
+| F1 - Cliente para reserva/contrato | CRM -> Integração -> Reservas e contratos | REST síncrono | Cliente, contatos, locação negociada | Validação 4xx; timeout/retry limitado; idempotência; erro rastreado |
+| F2 - Ativação e preparação de retirada | Reservas e contratos -> Broker -> Financeiro/Workflow | Evento assíncrono | Contrato de locação ativo, grupo de veículo, valor, vigência, cliente | Outbox, retry exponencial, consumidor idempotente e fila de erro |
+| F3 - Chamado com SLA | Atendimento e assistência 24h -> Integração -> Reservas e contratos; Atendimento e assistência 24h -> Broker -> BPM | REST + evento | Cliente, contrato, serviço, SLA, chamado | Circuit breaker/timeout; abertura em estado pendente se consulta indisponível; posterior reconciliação |
 
 ### F1 - Criar contrato a partir do CRM
 
-1. Comercial seleciona um cliente elegível no CRM.
+1. Comercial e canais digitais seleciona um cliente elegível no CRM.
 2. CRM chama `POST /api/v1/contracts/drafts` com `Idempotency-Key`.
 3. A integração valida e converte o cadastro para o contrato canônico.
-4. Contratos devolve `contractId`, estado `DRAFT` e eventuais pendências.
+4. Reservas e contratos devolve `contractId`, estado `DRAFT` e eventuais pendências.
 5. O mapeamento de IDs e a auditoria são persistidos.
 
 Exemplo de entrada:
@@ -172,27 +174,27 @@ Exemplo de entrada:
 ```json
 {
   "customerId": "dff9b632-44ca-4b03-bc08-80b718492832",
-  "serviceCode": "SUPPORT-PREMIUM",
+  "serviceCode": "RENTAL-FLEX",
   "startsOn": "2026-10-01",
   "billing": { "amount": 2500.00, "currency": "BRL", "cycle": "MONTHLY" }
 }
 ```
 
-### F2 - Ativar contrato, faturar e iniciar onboarding
+### F2 - Ativar contrato de locação, faturar e iniciar preparação de retirada
 
-1. Contratos conclui a aprovação e grava a ativação e o evento na mesma transação.
+1. Reservas e contratos conclui a aprovação e grava a ativação e o evento na mesma transação.
 2. A outbox publica `ContractActivated.v1` no broker.
-3. Financeiro cria a primeira cobrança.
-4. BPM inicia o processo de onboarding.
+3. Financeiro e faturamento cria a primeira cobrança da locação.
+4. BPM inicia o processo de preparação de retirada.
 5. Cada consumidor registra o `eventId`; reentregas não duplicam cobrança nem processo.
 
 ### F3 - Abrir chamado com o SLA correto
 
-1. Atendimento envia `customerId`, `contractId`, categoria e descrição.
-2. A integração consulta contrato e SLA por REST.
-3. Atendimento cria o chamado com prioridade e prazo calculados.
+1. Atendimento e assistência 24h envia `customerId`, `contractId`, categoria e descrição.
+2. A integração consulta contrato de locação e SLA por REST.
+3. Atendimento e assistência 24h cria o chamado com prioridade e prazo calculados.
 4. `TicketOpened.v1` inicia no BPM o processo de resolução.
-5. Se contratos estiver indisponível, o chamado fica `PENDING_ENTITLEMENT` e é reconciliado quando o serviço retorna.
+5. Se reservas e contratos estiver indisponível, o chamado fica `PENDING_ENTITLEMENT` e é reconciliado quando o serviço retorna.
 
 ## 9. Qualidade arquitetural
 
@@ -220,7 +222,7 @@ Entregáveis:
 
 Aceite: cada sistema tem responsabilidade, usuários, dados produzidos/consumidos, dependências e limitações documentados.
 
-### Etapa 1 - Contratos e fundação
+### Etapa 1 - Reservas e contratos e fundação
 
 Entregáveis:
 
@@ -230,13 +232,13 @@ Entregáveis:
 - Banco, migrações, outbox/inbox e correlação.
 - Autenticação simulada ou provedor OIDC local.
 
-Aceite: ambiente sobe por um único procedimento documentado; health checks respondem; contratos são validados automaticamente.
+Aceite: ambiente sobe por um único procedimento documentado; health checks respondem; reservas e contratos são validados automaticamente.
 
 ### Etapa 2 - Adaptadores e simuladores
 
 Entregáveis:
 
-- Adaptadores para CRM, contratos, financeiro, atendimento e BPM.
+- Adaptadores para CRM, reservas e contratos, financeiro e faturamento, atendimento e assistência 24h e BPM.
 - Simuladores com cenários de sucesso, validação, timeout e indisponibilidade.
 - Tabela de mapeamento de identificadores legados.
 
@@ -299,7 +301,7 @@ Aceite: uma equipe externa consegue subir o protótipo, executar os três fluxos
 ### P2 - Evolução futura
 
 - Extração de módulos de maior carga para serviços independentes.
-- Conectores reais de assinatura, cobrança e atendimento.
+- Conectores reais de assinatura, cobrança e atendimento e assistência 24h.
 - Catálogo de dados e governança de consentimento.
 - Analytics e indicadores operacionais.
 
@@ -336,11 +338,11 @@ Aceite: uma equipe externa consegue subir o protótipo, executar os três fluxos
 
 ## 15. Valor e viabilidade
 
-Público-alvo: equipes comercial, jurídica, financeira, atendimento, operações e gestão, além dos clientes beneficiados por respostas mais rápidas e dados coerentes.
+Público-alvo: equipes comercial e canais digitais, jurídica, financeira, atendimento e assistência 24h, operações e gestão, além dos clientes beneficiados por respostas mais rápidas e dados coerentes.
 
-Proposta de valor: transformar cinco aplicações isoladas em uma cadeia de serviço rastreável, reduzindo recadastro, erros, tempo de ativação e demora no atendimento.
+Proposta de valor: transformar cinco aplicações isoladas em uma cadeia de serviço rastreável, reduzindo recadastro, erros, tempo de ativação e demora no atendimento e assistência 24h.
 
-Viabilidade: o monólito modular e os simuladores limitam custo, infraestrutura e curva de aprendizagem. Os contratos e adaptadores preservam a possibilidade de conectar produtos reais ou extrair serviços quando houver justificativa. Indicadores sugeridos são tempo entre venda e ativação, percentual de recadastro, falhas por integração, chamados com SLA incorreto e tempo médio de diagnóstico.
+Viabilidade: o monólito modular e os simuladores limitam custo, infraestrutura e curva de aprendizagem. Os reservas e contratos e adaptadores preservam a possibilidade de conectar produtos reais ou extrair serviços quando houver justificativa. Indicadores sugeridos são tempo entre venda e ativação, percentual de recadastro, falhas por integração, chamados com SLA incorreto e tempo médio de diagnóstico.
 
 ## 16. Definição de pronto do projeto
 

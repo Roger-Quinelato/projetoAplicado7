@@ -1,1 +1,1 @@
-"""Contexto financeiro."""
+"""Contexto financeiro e faturamento."""

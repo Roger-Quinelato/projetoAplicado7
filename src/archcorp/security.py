@@ -1,7 +1,10 @@
 from dataclasses import dataclass
+from secrets import compare_digest
 
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
+from archcorp.config import settings
 
 
 bearer = HTTPBearer(auto_error=False)
@@ -22,6 +25,10 @@ class Principal:
 
 
 def current_principal(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)) -> Principal:
+    if settings.public_demo:
+        if not settings.demo_access_token or credentials is None or not compare_digest(credentials.credentials, settings.demo_access_token):
+            raise HTTPException(status_code=401, detail="Credencial de demonstração ausente ou inválida")
+        return Principal("public-demo", TOKEN_ROLES["demo-admin"])
     if credentials is None or credentials.credentials not in TOKEN_ROLES:
         raise HTTPException(status_code=401, detail="Token ausente ou inválido")
     return Principal(credentials.credentials, TOKEN_ROLES[credentials.credentials])

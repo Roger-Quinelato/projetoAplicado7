@@ -1,6 +1,6 @@
-# ArchCorp Cenário 4
+# ArchCorp · Projeto Aplicado 7 · Cenário 4
 
-Protótipo executável de integração entre CRM, contratos, financeiro, atendimento e gestão de processos. A solução segue o ADR vigente: SOA pragmática entregue como monólito modular, com REST para respostas imediatas e eventos persistidos em outbox para efeitos assíncronos.
+Protótipo acadêmico conceitual de integração entre CRM, reservas e contratos, financeiro e faturamento, atendimento e gestão de processos. Usa dados sintéticos e não acessa sistemas reais da Localiza. A solução é um monólito modular com REST e outbox; o despacho executa consumidores internos e pode publicar uma cópia no RabbitMQ local.
 
 ## Execução rápida
 
@@ -10,7 +10,7 @@ Requisitos: Docker Desktop com Docker Compose.
 docker compose up --build
 ```
 
-A API fica disponível em `http://localhost:8000`, a documentação Swagger em `http://localhost:8000/docs` e o RabbitMQ em `http://localhost:15672` (`guest`/`guest`, apenas no ambiente local).
+A interface e a API ficam em `http://localhost:8000`, a documentação Swagger em `http://localhost:8000/docs` e o RabbitMQ local em `http://localhost:15672` (`guest`/`guest`). No Compose, o navegador usa a mesma origem da API. O despacho da outbox é explícito pelo botão da interface ou por `POST /api/v1/integration/outbox/dispatch`.
 
 Para executar a demonstração completa:
 
@@ -20,7 +20,13 @@ Para executar a demonstração completa:
 
 ## Autenticação da demonstração
 
-As rotas protegidas aceitam tokens locais que simulam papéis emitidos por um provedor OIDC. Use `Authorization: Bearer demo-admin` no roteiro completo. Também existem `demo-commercial`, `demo-contracts`, `demo-finance`, `demo-support` e `demo-operations`. O simulador existe apenas para execução acadêmica; a arquitetura mantém a porta de autenticação substituível por um provedor OIDC real.
+No desenvolvimento local, as rotas protegidas aceitam tokens fixos de demonstração (`demo-admin`, `demo-commercial`, `demo-contracts`, `demo-finance`, `demo-support`, `demo-operations`). **Não há OIDC/OAuth implementado.** Com `PUBLIC_DEMO=true`, esses tokens são rejeitados e apenas `DEMO_ACCESS_TOKEN` — segredo aleatório com pelo menos 24 caracteres configurado fora do repositório — funciona. O acesso público usa uma credencial compartilhada, adequada apenas ao protótipo acadêmico. Não inserir dados pessoais reais.
+
+## Frontend e deploy gratuito
+
+Para desenvolver a interface: `cd web`, `npm ci`, `npm run dev`, com a API rodando na porta 8000. `npm run build` gera `web/dist`, servido pelo FastAPI na raiz. O Dockerfile compila a interface e usa a porta definida por `PORT`.
+
+O arquivo `render.yaml` prepara um **Render Free** com `DATABASE_URL` (PostgreSQL do Supabase Free) e `DEMO_ACCESS_TOKEN` definidos no painel, nunca no Git. `PUBLIC_DEMO=true` bloqueia os tokens locais. No PostgreSQL, a inicialização ativa RLS e revoga os privilégios de `anon` e `authenticated` nas tabelas do protótipo, pois o acesso de demonstração passa somente pela API FastAPI; consulte a [orientação de segurança do Supabase](https://supabase.com/docs/guides/database/postgres/row-level-security). A publicação ainda exige vincular as contas Render/Supabase, fornecer os segredos, aplicar o deploy e verificar HTTPS, `/health/ready`, criação/leitura e persistência após reinício. A infraestrutura gratuita pode suspender ou hibernar por inatividade; consulte [Render Free](https://render.com/docs/free) e [Supabase Free](https://supabase.com/docs/guides/platform/free-project-pausing) antes de usar. O banco SQLite local é somente para desenvolvimento.
 
 ## Desenvolvimento e testes
 
@@ -33,7 +39,10 @@ $env:PYTHONPATH = "src"
 
 Os artefatos principais estão em:
 
+- `docs/REQUISITOS.md`: requisitos funcionais e não funcionais do cenário;
+- `docs/CRONOGRAMA_EXECUCAO.md`: 14 semanas, 22 demandas canônicas, dependências e critérios;
 - `docs/arquitetura/`: AS-IS, TO-BE, componentes, implantação e sequências;
+- `docs/EXEMPLOS_API.md`: exemplos executáveis de requisição, resposta e erro;
 - `docs/api/openapi.yaml`: contrato REST;
 - `docs/events/asyncapi.yaml`: contrato dos eventos;
 - `docs/MATRIZ_RASTREABILIDADE.md`: requisito, implementação, teste e evidência;
@@ -45,17 +54,21 @@ Os artefatos principais estão em:
 **Planejamento / rastreabilidade**
 - `PLANO_IMPLEMENTACAO_CENARIO_4.md`
 - `docs/BACKLOG_TASKS_SUBTASKS.md`
+- `docs/CRONOGRAMA_EXECUCAO.md` e `docs/governanca/`
 - `docs/MATRIZ_RASTREABILIDADE.md`
 
-**Requisitos e visão de negócio**
+**Produto, requisitos e visão de negócio**
+- `docs/PRD_LOCALIZA.md`
 - `docs/REQUISITOS.md`
 - `docs/VISAO_NEGOCIO.md`
 
-**Arquitetura (AS-IS / TO-BE)**
+**Arquitetura (AS-IS / TO-BE / DDD / TDD)**
 - `docs/arquitetura/AS_IS.md`
 - `docs/arquitetura/TO_BE.md`
 - `docs/arquitetura/FLUXOS_INTEGRACAO.md`
 - `docs/adr/ADR-001-integracao-empresa-de-servicos.md`
+- `docs/DDD_LOCALIZA.md`
+- `docs/TDD_LOCALIZA.md`
 
 **Integrações e APIs**
 - `docs/INTEGRACOES.md`
@@ -72,8 +85,8 @@ Os artefatos principais estão em:
 - `docs/EVIDENCIAS_VALIDACAO.md`
 
 **Entrega final**
-- `output/Relatorio_Tecnico_Cenario_4.docx` (versões renderizadas em PDF/imagens também em `tmp/report-render-v2` a `v4`)
-- Apresentação em slides/imagens em `tmp/presentation-build/` (fonte `.pptx` não localizada — confirmar local)
+- `output/Relatorio_Tecnico_Cenario_4.docx` — relatório técnico gerado; revisar após cada mudança de escopo e completar integrantes/contribuições.
+- `output/Apresentacao_Cenario_4.pptx` — apresentação técnica gerada; revisar antes da submissão.
 
 **Código e testes**
 - `src/archcorp/` (implementação/protótipo)
@@ -81,7 +94,7 @@ Os artefatos principais estão em:
 - `docker-compose.yml`, `migrations/`, `scripts/`, `tools/`
 
 **Meta/organização**
-- `AGENT.md`, `AGENTS.md`, `README.md`, `termino1.md`
+- `AGENT.md`, `README.md`, `termino1.md`
 
 ### Ordem sugerida para auditoria
 
@@ -90,10 +103,10 @@ A ordem segue a estrutura do `Guia.pdf` (requisitos → arquitetura atual → ar
 1. `Guia.pdf` — critérios de entrega;
 2. `README.md` e `AGENT.md` — visão geral do repositório;
 3. `PLANO_IMPLEMENTACAO_CENARIO_4.md` — plano geral;
-4. `docs/REQUISITOS.md` — requisitos funcionais e não funcionais;
+4. `docs/PRD_LOCALIZA.md` e `docs/REQUISITOS.md` — produto, requisitos funcionais e não funcionais;
 5. `docs/arquitetura/AS_IS.md` — cenário atual;
 6. `docs/arquitetura/TO_BE.md` — arquitetura proposta e padrões/estilos;
-7. `docs/adr/ADR-001-integracao-empresa-de-servicos.md` — justificativa das decisões arquiteturais;
+7. `docs/adr/ADR-001-integracao-empresa-de-servicos.md`, `docs/DDD_LOCALIZA.md` e `docs/TDD_LOCALIZA.md` — domínio, desenho técnico e justificativa das decisões arquiteturais;
 8. `docs/arquitetura/FLUXOS_INTEGRACAO.md` e `docs/INTEGRACOES.md` — integrações (mínimo três) e interoperabilidade;
 9. `docs/api/openapi.yaml` e `docs/events/asyncapi.yaml` — contratos técnicos das integrações;
 10. `docs/EXEMPLOS_API.md` — exemplos de requisição/resposta;
@@ -103,10 +116,8 @@ A ordem segue a estrutura do `Guia.pdf` (requisitos → arquitetura atual → ar
 14. `docs/MATRIZ_RASTREABILIDADE.md` e `docs/BACKLOG_TASKS_SUBTASKS.md` — conferência cruzada de cobertura;
 15. `src/archcorp/` e `tests/` — protótipo/implementação sustentando a documentação;
 16. `docs/ROTEIRO_DEMONSTRACAO.md` e `docs/EVIDENCIAS_VALIDACAO.md` — validação dos três fluxos integrados;
-17. Slides em `tmp/presentation-build/` — apresentação técnica final;
-18. `output/Relatorio_Tecnico_Cenario_4.docx` — relatório técnico consolidado (15–20 páginas), por último, pois amarra todo o restante.
-
-> Observação: existem múltiplas pastas de render do relatório (`tmp/report-render-v1` a `v4`) além do `.docx` em `output/`. Confirmar qual é a versão oficial antes de tratar as demais como obsoletas.
+17. `output/Apresentacao_Cenario_4.pptx` — apresentação técnica final;
+18. `output/Relatorio_Tecnico_Cenario_4.docx` — relatório técnico consolidado; conferir paginação e dados da equipe antes da entrega.
 
 ## Health checks e operação
 
@@ -120,4 +131,4 @@ A ordem segue a estrutura do `Guia.pdf` (requisitos → arquitetura atual → ar
 
 ## Limites conhecidos
 
-Produtos e tecnologias dos cinco sistemas existentes não constam no enunciado. O projeto trata os detalhes do AS-IS como premissas a validar. A demonstração usa adaptadores internos substituíveis; integrações reais exigem confirmação dos produtos, contratos e responsáveis da organização.
+Produtos e tecnologias dos cinco sistemas existentes não constam no enunciado. O AS-IS é uma hipótese a validar. A demonstração usa módulos e simulações internas; integrações reais exigem confirmação dos sistemas, contratos e responsáveis. O broker RabbitMQ recebe cópias no ambiente local, mas os consumidores deste protótipo são chamados pelo despachante da API. Não há OIDC, tracing distribuído ou escala horizontal verificados. A URL pública e os arquivos finais só serão declarados entregues após conferência.
