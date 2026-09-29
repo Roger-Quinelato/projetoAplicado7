@@ -5,6 +5,7 @@ from pathlib import Path
 from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, inspect
 
 from archcorp.infrastructure.migrate import BASELINE_REVISION, alembic_config, load_models, upgrade_to_head
@@ -92,15 +93,28 @@ def test_migracoes_criam_esquema_sem_divergencia_dos_modelos(tmp_path):
     assert {"alembic_version", "crm_customers", "contracts_contracts", "integration_outbox"}.issubset(tables)
 
 
-def test_banco_criado_antes_das_migracoes_recebe_carimbo_sem_recriar_tabelas(tmp_path):
-    engine = create_engine(f"sqlite:///{tmp_path / 'legado.db'}")
+def test_banco_criado_por_create_all_recebe_carimbo_de_head(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'atual.db'}")
     load_models().metadata.create_all(engine)
     with engine.begin() as connection:
         upgrade_to_head(connection)
     with engine.connect() as connection:
         revision = MigrationContext.configure(connection).get_current_revision()
-    assert revision is not None
-    assert BASELINE_REVISION <= revision
+    assert revision == ScriptDirectory.from_config(alembic_config()).get_current_head()
+
+
+def test_banco_com_esquema_antigo_recebe_migracoes_seguintes(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'antigo.db'}")
+    with engine.begin() as connection:
+        command.upgrade(alembic_config(connection), BASELINE_REVISION)
+        connection.exec_driver_sql("DROP TABLE alembic_version")
+    with engine.begin() as connection:
+        upgrade_to_head(connection)
+    with engine.connect() as connection:
+        diff = compare_metadata(MigrationContext.configure(connection), load_models().metadata)
+        columns = {column["name"] for column in inspect(connection).get_columns("crm_customers")}
+    assert diff == []
+    assert "active" in columns
 
 
 def test_migracoes_geram_sql_valido_para_postgresql():
