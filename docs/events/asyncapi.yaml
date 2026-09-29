@@ -169,7 +169,7 @@ components:
             payload:
               customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
               name: Cliente Frota Localiza Ltda.
-              email: gestor.frota@cliente-localiza.test
+              email: gestor.frota@cliente-sintetico.example.com
     TicketEntitlementReconciled:
       name: TicketEntitlementReconciled.v1
       title: Elegibilidade do chamado reconciliada

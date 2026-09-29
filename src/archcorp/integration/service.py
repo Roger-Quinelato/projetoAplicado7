@@ -5,7 +5,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from archcorp.config import settings
-from archcorp.integration.models import AuditLog, InboxEvent, OutboxEvent
+from archcorp.exceptions import ConflictError
+from archcorp.integration.models import AuditLog, InboxEvent, LegacyIdMapping, OutboxEvent
 from archcorp.observability import COUNTERS, logger
 
 
@@ -70,3 +71,33 @@ def enqueue(session: Session, event_type: str, producer: str, payload: dict, cor
     event = OutboxEvent(event_type=event_type, producer=producer, payload=payload, correlation_id=correlation_id, causation_id=causation_id)
     session.add(event)
     return event
+
+
+class LegacyIdService:
+    """Mapeia identificadores legados ao UUID global, sem regra de negócio dos contextos."""
+
+    @staticmethod
+    def register(session: Session, entity_type: str, global_id: str, source_system: str, legacy_id: str) -> LegacyIdMapping:
+        existing = LegacyIdService.resolve(session, source_system, legacy_id)
+        if existing:
+            if existing.global_id != global_id:
+                raise ConflictError(f"Identificador legado {source_system}/{legacy_id} já associado a outro registro")
+            return existing
+        mapping = LegacyIdMapping(entity_type=entity_type, global_id=global_id, source_system=source_system, legacy_id=legacy_id)
+        session.add(mapping)
+        return mapping
+
+    @staticmethod
+    def resolve(session: Session, source_system: str, legacy_id: str) -> LegacyIdMapping | None:
+        return session.scalar(select(LegacyIdMapping).where(
+            LegacyIdMapping.source_system == source_system, LegacyIdMapping.legacy_id == legacy_id,
+        ))
+
+    @staticmethod
+    def legacy_ids(session: Session, global_id: str) -> list[LegacyIdMapping]:
+        return list(session.scalars(select(LegacyIdMapping).where(LegacyIdMapping.global_id == global_id).order_by(LegacyIdMapping.id)))
+
+    @staticmethod
+    def as_dict(mapping: LegacyIdMapping) -> dict:
+        return {"entityType": mapping.entity_type, "globalId": mapping.global_id,
+                "sourceSystem": mapping.source_system, "legacyId": mapping.legacy_id}

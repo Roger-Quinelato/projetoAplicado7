@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from archcorp.contracts.models import Contract, Reservation
 from archcorp.crm.public import CustomerReader
+from archcorp.exceptions import BusinessRuleError, IdempotencyConflictError, InvalidStateError, NotFoundError
 from archcorp.integration.models import IdempotencyRecord
 from archcorp.integration.service import audit, enqueue
 
@@ -20,11 +21,11 @@ class ContractService:
                     stored.response["billing"]["cycle"] != data["billing"]["cycle"] or
                     stored.response["billing"]["currency"] != data["billing"]["currency"] or
                     stored.response["billing"]["amount"] != float(data["billing"]["amount"])):
-                raise ValueError("Idempotency-Key já utilizada com outro contrato")
+                raise IdempotencyConflictError("Idempotency-Key já utilizada com outro contrato")
             return stored.response, True
         customer = self.customers.get(session, data["customerId"])
         if not customer or not customer.eligible or not customer.consent_service:
-            raise ValueError("Cliente inexistente ou inelegível")
+            raise BusinessRuleError("Cliente inexistente ou inelegível")
         contract = Contract(
             customer_id=customer.customer_id, customer_name=customer.name, customer_email=customer.email,
             service_code=data["serviceCode"], starts_on=data["startsOn"], amount=data["billing"]["amount"],
@@ -44,16 +45,16 @@ class ContractService:
             return stored.response, True
         contract = session.get(Contract, contract_id)
         if not contract:
-            raise LookupError("Contrato não encontrado")
+            raise NotFoundError("Contrato não encontrado")
         if contract.status == "ACTIVE":
             previous = session.scalar(select(IdempotencyRecord).where(
                 IdempotencyRecord.operation == f"activate_contract:{contract_id}"
             ))
             if previous:
                 return previous.response, True
-            raise ValueError("Contrato já ativo sem registro da ativação original")
+            raise InvalidStateError("Contrato já ativo sem registro da ativação original")
         if contract.status != "DRAFT":
-            raise ValueError("Somente contrato em rascunho pode ser ativado")
+            raise InvalidStateError("Somente contrato em rascunho pode ser ativado")
         contract.status = "ACTIVE"
         reservation = session.scalar(select(Reservation).where(Reservation.contract_id == contract_id))
         if reservation:

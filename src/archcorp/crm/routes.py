@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from archcorp.crm.models import Contact, Customer, Opportunity
+from archcorp.crm.service import CustomerService
 from archcorp.infrastructure.db import get_session
 from archcorp.security import require_roles
 
@@ -56,7 +57,7 @@ def get_customer(customer_id: UUID, session: Session = Depends(get_session)) -> 
     item = session.get(Customer, str(customer_id))
     if not item:
         raise HTTPException(404, "Cliente não encontrado")
-    return customer_data(item)
+    return {**customer_data(item), "legacyId": CustomerService.legacy_id(session, item.customer_id)}
 
 
 @router.post("/contacts", status_code=201, dependencies=[Depends(require_roles("commercial", "admin"))])

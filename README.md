@@ -41,6 +41,8 @@ $env:PYTHONPATH = "src"
 ./.venv/Scripts/pytest
 ```
 
+O esquema do banco é versionado com Alembic ([ADR-002](docs/adr/ADR-002-migracoes-aditivas.md)); a aplicação executa `upgrade head` ao iniciar. Para carregar dados sintéticos de demonstração, execute `python scripts/seed_sintetico.py` ([regras de dados sintéticos](docs/DADOS_SINTETICOS.md)). Depois de alterar rotas ou schemas, regenere o contrato REST com `python tools/export_openapi.py`. Erros seguem o contrato `application/problem+json` descrito em [INTEGRACOES.md](docs/INTEGRACOES.md#contrato-de-erro).
+
 Os artefatos principais estão em:
 
 - `docs/REQUISITOS.md`: requisitos funcionais e não funcionais do cenário;
@@ -64,6 +66,7 @@ Os artefatos principais estão em:
 **Produto, requisitos e visão de negócio**
 - `docs/PRD_LOCALIZA.md`
 - `docs/REQUISITOS.md`
+- `docs/DADOS_SINTETICOS.md`
 - `docs/VISAO_NEGOCIO.md`
 
 **Arquitetura (AS-IS / TO-BE / DDD / TDD)**
@@ -71,6 +74,7 @@ Os artefatos principais estão em:
 - `docs/arquitetura/TO_BE.md`
 - `docs/arquitetura/FLUXOS_INTEGRACAO.md`
 - `docs/adr/ADR-001-integracao-empresa-de-servicos.md`
+- `docs/adr/ADR-002-migracoes-aditivas.md`
 - `docs/DDD_LOCALIZA.md`
 - `docs/TDD_LOCALIZA.md`
 
@@ -95,7 +99,7 @@ Os artefatos principais estão em:
 **Código e testes**
 - `src/archcorp/` (implementação/protótipo)
 - `tests/` (testes automatizados)
-- `docker-compose.yml`, `migrations/`, `scripts/`, `tools/`
+- `docker-compose.yml`, `src/archcorp/infrastructure/migrations/` (Alembic), `scripts/`, `tools/`
 
 **Meta/organização**
 - `CLAUDE.md` — instruções iniciais para Claude Code;

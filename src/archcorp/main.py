@@ -14,12 +14,20 @@ from archcorp.contracts.service import ContractService
 from archcorp.crm.models import Customer
 from archcorp.crm.service import CustomerService
 from archcorp.crm.routes import router as crm_router
+from archcorp.errors import (
+    install_problem_openapi,
+    problem_content,
+    problem_example,
+    problem_response,
+    register_error_handlers,
+)
 from archcorp.finance.models import Invoice
 from archcorp.finance.service import handle_contract_activated as finance_contract_activated
 from archcorp.finance.routes import router as finance_router
-from archcorp.infrastructure.db import Base, engine, get_session, protect_public_demo_tables
+from archcorp.infrastructure.db import engine, get_session, protect_public_demo_tables
+from archcorp.infrastructure.migrate import upgrade_to_head
 from archcorp.integration.models import AuditLog, LegacyIdMapping, OutboxEvent
-from archcorp.integration.service import EventDispatcher, audit
+from archcorp.integration.service import EventDispatcher, LegacyIdService, audit
 from archcorp.observability import correlation_id_var, logger, metrics_middleware, render_metrics
 from archcorp.schemas import (
     EXAMPLE_CONTRACT_ACTIVATED_RESPONSE,
@@ -37,6 +45,7 @@ from archcorp.schemas import (
     CustomerResponse,
     CustomerUpdate,
     DispatchResponse,
+    LegacyIdResponse,
     EntitlementResponse,
     FailureResponse,
     OperationTraceResponse,
@@ -75,28 +84,30 @@ IDEMPOTENCY_RESPONSE_HEADERS = {
         "example": "false",
     },
 }
+
+def validation_problem_response(description: str, instance: str, field: str, rule_summary: str, rule_detail: str) -> dict:
+    invalid = [{"type": "uuid_parsing", "loc": ["body", field], "msg": "Input should be a valid UUID", "input": "not-a-uuid"}]
+    return {
+        "description": description,
+        "content": problem_content(examples={
+            "businessRule": {"summary": rule_summary, "value": problem_example(422, rule_detail, instance, "BUSINESS_RULE_VIOLATION")},
+            "validation": {"summary": "Corpo da requisição inválido", "value": {**problem_example(422, invalid, instance), "errors": invalid}},
+        }),
+    }
+
+
 COMMON_API_ERRORS = {
     400: {
         "description": "Cabeçalho de correlação inválido.",
-        "content": {
-            "application/json": {
-                "example": {"detail": "X-Correlation-ID deve ser UUID"}
-            }
-        },
+        "content": problem_content(problem_example(400, "X-Correlation-ID deve ser UUID", "/api/v1/contracts/drafts")),
     },
     401: {
         "description": "Token ausente ou inválido.",
-        "content": {
-            "application/json": {"example": {"detail": "Token ausente ou inválido"}}
-        },
+        "content": problem_content(problem_example(401, "Token ausente ou inválido", "/api/v1/contracts/drafts")),
     },
     403: {
         "description": "Papel sem permissão para a operação.",
-        "content": {
-            "application/json": {
-                "example": {"detail": "Papel sem permissão para esta operação"}
-            }
-        },
+        "content": problem_content(problem_example(403, "Papel sem permissão para esta operação", "/api/v1/contracts/drafts")),
     },
 }
 CUSTOMER_CREATE_RESPONSES = {
@@ -127,32 +138,15 @@ CONTRACT_DRAFT_RESPONSES = {
             }
         },
     },
-    422: {
-        "description": "Entrada inválida ou cliente inexistente, inelegível ou sem consentimento.",
-        "content": {
-            "application/json": {
-                "examples": {
-                    "businessRule": {
-                        "summary": "Cliente não pode originar contrato",
-                        "value": {"detail": "Cliente inexistente ou inelegível"},
-                    },
-                    "validation": {
-                        "summary": "Corpo da requisição inválido",
-                        "value": {
-                            "detail": [
-                                {
-                                    "type": "uuid_parsing",
-                                    "loc": ["body", "customerId"],
-                                    "msg": "Input should be a valid UUID",
-                                    "input": "not-a-uuid",
-                                }
-                            ]
-                        },
-                    },
-                }
-            }
-        },
+    409: {
+        "description": "Idempotency-Key reutilizada com outro conteúdo ou contrato já existente.",
+        "content": problem_content(problem_example(409, "Idempotency-Key já utilizada com outro contrato", "/api/v1/contracts/drafts", "IDEMPOTENCY_CONFLICT")),
     },
+    422: validation_problem_response(
+        "Entrada inválida ou cliente inexistente, inelegível ou sem consentimento.",
+        "/api/v1/contracts/drafts", "customerId",
+        "Cliente não pode originar contrato", "Cliente inexistente ou inelegível",
+    ),
 }
 CONTRACT_ACTIVATION_RESPONSES = {
     **COMMON_API_ERRORS,
@@ -176,11 +170,12 @@ CONTRACT_ACTIVATION_RESPONSES = {
     },
     404: {
         "description": "Contrato não encontrado.",
-        "content": {
-            "application/json": {"example": {"detail": "Contrato não encontrado"}}
-        },
+        "content": problem_content(problem_example(404, "Contrato não encontrado", "/api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/activate")),
     },
-    409: {"description": "Contrato já encerrado ou estado incompatível para ativação."},
+    409: {
+        "description": "Contrato já encerrado ou estado incompatível para ativação.",
+        "content": problem_content(problem_example(409, "Somente contrato em rascunho pode ser ativado", "/api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/activate", "INVALID_STATE")),
+    },
 }
 ENTITLEMENT_RESPONSES = {
     **COMMON_API_ERRORS,
@@ -227,34 +222,15 @@ TICKET_RESPONSES = {
             }
         },
     },
-    422: {
-        "description": "Entrada inválida ou contrato, serviço ou cliente sem elegibilidade.",
-        "content": {
-            "application/json": {
-                "examples": {
-                    "businessRule": {
-                        "summary": "Contrato sem elegibilidade",
-                        "value": {
-                            "detail": "Contrato, serviço ou cliente sem elegibilidade"
-                        },
-                    },
-                    "validation": {
-                        "summary": "Corpo da requisição inválido",
-                        "value": {
-                            "detail": [
-                                {
-                                    "type": "uuid_parsing",
-                                    "loc": ["body", "contractId"],
-                                    "msg": "Input should be a valid UUID",
-                                    "input": "not-a-uuid",
-                                }
-                            ]
-                        },
-                    },
-                }
-            }
-        },
+    409: {
+        "description": "Idempotency-Key reutilizada com outro chamado.",
+        "content": problem_content(problem_example(409, "Idempotency-Key já utilizada com outro chamado", "/api/v1/support/tickets", "IDEMPOTENCY_CONFLICT")),
     },
+    422: validation_problem_response(
+        "Entrada inválida ou contrato, serviço ou cliente sem elegibilidade.",
+        "/api/v1/support/tickets", "contractId",
+        "Contrato sem elegibilidade", "Contrato, serviço ou cliente sem elegibilidade",
+    ),
 }
 RECONCILIATION_RESPONSES = {
     **COMMON_API_ERRORS,
@@ -281,11 +257,12 @@ RECONCILIATION_RESPONSES = {
     },
     404: {
         "description": "Chamado não encontrado.",
-        "content": {
-            "application/json": {"example": {"detail": "Chamado não encontrado"}}
-        },
+        "content": problem_content(problem_example(404, "Chamado não encontrado", "/api/v1/support/tickets/dddddddd-dddd-4ddd-8ddd-dddddddddddd/reconcile")),
     },
-    409: {"description": "Chamado não está pendente de elegibilidade."},
+    409: {
+        "description": "Chamado não está pendente de elegibilidade.",
+        "content": problem_content(problem_example(409, "Somente chamado pendente pode ser reconciliado", "/api/v1/support/tickets/dddddddd-dddd-4ddd-8ddd-dddddddddddd/reconcile", "INVALID_STATE")),
+    },
 }
 DISPATCH_RESPONSES = {
     **COMMON_API_ERRORS,
@@ -333,9 +310,7 @@ REPROCESS_RESPONSES = {
     },
     404: {
         "description": "Evento com falha não encontrado.",
-        "content": {
-            "application/json": {"example": {"detail": "Falha não encontrada"}}
-        },
+        "content": problem_content(problem_example(404, "Falha não encontrada", "/api/v1/integration/failures/cccccccc-cccc-4ccc-8ccc-cccccccccccc/reprocess")),
     },
 }
 OPERATION_TRACE_RESPONSES = {
@@ -389,13 +364,15 @@ async def lifespan(_: FastAPI):
     if settings.public_demo and (not settings.demo_access_token or len(settings.demo_access_token) < 24 or settings.demo_access_token.startswith("demo-")):
         raise RuntimeError("PUBLIC_DEMO exige DEMO_ACCESS_TOKEN aleatório com pelo menos 24 caracteres")
     with engine.begin() as connection:
-        Base.metadata.create_all(connection)
+        upgrade_to_head(connection)
         protect_public_demo_tables(connection)
     yield
 
 
 app = FastAPI(title="Localiza Integração Cenário 4", version="1.0.0", description="API demonstrativa para CRM, reservas e contratos, financeiro e faturamento, atendimento e assistência 24h, workflow e integração.", lifespan=lifespan)
 app.middleware("http")(metrics_middleware)
+register_error_handlers(app)
+install_problem_openapi(app)
 
 
 @app.middleware("http")
@@ -404,10 +381,19 @@ async def correlation_middleware(request: Request, call_next):
     try:
         correlation_id = str(UUID(supplied)) if supplied else str(uuid4())
     except ValueError:
-        return Response(content='{"detail":"X-Correlation-ID deve ser UUID"}', status_code=400, media_type="application/json")
+        correlation_id = str(uuid4())
+        token = correlation_id_var.set(correlation_id)
+        try:
+            return problem_response(request, 400, "X-Correlation-ID deve ser UUID", headers={"X-Correlation-ID": correlation_id})
+        finally:
+            correlation_id_var.reset(token)
     token = correlation_id_var.set(correlation_id)
     try:
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception:
+            logger.exception("Erro não tratado", extra={"operation": request.url.path, "result": "failure"})
+            response = problem_response(request, 500, "Erro interno inesperado")
         response.headers["X-Correlation-ID"] = correlation_id
         logger.info("Requisição concluída", extra={"operation": request.url.path, "result": response.status_code})
         return response
@@ -445,7 +431,8 @@ def metrics() -> str:
 )
 def create_customer(body: CustomerCreate, session: Session = Depends(get_session)) -> dict:
     customer = customers.create(session, body.model_dump(mode="json"), correlation_id_var.get())
-    return {"customerId": customer.customer_id, "name": customer.name, "email": customer.email, "eligible": customer.eligible}
+    return {"customerId": customer.customer_id, "name": customer.name, "email": customer.email, "eligible": customer.eligible,
+            "consentService": customer.consent_service, "legacyId": body.legacyId}
 
 
 @app.patch("/api/v1/crm/customers/{customer_id}", tags=["CRM"], dependencies=[Depends(require_roles("commercial", "admin"))])
@@ -475,10 +462,7 @@ def create_contract_draft(
 ) -> dict:
     draft_data = body.model_dump()
     draft_data["customerId"] = str(draft_data["customerId"])
-    try:
-        result, replay = contracts.create_draft(session, draft_data, idempotency_key, correlation_id_var.get())
-    except ValueError as exc:
-        raise HTTPException(status_code=409 if "Idempotency-Key" in str(exc) else 422, detail=str(exc)) from exc
+    result, replay = contracts.create_draft(session, draft_data, idempotency_key, correlation_id_var.get())
     response.headers["Idempotency-Replayed"] = str(replay).lower()
     return result
 
@@ -499,12 +483,7 @@ def activate_contract(
     ),
     session: Session = Depends(get_session),
 ) -> dict:
-    try:
-        result, replay = contracts.activate(session, str(contract_id), idempotency_key, correlation_id_var.get())
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    result, replay = contracts.activate(session, str(contract_id), idempotency_key, correlation_id_var.get())
     response.headers["Idempotency-Replayed"] = str(replay).lower()
     return result
 
@@ -539,10 +518,7 @@ def open_ticket(
     session: Session = Depends(get_session),
 ) -> dict:
     ticket_data = body.model_dump(mode="json")
-    try:
-        result, replay = tickets.open(session, ticket_data, idempotency_key, correlation_id_var.get())
-    except ValueError as exc:
-        raise HTTPException(status_code=409 if "Idempotency-Key" in str(exc) else 422, detail=str(exc)) from exc
+    result, replay = tickets.open(session, ticket_data, idempotency_key, correlation_id_var.get())
     response.headers["Idempotency-Replayed"] = str(replay).lower()
     return result
 
@@ -556,12 +532,7 @@ def open_ticket(
     openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def reconcile_ticket(ticket_id: UUID, session: Session = Depends(get_session)) -> dict:
-    try:
-        return tickets.reconcile(session, str(ticket_id), correlation_id_var.get())
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return tickets.reconcile(session, str(ticket_id), correlation_id_var.get())
 
 
 @app.post(
@@ -610,6 +581,27 @@ def reprocess(event_id: UUID, session: Session = Depends(get_session)) -> dict:
 
 
 @app.get(
+    "/api/v1/integration/legacy-ids/{source_system}/{legacy_id}",
+    response_model=LegacyIdResponse,
+    tags=["Integração"],
+    dependencies=[Depends(require_roles("commercial", "operations", "admin"))],
+    responses={
+        **COMMON_API_ERRORS,
+        404: {
+            "description": "Identificador legado não mapeado.",
+            "content": problem_content(problem_example(404, "Identificador legado não encontrado", "/api/v1/integration/legacy-ids/CRM/WEB-LOCALIZA-9999")),
+        },
+    },
+    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
+)
+def resolve_legacy_id(source_system: str, legacy_id: str, session: Session = Depends(get_session)) -> dict:
+    mapping = LegacyIdService.resolve(session, source_system, legacy_id)
+    if not mapping:
+        raise HTTPException(status_code=404, detail="Identificador legado não encontrado")
+    return LegacyIdService.as_dict(mapping)
+
+
+@app.get(
     "/api/v1/operations/{correlation_id}",
     response_model=OperationTraceResponse,
     tags=["Integração"],
@@ -644,10 +636,7 @@ def draft_from_reservation(reservation_id: UUID, response: Response,
             "startsOn": reservation.starts_on, "slaHours": reservation.sla_hours,
             "billing": {"amount": reservation.amount, "currency": reservation.currency,
                         "cycle": reservation.billing_cycle}}
-    try:
-        result, replay = contracts.create_draft(session, data, idempotency_key, correlation_id_var.get())
-    except ValueError as exc:
-        raise HTTPException(409 if "Idempotency-Key" in str(exc) else 422, str(exc)) from exc
+    result, replay = contracts.create_draft(session, data, idempotency_key, correlation_id_var.get())
     reservation.contract_id = result["contractId"]
     reservation.status = "DRAFTED"
     session.commit()

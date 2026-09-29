@@ -72,8 +72,10 @@ paths:
               example:
                 customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
                 name: Cliente Frota Localiza Ltda.
-                email: gestor.frota@cliente-localiza.test
+                email: gestor.frota@cliente-sintetico.example.com
                 eligible: true
+                consentService: true
+                legacyId: WEB-LOCALIZA-1001
           headers:
             X-Correlation-ID:
               description: UUID usado para correlacionar a requisição, os logs e os
@@ -85,27 +87,68 @@ paths:
         '400':
           description: Cabeçalho de correlação inválido.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:bad-request
+                title: Requisição inválida
+                status: 400
                 detail: X-Correlation-ID deve ser UUID
+                instance: /api/v1/contracts/drafts
+                code: BAD_REQUEST
+                correlationId: 11111111-1111-4111-8111-111111111111
         '401':
           description: Token ausente ou inválido.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
                 detail: Token ausente ou inválido
+                instance: /api/v1/contracts/drafts
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
         '403':
           description: Papel sem permissão para a operação.
           content:
-            application/json:
-              example:
-                detail: Papel sem permissão para esta operação
-        '422':
-          description: Validation Error
-          content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/contracts/drafts
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          description: Entrada inválida.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - &id001
+                  type: missing
+                  loc:
+                  - body
+                  - name
+                  msg: Field required
+                  input: {}
+                instance: /api/v1/crm/customers
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
       parameters:
       - name: X-Correlation-ID
         in: header
@@ -165,11 +208,22 @@ paths:
                 additionalProperties: true
                 title: Response Update Customer Api V1 Crm Customers  Customer Id  Patch
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/crm/customers/{customer_id}
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
     get:
       tags:
       - CRM
@@ -195,11 +249,22 @@ paths:
                 additionalProperties: true
                 title: Response Get Customer Api V1 Crm Customers  Customer Id  Get
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/crm/customers/{customer_id}
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/contracts/drafts:
     post:
       tags:
@@ -284,35 +349,95 @@ paths:
         '400':
           description: Cabeçalho de correlação inválido.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:bad-request
+                title: Requisição inválida
+                status: 400
                 detail: X-Correlation-ID deve ser UUID
+                instance: /api/v1/contracts/drafts
+                code: BAD_REQUEST
+                correlationId: 11111111-1111-4111-8111-111111111111
         '401':
           description: Token ausente ou inválido.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
                 detail: Token ausente ou inválido
+                instance: /api/v1/contracts/drafts
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
         '403':
           description: Papel sem permissão para a operação.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
                 detail: Papel sem permissão para esta operação
+                instance: /api/v1/contracts/drafts
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '409':
+          description: Idempotency-Key reutilizada com outro conteúdo ou contrato
+            já existente.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:idempotency-conflict
+                title: Conflito de estado
+                status: 409
+                detail: Idempotency-Key já utilizada com outro contrato
+                instance: /api/v1/contracts/drafts
+                code: IDEMPOTENCY_CONFLICT
+                correlationId: 11111111-1111-4111-8111-111111111111
         '422':
           description: Entrada inválida ou cliente inexistente, inelegível ou sem
             consentimento.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               examples:
                 businessRule:
                   summary: Cliente não pode originar contrato
                   value:
+                    type: urn:archcorp:problem:business-rule-violation
+                    title: Entrada inválida
+                    status: 422
                     detail: Cliente inexistente ou inelegível
+                    instance: /api/v1/contracts/drafts
+                    code: BUSINESS_RULE_VIOLATION
+                    correlationId: 11111111-1111-4111-8111-111111111111
                 validation:
                   summary: Corpo da requisição inválido
                   value:
+                    type: urn:archcorp:problem:validation-error
+                    title: Entrada inválida
+                    status: 422
                     detail:
+                    - type: uuid_parsing
+                      loc:
+                      - body
+                      - customerId
+                      msg: Input should be a valid UUID
+                      input: not-a-uuid
+                    instance: /api/v1/contracts/drafts
+                    code: VALIDATION_ERROR
+                    correlationId: 11111111-1111-4111-8111-111111111111
+                    errors:
                     - type: uuid_parsing
                       loc:
                       - body
@@ -406,35 +531,90 @@ paths:
         '400':
           description: Cabeçalho de correlação inválido.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:bad-request
+                title: Requisição inválida
+                status: 400
                 detail: X-Correlation-ID deve ser UUID
+                instance: /api/v1/contracts/drafts
+                code: BAD_REQUEST
+                correlationId: 11111111-1111-4111-8111-111111111111
         '401':
           description: Token ausente ou inválido.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
                 detail: Token ausente ou inválido
+                instance: /api/v1/contracts/drafts
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
         '403':
           description: Papel sem permissão para a operação.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
                 detail: Papel sem permissão para esta operação
+                instance: /api/v1/contracts/drafts
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
         '404':
           description: Contrato não encontrado.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:not-found
+                title: Recurso não encontrado
+                status: 404
                 detail: Contrato não encontrado
+                instance: /api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/activate
+                code: NOT_FOUND
+                correlationId: 11111111-1111-4111-8111-111111111111
         '409':
           description: Contrato já encerrado ou estado incompatível para ativação.
-        '422':
-          description: Validation Error
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:invalid-state
+                title: Conflito de estado
+                status: 409
+                detail: Somente contrato em rascunho pode ser ativado
+                instance: /api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/activate
+                code: INVALID_STATE
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          description: Entrada inválida.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/contracts/{contract_id}/activate
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/contracts/{contract_id}/entitlement:
     get:
       tags:
@@ -500,27 +680,62 @@ paths:
         '400':
           description: Cabeçalho de correlação inválido.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:bad-request
+                title: Requisição inválida
+                status: 400
                 detail: X-Correlation-ID deve ser UUID
+                instance: /api/v1/contracts/drafts
+                code: BAD_REQUEST
+                correlationId: 11111111-1111-4111-8111-111111111111
         '401':
           description: Token ausente ou inválido.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
                 detail: Token ausente ou inválido
+                instance: /api/v1/contracts/drafts
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
         '403':
           description: Papel sem permissão para a operação.
           content:
-            application/json:
-              example:
-                detail: Papel sem permissão para esta operação
-        '422':
-          description: Validation Error
-          content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/contracts/drafts
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          description: Entrada inválida.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/contracts/{contract_id}/entitlement
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/support/tickets:
     post:
       tags:
@@ -613,34 +828,93 @@ paths:
         '400':
           description: Cabeçalho de correlação inválido.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:bad-request
+                title: Requisição inválida
+                status: 400
                 detail: X-Correlation-ID deve ser UUID
+                instance: /api/v1/contracts/drafts
+                code: BAD_REQUEST
+                correlationId: 11111111-1111-4111-8111-111111111111
         '401':
           description: Token ausente ou inválido.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
                 detail: Token ausente ou inválido
+                instance: /api/v1/contracts/drafts
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
         '403':
           description: Papel sem permissão para a operação.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
                 detail: Papel sem permissão para esta operação
+                instance: /api/v1/contracts/drafts
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '409':
+          description: Idempotency-Key reutilizada com outro chamado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:idempotency-conflict
+                title: Conflito de estado
+                status: 409
+                detail: Idempotency-Key já utilizada com outro chamado
+                instance: /api/v1/support/tickets
+                code: IDEMPOTENCY_CONFLICT
+                correlationId: 11111111-1111-4111-8111-111111111111
         '422':
           description: Entrada inválida ou contrato, serviço ou cliente sem elegibilidade.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               examples:
                 businessRule:
                   summary: Contrato sem elegibilidade
                   value:
+                    type: urn:archcorp:problem:business-rule-violation
+                    title: Entrada inválida
+                    status: 422
                     detail: Contrato, serviço ou cliente sem elegibilidade
+                    instance: /api/v1/support/tickets
+                    code: BUSINESS_RULE_VIOLATION
+                    correlationId: 11111111-1111-4111-8111-111111111111
                 validation:
                   summary: Corpo da requisição inválido
                   value:
+                    type: urn:archcorp:problem:validation-error
+                    title: Entrada inválida
+                    status: 422
                     detail:
+                    - type: uuid_parsing
+                      loc:
+                      - body
+                      - contractId
+                      msg: Input should be a valid UUID
+                      input: not-a-uuid
+                    instance: /api/v1/support/tickets
+                    code: VALIDATION_ERROR
+                    correlationId: 11111111-1111-4111-8111-111111111111
+                    errors:
                     - type: uuid_parsing
                       loc:
                       - body
@@ -730,35 +1004,90 @@ paths:
         '400':
           description: Cabeçalho de correlação inválido.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:bad-request
+                title: Requisição inválida
+                status: 400
                 detail: X-Correlation-ID deve ser UUID
+                instance: /api/v1/contracts/drafts
+                code: BAD_REQUEST
+                correlationId: 11111111-1111-4111-8111-111111111111
         '401':
           description: Token ausente ou inválido.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
                 detail: Token ausente ou inválido
+                instance: /api/v1/contracts/drafts
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
         '403':
           description: Papel sem permissão para a operação.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
                 detail: Papel sem permissão para esta operação
+                instance: /api/v1/contracts/drafts
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
         '404':
           description: Chamado não encontrado.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:not-found
+                title: Recurso não encontrado
+                status: 404
                 detail: Chamado não encontrado
+                instance: /api/v1/support/tickets/dddddddd-dddd-4ddd-8ddd-dddddddddddd/reconcile
+                code: NOT_FOUND
+                correlationId: 11111111-1111-4111-8111-111111111111
         '409':
           description: Chamado não está pendente de elegibilidade.
-        '422':
-          description: Validation Error
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:invalid-state
+                title: Conflito de estado
+                status: 409
+                detail: Somente chamado pendente pode ser reconciliado
+                instance: /api/v1/support/tickets/dddddddd-dddd-4ddd-8ddd-dddddddddddd/reconcile
+                code: INVALID_STATE
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          description: Entrada inválida.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/support/tickets/{ticket_id}/reconcile
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/integration/outbox/dispatch:
     post:
       tags:
@@ -788,21 +1117,45 @@ paths:
         '400':
           description: Cabeçalho de correlação inválido.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:bad-request
+                title: Requisição inválida
+                status: 400
                 detail: X-Correlation-ID deve ser UUID
+                instance: /api/v1/contracts/drafts
+                code: BAD_REQUEST
+                correlationId: 11111111-1111-4111-8111-111111111111
         '401':
           description: Token ausente ou inválido.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
                 detail: Token ausente ou inválido
+                instance: /api/v1/contracts/drafts
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
         '403':
           description: Papel sem permissão para a operação.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
                 detail: Papel sem permissão para esta operação
+                instance: /api/v1/contracts/drafts
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
       parameters:
       - name: X-Correlation-ID
         in: header
@@ -847,21 +1200,45 @@ paths:
         '400':
           description: Cabeçalho de correlação inválido.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:bad-request
+                title: Requisição inválida
+                status: 400
                 detail: X-Correlation-ID deve ser UUID
+                instance: /api/v1/contracts/drafts
+                code: BAD_REQUEST
+                correlationId: 11111111-1111-4111-8111-111111111111
         '401':
           description: Token ausente ou inválido.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
                 detail: Token ausente ou inválido
+                instance: /api/v1/contracts/drafts
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
         '403':
           description: Papel sem permissão para a operação.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
                 detail: Papel sem permissão para esta operação
+                instance: /api/v1/contracts/drafts
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
       parameters:
       - name: X-Correlation-ID
         in: header
@@ -916,33 +1293,185 @@ paths:
         '400':
           description: Cabeçalho de correlação inválido.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:bad-request
+                title: Requisição inválida
+                status: 400
                 detail: X-Correlation-ID deve ser UUID
+                instance: /api/v1/contracts/drafts
+                code: BAD_REQUEST
+                correlationId: 11111111-1111-4111-8111-111111111111
         '401':
           description: Token ausente ou inválido.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
                 detail: Token ausente ou inválido
+                instance: /api/v1/contracts/drafts
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
         '403':
           description: Papel sem permissão para a operação.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
                 detail: Papel sem permissão para esta operação
+                instance: /api/v1/contracts/drafts
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
         '404':
           description: Evento com falha não encontrado.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:not-found
+                title: Recurso não encontrado
+                status: 404
                 detail: Falha não encontrada
+                instance: /api/v1/integration/failures/cccccccc-cccc-4ccc-8ccc-cccccccccccc/reprocess
+                code: NOT_FOUND
+                correlationId: 11111111-1111-4111-8111-111111111111
         '422':
-          description: Validation Error
+          description: Entrada inválida.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/integration/failures/{event_id}/reprocess
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
+  /api/v1/integration/legacy-ids/{source_system}/{legacy_id}:
+    get:
+      tags:
+      - Integração
+      summary: Resolve Legacy Id
+      operationId: resolve_legacy_id_api_v1_integration_legacy_ids__source_system___legacy_id__get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: source_system
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Source System
+      - name: legacy_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Legacy Id
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
+      responses:
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/LegacyIdResponse'
+        '400':
+          description: Cabeçalho de correlação inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:bad-request
+                title: Requisição inválida
+                status: 400
+                detail: X-Correlation-ID deve ser UUID
+                instance: /api/v1/contracts/drafts
+                code: BAD_REQUEST
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/contracts/drafts
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/contracts/drafts
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '404':
+          description: Identificador legado não mapeado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:not-found
+                title: Recurso não encontrado
+                status: 404
+                detail: Identificador legado não encontrado
+                instance: /api/v1/integration/legacy-ids/CRM/WEB-LOCALIZA-9999
+                code: NOT_FOUND
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          description: Entrada inválida.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/integration/legacy-ids/{source_system}/{legacy_id}
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/operations/{correlation_id}:
     get:
       tags:
@@ -999,27 +1528,62 @@ paths:
         '400':
           description: Cabeçalho de correlação inválido.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:bad-request
+                title: Requisição inválida
+                status: 400
                 detail: X-Correlation-ID deve ser UUID
+                instance: /api/v1/contracts/drafts
+                code: BAD_REQUEST
+                correlationId: 11111111-1111-4111-8111-111111111111
         '401':
           description: Token ausente ou inválido.
           content:
-            application/json:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
               example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
                 detail: Token ausente ou inválido
+                instance: /api/v1/contracts/drafts
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
         '403':
           description: Papel sem permissão para a operação.
           content:
-            application/json:
-              example:
-                detail: Papel sem permissão para esta operação
-        '422':
-          description: Validation Error
-          content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/contracts/drafts
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          description: Entrada inválida.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/operations/{correlation_id}
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/demo/state:
     get:
       tags:
@@ -1070,11 +1634,22 @@ paths:
                 title: Response Draft From Reservation Api V1 Contracts Reservations  Reservation
                   Id  Draft Post
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/contracts/reservations/{reservation_id}/draft
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/contracts/reservations:
     post:
       tags:
@@ -1099,11 +1674,22 @@ paths:
                 additionalProperties: true
                 title: Response Create Reservation Api V1 Contracts Reservations Post
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/contracts/reservations
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
     get:
       tags:
       - Reservas e contratos
@@ -1133,11 +1719,22 @@ paths:
                   additionalProperties: true
                 title: Response List Reservations Api V1 Contracts Reservations Get
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/contracts/reservations
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/crm/contacts:
     post:
       tags:
@@ -1162,11 +1759,22 @@ paths:
                 additionalProperties: true
                 title: Response Create Contact Api V1 Crm Contacts Post
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/crm/contacts
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
     get:
       tags:
       - CRM
@@ -1196,11 +1804,22 @@ paths:
                   additionalProperties: true
                 title: Response List Contacts Api V1 Crm Contacts Get
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/crm/contacts
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/crm/opportunities:
     post:
       tags:
@@ -1225,11 +1844,22 @@ paths:
                 additionalProperties: true
                 title: Response Create Opportunity Api V1 Crm Opportunities Post
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/crm/opportunities
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
     get:
       tags:
       - CRM
@@ -1259,11 +1889,22 @@ paths:
                   additionalProperties: true
                 title: Response List Opportunities Api V1 Crm Opportunities Get
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/crm/opportunities
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/crm/opportunities/{opportunity_id}:
     patch:
       tags:
@@ -1297,11 +1938,22 @@ paths:
                 title: Response Update Opportunity Api V1 Crm Opportunities  Opportunity
                   Id  Patch
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/crm/opportunities/{opportunity_id}
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/contracts/reservations/{reservation_id}:
     get:
       tags:
@@ -1329,11 +1981,22 @@ paths:
                 title: Response Get Reservation Api V1 Contracts Reservations  Reservation
                   Id  Get
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/contracts/reservations/{reservation_id}
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/contracts:
     get:
       tags:
@@ -1364,11 +2027,22 @@ paths:
                   additionalProperties: true
                 title: Response List Contracts Api V1 Contracts Get
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/contracts
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/contracts/{contract_id}:
     get:
       tags:
@@ -1395,11 +2069,22 @@ paths:
                 additionalProperties: true
                 title: Response Get Contract Api V1 Contracts  Contract Id  Get
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/contracts/{contract_id}
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/contracts/{contract_id}/close:
     post:
       tags:
@@ -1427,11 +2112,22 @@ paths:
                 title: Response Close Contract Api V1 Contracts  Contract Id  Close
                   Post
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/contracts/{contract_id}/close
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/finance/invoices:
     get:
       tags:
@@ -1477,11 +2173,22 @@ paths:
                 additionalProperties: true
                 title: Response Get Invoice Api V1 Finance Invoices  Invoice Id  Get
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/finance/invoices/{invoice_id}
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/finance/invoices/{invoice_id}/payments:
     post:
       tags:
@@ -1515,11 +2222,22 @@ paths:
                 title: Response Record Payment Api V1 Finance Invoices  Invoice Id  Payments
                   Post
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/finance/invoices/{invoice_id}/payments
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/finance/payments:
     get:
       tags:
@@ -1550,11 +2268,22 @@ paths:
                   additionalProperties: true
                 title: Response List Payments Api V1 Finance Payments Get
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/finance/payments
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/support/tickets/{ticket_id}:
     get:
       tags:
@@ -1581,11 +2310,22 @@ paths:
                 additionalProperties: true
                 title: Response Get Ticket Api V1 Support Tickets  Ticket Id  Get
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/support/tickets/{ticket_id}
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/support/tickets/{ticket_id}/assign:
     post:
       tags:
@@ -1619,11 +2359,22 @@ paths:
                 title: Response Assign Ticket Api V1 Support Tickets  Ticket Id  Assign
                   Post
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/support/tickets/{ticket_id}/assign
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/support/tickets/{ticket_id}/resolve:
     post:
       tags:
@@ -1651,11 +2402,22 @@ paths:
                 title: Response Resolve Ticket Api V1 Support Tickets  Ticket Id  Resolve
                   Post
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/support/tickets/{ticket_id}/resolve
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/workflow/processes:
     get:
       tags:
@@ -1701,11 +2463,22 @@ paths:
                 additionalProperties: true
                 title: Response Get Process Api V1 Workflow Processes  Process Id  Get
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/workflow/processes/{process_id}
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/workflow/tasks:
     get:
       tags:
@@ -1736,11 +2509,22 @@ paths:
                   additionalProperties: true
                 title: Response List Tasks Api V1 Workflow Tasks Get
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/workflow/tasks
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
     post:
       tags:
       - Gestão de processos
@@ -1764,11 +2548,22 @@ paths:
                 additionalProperties: true
                 title: Response Create Task Api V1 Workflow Tasks Post
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/workflow/tasks
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/workflow/tasks/{task_id}:
     patch:
       tags:
@@ -1801,11 +2596,22 @@ paths:
                 additionalProperties: true
                 title: Response Change Task Api V1 Workflow Tasks  Task Id  Patch
         '422':
-          description: Validation Error
+          description: Entrada inválida.
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/workflow/tasks/{task_id}
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
 components:
   schemas:
     AssignmentInput:
@@ -2071,7 +2877,7 @@ components:
       examples:
       - consentService: true
         eligible: true
-        email: gestor.frota@cliente-localiza.test
+        email: gestor.frota@cliente-sintetico.example.com
         legacyId: WEB-LOCALIZA-1001
         name: Cliente Frota Localiza Ltda.
     CustomerResponse:
@@ -2090,12 +2896,21 @@ components:
         eligible:
           type: boolean
           title: Eligible
+        consentService:
+          type: boolean
+          title: Consentservice
+        legacyId:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Legacyid
       type: object
       required:
       - customerId
       - name
       - email
       - eligible
+      - consentService
       title: CustomerResponse
     CustomerUpdate:
       properties:
@@ -2181,15 +2996,33 @@ components:
       - reason
       - correlationId
       title: FailureResponse
-    HTTPValidationError:
+    LegacyIdResponse:
       properties:
-        detail:
-          items:
-            $ref: '#/components/schemas/ValidationError'
-          type: array
-          title: Detail
+        entityType:
+          type: string
+          title: Entitytype
+        globalId:
+          type: string
+          format: uuid
+          title: Globalid
+        sourceSystem:
+          type: string
+          title: Sourcesystem
+        legacyId:
+          type: string
+          title: Legacyid
       type: object
-      title: HTTPValidationError
+      required:
+      - entityType
+      - globalId
+      - sourceSystem
+      - legacyId
+      title: LegacyIdResponse
+      examples:
+      - entityType: customer
+        globalId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+        legacyId: WEB-LOCALIZA-1001
+        sourceSystem: CRM
     OperationEventResponse:
       properties:
         eventId:
@@ -2509,27 +3342,67 @@ components:
       - slaHours
       - dueAt
       title: TicketResponse
-    ValidationError:
+    ProblemDetails:
+      description: Corpo de erro publicado no OpenAPI.
+      examples:
+      - code: NOT_FOUND
+        correlationId: 11111111-1111-4111-8111-111111111111
+        detail: Contrato não encontrado
+        instance: /api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+        status: 404
+        title: Recurso não encontrado
+        type: urn:archcorp:problem:not-found
       properties:
-        loc:
-          items:
-            anyOf:
-            - type: string
-            - type: integer
-          type: array
-          title: Location
-        msg:
-          type: string
-          title: Message
         type:
+          description: URI que identifica o tipo do problema.
+          title: Type
           type: string
-          title: Error Type
-      type: object
+        title:
+          title: Title
+          type: string
+        status:
+          title: Status
+          type: integer
+        detail:
+          anyOf:
+          - type: string
+          - items:
+              additionalProperties: true
+              type: object
+            type: array
+          description: Mensagem legível. Em 422 mantém a lista de erros da versão
+            1.
+          title: Detail
+        instance:
+          description: Caminho da requisição que originou o erro.
+          title: Instance
+          type: string
+        code:
+          description: Código estável para tratamento pelo cliente.
+          title: Code
+          type: string
+        correlationId:
+          title: Correlationid
+          type: string
+        errors:
+          anyOf:
+          - items:
+              additionalProperties: true
+              type: object
+            type: array
+          - type: 'null'
+          default: null
+          title: Errors
       required:
-      - loc
-      - msg
       - type
-      title: ValidationError
+      - title
+      - status
+      - detail
+      - instance
+      - code
+      - correlationId
+      title: ProblemDetails
+      type: object
   securitySchemes:
     HTTPBearer:
       type: http

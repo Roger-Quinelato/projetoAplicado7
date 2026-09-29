@@ -47,7 +47,7 @@ X-Correlation-ID: 11111111-1111-4111-8111-111111111111
 
 {
   "name": "Cliente Frota Localiza Ltda.",
-  "email": "gestor.frota@cliente-localiza.test",
+  "email": "gestor.frota@cliente-sintetico.example.com",
   "eligible": true,
   "consentService": true,
   "legacyId": "WEB-LOCALIZA-1001"
@@ -64,13 +64,18 @@ X-Correlation-ID: 11111111-1111-4111-8111-111111111111
 {
   "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   "name": "Cliente Frota Localiza Ltda.",
-  "email": "gestor.frota@cliente-localiza.test",
-  "eligible": true
+  "email": "gestor.frota@cliente-sintetico.example.com",
+  "eligible": true,
+  "consentService": true,
+  "legacyId": "WEB-LOCALIZA-1001"
 }
 ```
 
 O CRM mantém o cadastro oficial. O identificador legado `WEB-LOCALIZA-1001` fica associado
-ao `customerId` global no contexto de integração.
+ao `customerId` global no contexto de integração e pode ser resolvido por
+`GET /api/v1/integration/legacy-ids/CRM/WEB-LOCALIZA-1001`, que devolve
+`entityType`, `globalId`, `sourceSystem` e `legacyId`. Um e-mail ou identificador
+legado já cadastrado recebe `409` com código `CONFLICT`.
 
 ### Criar o rascunho do contrato
 
@@ -131,23 +136,54 @@ Idempotency-Replayed: true
 
 ### Erros de F1
 
+Todos os erros usam o contrato único `application/problem+json` (RFC 9457),
+descrito em [INTEGRACOES.md](INTEGRACOES.md#contrato-de-erro). `code` é estável
+para tratamento automático; `correlationId` repete o cabeçalho `X-Correlation-ID`.
+
 Cliente inexistente, inelegível ou sem consentimento, resposta `422`:
 
 ```json
 {
-  "detail": "Cliente inexistente ou inelegível"
+  "type": "urn:archcorp:problem:business-rule-violation",
+  "title": "Entrada inválida",
+  "status": 422,
+  "detail": "Cliente inexistente ou inelegível",
+  "instance": "/api/v1/contracts/drafts",
+  "code": "BUSINESS_RULE_VIOLATION",
+  "correlationId": "11111111-1111-4111-8111-111111111111"
 }
 ```
 
-Um corpo estruturalmente inválido também recebe `422`, mas usa a lista padrão de
-erros de validação do FastAPI. Exemplo com `customerId` inválido:
+Um corpo estruturalmente inválido também recebe `422` com código `VALIDATION_ERROR`.
+Para manter compatibilidade com a versão 1, `detail` continua sendo a lista de erros
+do FastAPI; a mesma lista aparece em `errors`. Exemplo com `customerId` inválido:
 
 ```json
 {
+  "type": "urn:archcorp:problem:validation-error",
+  "title": "Entrada inválida",
+  "status": 422,
   "detail": [
     {
       "type": "uuid_parsing",
-      "loc": ["body", "customerId"],
+      "loc": [
+        "body",
+        "customerId"
+      ],
+      "msg": "Input should be a valid UUID",
+      "input": "not-a-uuid"
+    }
+  ],
+  "instance": "/api/v1/contracts/drafts",
+  "code": "VALIDATION_ERROR",
+  "correlationId": "11111111-1111-4111-8111-111111111111",
+  "errors": [
+    {
+      "type": "uuid_parsing",
+      "loc": [
+        "body",
+        "customerId"
+      ],
       "msg": "Input should be a valid UUID",
       "input": "not-a-uuid"
     }
@@ -159,7 +195,13 @@ Token ausente ou desconhecido, resposta `401`:
 
 ```json
 {
-  "detail": "Token ausente ou inválido"
+  "type": "urn:archcorp:problem:unauthorized",
+  "title": "Não autenticado",
+  "status": 401,
+  "detail": "Token ausente ou inválido",
+  "instance": "/api/v1/contracts/drafts",
+  "code": "UNAUTHORIZED",
+  "correlationId": "11111111-1111-4111-8111-111111111111"
 }
 ```
 
@@ -167,15 +209,28 @@ Papel sem acesso à operação, resposta `403`:
 
 ```json
 {
-  "detail": "Papel sem permissão para esta operação"
+  "type": "urn:archcorp:problem:forbidden",
+  "title": "Acesso negado",
+  "status": 403,
+  "detail": "Papel sem permissão para esta operação",
+  "instance": "/api/v1/contracts/drafts",
+  "code": "FORBIDDEN",
+  "correlationId": "11111111-1111-4111-8111-111111111111"
 }
 ```
 
-Cabeçalho de correlação inválido, resposta `400`:
+Cabeçalho de correlação inválido, resposta `400`. Como o valor recebido não é UUID,
+a API gera outro `correlationId` e o devolve no corpo e em `X-Correlation-ID`:
 
 ```json
 {
-  "detail": "X-Correlation-ID deve ser UUID"
+  "type": "urn:archcorp:problem:bad-request",
+  "title": "Requisição inválida",
+  "status": 400,
+  "detail": "X-Correlation-ID deve ser UUID",
+  "instance": "/api/v1/contracts/drafts",
+  "code": "BAD_REQUEST",
+  "correlationId": "22222222-2222-4222-8222-222222222222"
 }
 ```
 
@@ -321,7 +376,13 @@ Contrato desconhecido na ativação, resposta `404`:
 
 ```json
 {
-  "detail": "Contrato não encontrado"
+  "type": "urn:archcorp:problem:not-found",
+  "title": "Recurso não encontrado",
+  "status": 404,
+  "detail": "Contrato não encontrado",
+  "instance": "/api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/activate",
+  "code": "NOT_FOUND",
+  "correlationId": "11111111-1111-4111-8111-111111111111"
 }
 ```
 
@@ -423,7 +484,13 @@ Contrato, cliente ou serviço sem elegibilidade, resposta `422`:
 
 ```json
 {
-  "detail": "Contrato, serviço ou cliente sem elegibilidade"
+  "type": "urn:archcorp:problem:business-rule-violation",
+  "title": "Entrada inválida",
+  "status": 422,
+  "detail": "Contrato, serviço ou cliente sem elegibilidade",
+  "instance": "/api/v1/support/tickets",
+  "code": "BUSINESS_RULE_VIOLATION",
+  "correlationId": "11111111-1111-4111-8111-111111111111"
 }
 ```
 
@@ -431,10 +498,30 @@ Um UUID inválido no corpo também recebe `422` com a lista de validação estru
 
 ```json
 {
+  "type": "urn:archcorp:problem:validation-error",
+  "title": "Entrada inválida",
+  "status": 422,
   "detail": [
     {
       "type": "uuid_parsing",
-      "loc": ["body", "contractId"],
+      "loc": [
+        "body",
+        "contractId"
+      ],
+      "msg": "Input should be a valid UUID",
+      "input": "not-a-uuid"
+    }
+  ],
+  "instance": "/api/v1/support/tickets",
+  "code": "VALIDATION_ERROR",
+  "correlationId": "11111111-1111-4111-8111-111111111111",
+  "errors": [
+    {
+      "type": "uuid_parsing",
+      "loc": [
+        "body",
+        "contractId"
+      ],
       "msg": "Input should be a valid UUID",
       "input": "not-a-uuid"
     }

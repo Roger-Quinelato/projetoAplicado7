@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from archcorp.config import settings
 from archcorp.contracts.public import ContractEntitlementPort
+from archcorp.exceptions import BusinessRuleError, IdempotencyConflictError, InvalidStateError, NotFoundError
 from archcorp.integration.models import IdempotencyRecord
 from archcorp.integration.service import audit, enqueue
 from archcorp.support.models import Ticket
@@ -17,12 +18,12 @@ class TicketService:
         stored = session.get(IdempotencyRecord, {"key": idempotency_key, "operation": "open_ticket"})
         if stored:
             if any(stored.response[field] != data[field] for field in ("customerId", "contractId", "serviceCode", "category")):
-                raise ValueError("Idempotency-Key já utilizada com outro chamado")
+                raise IdempotencyConflictError("Idempotency-Key já utilizada com outro chamado")
             return stored.response, True
         if settings.contract_adapter_available:
             entitlement = self.contracts.entitlement(session, data["contractId"], data["customerId"], data["serviceCode"])
             if not entitlement["eligible"]:
-                raise ValueError("Contrato, serviço ou cliente sem elegibilidade")
+                raise BusinessRuleError("Contrato, serviço ou cliente sem elegibilidade")
             status, sla_hours = "OPEN", entitlement["slaHours"]
         else:
             status, sla_hours = "PENDING_ENTITLEMENT", None
@@ -45,9 +46,9 @@ class TicketService:
     def reconcile(self, session: Session, ticket_id: str, correlation_id: str) -> dict:
         ticket = session.get(Ticket, ticket_id)
         if not ticket:
-            raise LookupError("Chamado não encontrado")
+            raise NotFoundError("Chamado não encontrado")
         if ticket.status != "PENDING_ENTITLEMENT":
-            raise ValueError("Somente chamado pendente pode ser reconciliado")
+            raise InvalidStateError("Somente chamado pendente pode ser reconciliado")
         entitlement = self.contracts.entitlement(session, ticket.contract_id, ticket.customer_id, ticket.service_code)
         if entitlement["eligible"]:
             ticket.status = "OPEN"

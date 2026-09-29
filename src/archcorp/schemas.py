@@ -15,8 +15,10 @@ EXAMPLE_TICKET_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd"
 EXAMPLE_CUSTOMER_RESPONSE = {
     "customerId": EXAMPLE_CUSTOMER_ID,
     "name": "Cliente Frota Localiza Ltda.",
-    "email": "gestor.frota@cliente-localiza.test",
+    "email": "gestor.frota@cliente-sintetico.example.com",
     "eligible": True,
+    "consentService": True,
+    "legacyId": "WEB-LOCALIZA-1001",
 }
 
 EXAMPLE_CONTRACT_DRAFT_RESPONSE = {
@@ -67,7 +69,7 @@ class CustomerCreate(BaseModel):
             "examples": [
                 {
                     "name": "Cliente Frota Localiza Ltda.",
-                    "email": "gestor.frota@cliente-localiza.test",
+                    "email": "gestor.frota@cliente-sintetico.example.com",
                     "eligible": True,
                     "consentService": True,
                     "legacyId": "WEB-LOCALIZA-1001",
@@ -153,6 +155,28 @@ class CustomerResponse(BaseModel):
     name: str
     email: EmailStr
     eligible: bool
+    consentService: bool
+    legacyId: str | None = None
+
+
+class LegacyIdResponse(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "entityType": "customer",
+                    "globalId": EXAMPLE_CUSTOMER_ID,
+                    "sourceSystem": "CRM",
+                    "legacyId": "WEB-LOCALIZA-1001",
+                }
+            ]
+        }
+    )
+
+    entityType: str
+    globalId: UUID
+    sourceSystem: str
+    legacyId: str
 
 
 class ContractDraftResponse(BaseModel):
