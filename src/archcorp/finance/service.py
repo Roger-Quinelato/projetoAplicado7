@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from archcorp.finance.models import Invoice
@@ -19,3 +19,7 @@ def handle_contract_activated(session: Session, envelope: dict) -> None:
     session.add(invoice)
     session.flush()
     audit(session, envelope["correlationId"], "finance", "create_first_invoice", "success", invoice.invoice_id, contractId=payload["contractId"])
+
+
+def count_invoices(session: Session) -> int:
+    return session.scalar(select(func.count()).select_from(Invoice)) or 0

@@ -20,6 +20,13 @@ channels:
     messages:
       contractActivated:
         $ref: '#/components/messages/ContractActivated'
+  contractClosed:
+    address: ContractClosed.v1
+    bindings:
+      $ref: '#/components/channelBindings/archcorpEvents'
+    messages:
+      contractClosed:
+        $ref: '#/components/messages/ContractClosed'
   ticketOpened:
     address: TicketOpened.v1
     bindings:
@@ -59,6 +66,16 @@ operations:
     summary: 'Consumidores: `finance` (primeira fatura) e `workflow-preparacao-retirada` (processo ONBOARDING).'
     channel:
       $ref: '#/channels/contractActivated'
+  publishContractClosed:
+    action: send
+    summary: 'Publicado pelo contexto `contracts` na outbox transacional.'
+    channel:
+      $ref: '#/channels/contractClosed'
+  receiveContractClosed:
+    action: receive
+    summary: 'Consumidor: `workflow-encerramento-contrato` (conclui a preparação de retirada pendente). Finance ainda não consome este evento.'
+    channel:
+      $ref: '#/channels/contractClosed'
   publishTicketOpened:
     action: send
     summary: 'Publicado pelo contexto `support` na outbox transacional.'
@@ -154,6 +171,44 @@ components:
                 cycle: MONTHLY
               slaHours: 8
               status: ACTIVE
+    ContractClosed:
+      name: ContractClosed.v1
+      title: Contrato encerrado
+      contentType: application/json
+      bindings:
+        $ref: '#/components/messageBindings/persistentJson'
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/EventEnvelope'
+          - type: object
+            properties:
+              eventType: { const: ContractClosed.v1 }
+              producer: { const: contracts }
+              payload: { $ref: '#/components/schemas/ContractClosedPayload' }
+      examples:
+        - name: contractClosed
+          summary: Locação encerrada após a devolução do veículo
+          payload:
+            eventId: 18181818-1818-4181-8181-181818181818
+            eventType: ContractClosed.v1
+            eventVersion: 1
+            occurredAt: '2027-01-08T15:00:00Z'
+            correlationId: 11111111-1111-4111-8111-111111111111
+            causationId: null
+            producer: contracts
+            payload:
+              contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+              customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+              serviceCode: RENTAL-FLEX
+              startsOn: '2026-10-01'
+              endsOn: '2027-01-08'
+              billing:
+                amount: 2500.00
+                currency: BRL
+                cycle: MONTHLY
+              slaHours: 8
+              status: CLOSED
+              closeReason: Devolução do veículo
     TicketOpened:
       name: TicketOpened.v1
       title: Chamado aberto
@@ -316,9 +371,23 @@ components:
         customerId: { type: string, format: uuid }
         serviceCode: { type: string }
         startsOn: { type: string, format: date }
+        endsOn: { type: [string, 'null'], format: date }
         billing: { $ref: '#/components/schemas/Money' }
         slaHours: { type: integer, minimum: 1 }
         status: { const: ACTIVE }
+    ContractClosedPayload:
+      type: object
+      required: [contractId, customerId, serviceCode, startsOn, endsOn, billing, slaHours, status]
+      properties:
+        contractId: { type: string, format: uuid }
+        customerId: { type: string, format: uuid }
+        serviceCode: { type: string }
+        startsOn: { type: string, format: date }
+        endsOn: { type: string, format: date }
+        billing: { $ref: '#/components/schemas/Money' }
+        slaHours: { type: integer, minimum: 1 }
+        status: { const: CLOSED }
+        closeReason: { type: [string, 'null'], maxLength: 200 }
     TicketOpenedPayload:
       type: object
       required: [ticketId, customerId, contractId, serviceCode, category, status, priority]

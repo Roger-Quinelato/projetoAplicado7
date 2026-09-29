@@ -8,10 +8,8 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from archcorp.contracts.models import Contract, Reservation
-from archcorp.contracts.routes import ReservationDraftResponse, ReservationInput, ReservationResponse, reservation_data, router as contracts_router
+from archcorp.contracts.routes import configure as configure_contracts, router as contracts_router
 from archcorp.contracts.service import ContractService
-from archcorp.crm.models import Customer
 from archcorp.crm.service import CustomerService
 from archcorp.crm.routes import router as crm_router
 from archcorp.errors import (
@@ -21,13 +19,11 @@ from archcorp.errors import (
     problem_response,
     register_error_handlers,
 )
-from archcorp.finance.models import Invoice
-from archcorp.finance.service import handle_contract_activated as finance_contract_activated
+from archcorp.finance.service import count_invoices, handle_contract_activated as finance_contract_activated
 from archcorp.finance.routes import router as finance_router
 from archcorp.infrastructure.db import engine, get_session, protect_public_demo_tables
 from archcorp.infrastructure.migrate import upgrade_to_head
-from archcorp.exceptions import BusinessRuleError
-from archcorp.integration.models import AuditLog, LegacyIdMapping, OutboxEvent
+from archcorp.integration.models import AuditLog, OutboxEvent
 from archcorp.integration.service import EventDispatcher, LegacyIdService, audit
 from archcorp.observability import correlation_id_var, logger, metrics_middleware, render_metrics
 from archcorp.schemas import (
@@ -38,6 +34,7 @@ from archcorp.schemas import (
     EXAMPLE_CORRELATION_ID,
     EXAMPLE_PENDING_TICKET_RESPONSE,
     EXAMPLE_TICKET_RESPONSE,
+    IDEMPOTENCY_KEY_MAX_LENGTH,
     ContractActivationResponse,
     ContractDraftCreate,
     ContractDraftResponse,
@@ -54,12 +51,10 @@ from archcorp.schemas import (
 )
 from archcorp.security import require_roles
 from archcorp.config import settings
-from archcorp.support.models import Ticket
 from archcorp.support.service import TicketService
 from archcorp.support.routes import router as support_router
-from archcorp.workflow.models import ProcessInstance
 from archcorp.workflow.routes import router as workflow_router
-from archcorp.workflow.service import handle_contract_activated as workflow_contract_activated, handle_ticket_opened, handle_ticket_entitlement_reconciled, handle_ticket_resolved
+from archcorp.workflow.service import count_processes, handle_contract_activated as workflow_contract_activated, handle_contract_closed as workflow_contract_closed, handle_ticket_opened, handle_ticket_entitlement_reconciled, handle_ticket_resolved
 
 
 CORRELATION_REQUEST_PARAMETER = {
@@ -341,8 +336,10 @@ OPERATION_TRACE_RESPONSES = {
 customers = CustomerService()
 contracts = ContractService(customers)
 tickets = TicketService(contracts)
+configure_contracts(contracts)
 dispatcher = EventDispatcher({
     "ContractActivated.v1": [("finance", finance_contract_activated), ("workflow-preparacao-retirada", workflow_contract_activated)],
+    "ContractClosed.v1": [("workflow-encerramento-contrato", workflow_contract_closed)],
     "TicketOpened.v1": [("workflow-ticket-resolution", handle_ticket_opened)],
     "TicketEntitlementReconciled.v1": [("workflow-ticket-entitlement", handle_ticket_entitlement_reconciled)],
     "TicketResolved.v1": [("workflow-ticket-resolution-complete", handle_ticket_resolved)],
@@ -435,7 +432,7 @@ def create_contract_draft(
     body: ContractDraftCreate,
     response: Response,
     idempotency_key: str = Header(
-        alias="Idempotency-Key", examples=["demo-contract-001"]
+        alias="Idempotency-Key", max_length=IDEMPOTENCY_KEY_MAX_LENGTH, examples=["demo-contract-001"]
     ),
     session: Session = Depends(get_session),
 ) -> dict:
@@ -458,7 +455,7 @@ def activate_contract(
     contract_id: UUID,
     response: Response,
     idempotency_key: str = Header(
-        alias="Idempotency-Key", examples=["demo-activate-001"]
+        alias="Idempotency-Key", max_length=IDEMPOTENCY_KEY_MAX_LENGTH, examples=["demo-activate-001"]
     ),
     session: Session = Depends(get_session),
 ) -> dict:
@@ -492,7 +489,7 @@ def open_ticket(
     body: TicketCreate,
     response: Response,
     idempotency_key: str = Header(
-        alias="Idempotency-Key", examples=["demo-ticket-001"]
+        alias="Idempotency-Key", max_length=IDEMPOTENCY_KEY_MAX_LENGTH, examples=["demo-ticket-001"]
     ),
     session: Session = Depends(get_session),
 ) -> dict:
@@ -597,65 +594,8 @@ def operation_trace(correlation_id: UUID, session: Session = Depends(get_session
 
 @app.get("/api/v1/demo/state", response_model=DemoStateResponse, tags=["Demonstração"], dependencies=[Depends(require_roles("admin"))])
 def demo_state(session: Session = Depends(get_session)) -> dict:
-    return {"customers": session.query(Customer).count(), "contracts": session.query(Contract).count(), "invoices": session.query(Invoice).count(), "tickets": session.query(Ticket).count(), "processes": session.query(ProcessInstance).count(), "legacyMappings": session.query(LegacyIdMapping).count()}
-
-
-@app.post(
-    "/api/v1/contracts/reservations/{reservation_id}/draft",
-    response_model=ReservationDraftResponse,
-    tags=["Reservas e contratos"],
-    responses={
-        200: {"headers": IDEMPOTENCY_RESPONSE_HEADERS},
-        404: {"description": "Reserva não encontrada."},
-        409: {"description": "Idempotency-Key reutilizada com outro contrato."},
-        422: {"description": "Cliente inelegível, sem consentimento ou entrada inválida."},
-    },
-    dependencies=[Depends(require_roles("commercial", "contracts", "admin"))])
-def draft_from_reservation(reservation_id: UUID, response: Response,
-                           idempotency_key: str = Header(alias="Idempotency-Key"),
-                           session: Session = Depends(get_session)) -> dict:
-    reservation = session.get(Reservation, str(reservation_id))
-    if not reservation:
-        raise HTTPException(404, "Reserva não encontrada")
-    if reservation.contract_id:
-        contract = session.get(Contract, reservation.contract_id)
-        response.headers["Idempotency-Replayed"] = "true"
-        return {"reservationId": reservation.reservation_id, "contract": contracts.to_dict(contract)}
-    data = {"customerId": reservation.customer_id, "serviceCode": reservation.service_code,
-            "startsOn": reservation.starts_on, "slaHours": reservation.sla_hours,
-            "billing": {"amount": reservation.amount, "currency": reservation.currency,
-                        "cycle": reservation.billing_cycle}}
-    result, replay = contracts.create_draft(session, data, idempotency_key, correlation_id_var.get())
-    reservation.contract_id = result["contractId"]
-    reservation.status = "DRAFTED"
-    session.commit()
-    response.headers["Idempotency-Replayed"] = str(replay).lower()
-    return {"reservationId": reservation.reservation_id, "contract": result}
-
-
-@app.post(
-    "/api/v1/contracts/reservations",
-    status_code=201,
-    response_model=ReservationResponse,
-    tags=["Reservas e contratos"],
-    responses={
-        404: {"description": "Cliente não encontrado."},
-        422: {"description": "Cliente inelegível, sem consentimento ou datas fora de ordem."},
-    },
-    dependencies=[Depends(require_roles("commercial", "contracts", "admin"))])
-def create_reservation(body: ReservationInput, session: Session = Depends(get_session)) -> dict:
-    customer = session.get(Customer, str(body.customerId))
-    if not customer:
-        raise HTTPException(404, "Cliente não encontrado")
-    if not customer.eligible or not customer.consent_service:
-        raise BusinessRuleError("Cliente inelegível ou sem consentimento")
-    item = Reservation(customer_id=str(body.customerId), vehicle_group=body.vehicleGroup,
-                       protection_code=body.protectionCode, service_code=body.serviceCode,
-                       starts_on=body.startsOn, ends_on=body.endsOn, amount=body.amount,
-                       currency=body.currency, billing_cycle=body.billingCycle, sla_hours=body.slaHours)
-    session.add(item)
-    session.commit()
-    return reservation_data(item)
+    return {"customers": CustomerService.count(session), "contracts": ContractService.count(session), "invoices": count_invoices(session),
+            "tickets": TicketService.count(session), "processes": count_processes(session), "legacyMappings": LegacyIdService.count(session)}
 
 
 app.include_router(crm_router)

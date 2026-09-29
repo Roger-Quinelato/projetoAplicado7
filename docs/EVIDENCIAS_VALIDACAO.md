@@ -52,3 +52,16 @@ Os testes usam SQLite e adaptadores internos para rapidez. Docker Compose fornec
 - A apresentação foi regenerada com 15 slides. Os validadores de integridade, geometria, fontes e reimportação aprovaram o pacote, e todos os slides foram inspecionados em PNG.
 
 As imagens e recibos técnicos de verificação permanecem em `tmp/report-render-final/`, `tmp/presentation-build/`, `tmp/mermaid-render/` e `.codex-finalizer/`.
+
+## Execução da sprint Q3 em 29 de setembro de 2026 (T06–T09)
+
+Ambiente: contêiner Linux, Python 3.11.15, SQLite local e Node para o build da interface. Estes resultados acrescentam evidências às execuções anteriores, sem substituí-las.
+
+- Suíte automatizada: 57 testes aprovados com `PYTHONPATH=src python -m pytest -q tests -p no:cacheprovider`.
+- Contratos: `python tools/export_openapi.py --check` confirmou o OpenAPI sincronizado com `app.openapi()`. O OpenAPI 3.1 passou no `openapi-spec-validator`, todas as respostas 2xx JSON têm exemplo e todos os erros usam `application/problem+json`.
+- Eventos: o AsyncAPI descreve seis eventos (`CustomerUpdated.v1`, `ContractActivated.v1`, `ContractClosed.v1`, `TicketOpened.v1`, `TicketEntitlementReconciled.v1` e `TicketResolved.v1`). Os exemplos e os envelopes gravados na outbox durante os fluxos foram validados contra os schemas com `jsonschema`.
+- Migrações: `upgrade head` em banco vazio não mostrou divergência entre migrações e modelos. O SQL gerado para PostgreSQL foi inspecionado no modo offline do Alembic, sem banco PostgreSQL real.
+- Smoke HTTP com `uvicorn` e `curl`: cliente, reserva, rascunho a partir da reserva, ativação, despacho, encerramento e novo despacho; `GET /api/v1/operations/{correlationId}` mostrou `ContractActivated.v1` e `ContractClosed.v1` publicados e a auditoria de cada etapa; e-mail duplicado retornou `409` em `application/problem+json` com o mesmo `correlationId`.
+- Desempenho local: `scripts/performance_smoke.py` mediu p95 de 5,74 ms em 200 consultas de prontidão.
+- Interface: `npm run build` concluído.
+- Não executado neste ambiente: `docker build` (sem daemon Docker no contêiner; o GitHub Actions executa o build) e qualquer verificação no Render/Supabase.

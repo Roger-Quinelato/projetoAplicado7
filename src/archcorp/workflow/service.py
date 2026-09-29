@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from archcorp.integration.service import audit
@@ -58,3 +58,22 @@ def handle_ticket_resolved(session: Session, envelope: dict) -> None:
     for task in session.scalars(select(ProcessTask).where(ProcessTask.process_id == process.process_id)):
         task.state = "DONE"
     audit(session, envelope["correlationId"], "workflow", "complete_ticket_resolution", "success", process.process_id)
+
+
+def count_processes(session: Session) -> int:
+    return session.scalar(select(func.count()).select_from(ProcessInstance)) or 0
+
+
+def handle_contract_closed(session: Session, envelope: dict) -> None:
+    """Encerra a preparação de retirada do contrato; o processo não fica pendente após o fim da locação."""
+    process = session.scalar(select(ProcessInstance).where(
+        ProcessInstance.process_type == "ONBOARDING",
+        ProcessInstance.reference_id == envelope["payload"]["contractId"],
+    ))
+    if not process or process.state in {"COMPLETED", "CANCELLED"}:
+        return
+    process.state = "COMPLETED"
+    for task in session.scalars(select(ProcessTask).where(ProcessTask.process_id == process.process_id)):
+        if task.state not in {"DONE", "CANCELLED"}:
+            task.state = "CANCELLED"
+    audit(session, envelope["correlationId"], "workflow", "complete_onboarding_on_close", "success", process.process_id)

@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from archcorp.crm.models import Contact, Customer, Opportunity
@@ -66,6 +66,10 @@ class CustomerService:
         if active is not None:
             query = query.where(Customer.active == active)
         return list(session.scalars(query.limit(min(limit, MAX_PAGE_SIZE)).offset(offset)))
+
+    @staticmethod
+    def count(session: Session) -> int:
+        return session.scalar(select(func.count()).select_from(Customer)) or 0
 
     @staticmethod
     def legacy_id(session: Session, customer_id: str) -> str | None:

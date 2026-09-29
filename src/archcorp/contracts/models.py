@@ -21,6 +21,8 @@ class Contract(Base):
     billing_cycle: Mapped[str] = mapped_column(String(20))
     sla_hours: Mapped[int] = mapped_column(default=8)
     status: Mapped[str] = mapped_column(String(20), default="DRAFT")
+    ends_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    close_reason: Mapped[str | None] = mapped_column(String(200), nullable=True)
     __table_args__ = (UniqueConstraint("customer_id", "service_code", "starts_on", name="uq_contract_business_key"),)
 
 

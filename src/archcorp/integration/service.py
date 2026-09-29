@@ -1,12 +1,13 @@
+import hashlib
 import json
 from collections.abc import Callable
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from archcorp.config import settings
-from archcorp.exceptions import ConflictError
-from archcorp.integration.models import AuditLog, InboxEvent, LegacyIdMapping, OutboxEvent
+from archcorp.exceptions import ConflictError, IdempotencyConflictError
+from archcorp.integration.models import AuditLog, IdempotencyRecord, InboxEvent, LegacyIdMapping, OutboxEvent
 from archcorp.observability import COUNTERS, logger
 
 
@@ -98,6 +99,32 @@ class LegacyIdService:
         return list(session.scalars(select(LegacyIdMapping).where(LegacyIdMapping.global_id == global_id).order_by(LegacyIdMapping.id)))
 
     @staticmethod
+    def count(session: Session) -> int:
+        return session.scalar(select(func.count()).select_from(LegacyIdMapping)) or 0
+
+    @staticmethod
     def as_dict(mapping: LegacyIdMapping) -> dict:
         return {"entityType": mapping.entity_type, "globalId": mapping.global_id,
                 "sourceSystem": mapping.source_system, "legacyId": mapping.legacy_id}
+
+
+class IdempotencyStore:
+    """Guarda a resposta de um comando e a impressão digital da requisição."""
+
+    @staticmethod
+    def fingerprint(request: dict) -> str:
+        canonical = json.dumps(request, sort_keys=True, default=str, separators=(",", ":"))
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+    @classmethod
+    def replay(cls, session: Session, key: str, operation: str, request: dict, conflict_message: str) -> dict | None:
+        stored = session.get(IdempotencyRecord, {"key": key, "operation": operation})
+        if not stored:
+            return None
+        if stored.request_hash and stored.request_hash != cls.fingerprint(request):
+            raise IdempotencyConflictError(conflict_message)
+        return stored.response
+
+    @classmethod
+    def save(cls, session: Session, key: str, operation: str, request: dict, response: dict) -> None:
+        session.add(IdempotencyRecord(key=key, operation=operation, response=response, request_hash=cls.fingerprint(request)))

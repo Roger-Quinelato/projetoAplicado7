@@ -24,7 +24,7 @@ STATUS_CODES = {
     401: ("UNAUTHORIZED", "Não autenticado"),
     403: ("FORBIDDEN", "Acesso negado"),
     404: ("NOT_FOUND", "Recurso não encontrado"),
-    409: ("CONFLICT", "Conflito de estado"),
+    409: ("CONFLICT", "Conflito"),
     422: ("VALIDATION_ERROR", "Entrada inválida"),
     500: ("INTERNAL_ERROR", "Erro interno"),
     503: ("SERVICE_UNAVAILABLE", "Dependência indisponível"),

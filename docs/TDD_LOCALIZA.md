@@ -24,8 +24,8 @@ decisoes imediatas e eventos para efeitos assíncronos.
 
 - API REST versionada em `/api/v1`.
 - Eventos versionados, listados em `docs/events/asyncapi.yaml`:
-  `CustomerUpdated.v1`, `ContractActivated.v1`, `TicketOpened.v1`,
-  `TicketEntitlementReconciled.v1` e `TicketResolved.v1`.
+  `CustomerUpdated.v1`, `ContractActivated.v1`, `ContractClosed.v1`,
+  `TicketOpened.v1`, `TicketEntitlementReconciled.v1` e `TicketResolved.v1`.
 - Erros em `application/problem+json` com `code` estável e `correlationId`.
 - `Idempotency-Key` em comandos repetiveis.
 - `X-Correlation-ID` em requisicoes, auditoria, logs e eventos.
@@ -62,6 +62,33 @@ Regras do CRM verificadas em `tests/test_crm.py`:
 - `CustomerUpdated.v1` é publicado somente quando nome ou e-mail mudam, que são os
   dados projetados em Contracts;
 - criação, alteração e remoção são auditadas com `correlationId`.
+
+### Reservas e contratos
+
+| Operação | Papéis |
+|---|---|
+| Criar, listar, consultar e cancelar reserva; gerar rascunho a partir da reserva | commercial, contracts, admin |
+| Criar rascunho de contrato | commercial, contracts, admin |
+| Ativar e encerrar contrato | contracts, admin |
+| Listar e consultar contratos | commercial, contracts, finance, support, admin |
+| Consultar elegibilidade e SLA | support, admin |
+
+Regras verificadas em `tests/test_contracts.py`:
+
+- estados e transições centralizados em `src/archcorp/contracts/domain.py`;
+- Contracts lê o cliente somente por `CustomerReader` (`crm/public.py`); a
+  composição em `main.py` não importa modelos de outros contextos;
+- rascunho e ativação exigem cliente ativo, elegível e com consentimento; a
+  ativação revalida o cliente;
+- `Idempotency-Key` (até 100 caracteres) é obrigatória em rascunho e ativação e
+  opcional em criação de reserva e encerramento; a impressão digital do pedido
+  inclui todos os campos, inclusive `slaHours`;
+- um segundo rascunho para o mesmo cliente, serviço e início recebe `409` com o
+  `contractId` existente;
+- reserva exige início futuro, fim não anterior ao início, moeda com três letras
+  maiúsculas e valor com duas casas decimais;
+- o encerramento grava data e motivo, encerra a reserva vinculada, publica
+  `ContractClosed.v1` e é auditado.
 
 ## Fluxos Tecnicos
 

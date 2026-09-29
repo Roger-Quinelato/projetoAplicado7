@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints, model_validator
 
 
+IDEMPOTENCY_KEY_MAX_LENGTH = 100
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=150)]
 
 EXAMPLE_CORRELATION_ID = "11111111-1111-4111-8111-111111111111"
@@ -221,6 +222,7 @@ class ContractDraftResponse(BaseModel):
     customerId: UUID
     serviceCode: str
     startsOn: date
+    endsOn: date | None = None
     billing: Billing
     slaHours: int
     status: Literal["DRAFT"]
@@ -231,6 +233,7 @@ class ContractActivationResponse(BaseModel):
     customerId: UUID
     serviceCode: str
     startsOn: date
+    endsOn: date | None = None
     billing: Billing
     slaHours: int
     status: Literal["ACTIVE"]

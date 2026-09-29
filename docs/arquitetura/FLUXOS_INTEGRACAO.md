@@ -229,8 +229,59 @@ sequenceDiagram
 ```
 
 `TicketOpened.v1` nunca contém a descrição. A reconciliação atualiza o chamado e a
-auditoria, mas não publica outro evento e não recalcula o prazo do processo já
-iniciado em Workflow.
+auditoria e publica `TicketEntitlementReconciled.v1`; Workflow ajusta o prazo do
+processo de resolução ou o cancela quando a elegibilidade é rejeitada.
+
+## Ciclo de vida de reserva e contrato
+
+As transições ficam em `src/archcorp/contracts/domain.py`. Uma transição fora do
+diagrama recebe `409` com código `INVALID_STATE`.
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    state "Reserva" as R {
+        [*] --> REQUESTED
+        REQUESTED --> DRAFTED: gerar rascunho
+        REQUESTED --> CANCELLED: cancelar
+        DRAFTED --> ACTIVE: contrato ativado
+        DRAFTED --> CANCELLED: cancelar
+        ACTIVE --> CLOSED: contrato encerrado
+    }
+    state "Contrato" as C {
+        [*] --> DRAFT
+        DRAFT --> ACTIVE_C: ativar
+        DRAFT --> CANCELLED_C: reserva cancelada
+        ACTIVE_C --> CLOSED_C: encerrar
+    }
+```
+
+`ACTIVE_C`, `CLOSED_C` e `CANCELLED_C` representam os estados `ACTIVE`, `CLOSED` e
+`CANCELLED` do contrato; o sufixo existe apenas para separar os diagramas.
+
+### Encerramento da locação
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Operador
+    participant Contracts
+    participant Outbox
+    participant Dispatcher
+    participant Workflow
+    Operador->>Contracts: POST /contracts/{id}/close + Idempotency-Key
+    Contracts->>Contracts: Validar ACTIVE e data de fim
+    Contracts->>Outbox: ContractClosed.v1 na mesma transação
+    Contracts-->>Operador: 200 CLOSED com eventId
+    Operador->>Dispatcher: POST /integration/outbox/dispatch
+    Dispatcher->>Workflow: ContractClosed.v1
+    Workflow->>Workflow: Concluir preparação de retirada pendente
+```
+
+Repetir o encerramento com a mesma chave, ou com outra chave depois de concluído,
+devolve a resposta original com `Idempotency-Replayed: true` e não cria outro
+evento. Sem `Idempotency-Key`, uma repetição recebe `409`. Finance ainda não
+consome `ContractClosed.v1`; o faturamento final pertence à tarefa T12.
 
 ## Rastreabilidade operacional
 

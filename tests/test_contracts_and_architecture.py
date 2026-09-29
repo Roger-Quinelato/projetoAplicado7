@@ -102,6 +102,19 @@ def test_modulos_de_negocio_nao_importam_models_de_outro_contexto():
     assert violations == []
 
 
+def test_composicao_da_aplicacao_nao_le_modelos_dos_contextos():
+    contexts = {"crm", "contracts", "finance", "support", "workflow"}
+    tree = ast.parse(Path("src/archcorp/main.py").read_text(encoding="utf-8"))
+    violations = [
+        f"main.py:{node.lineno}:{node.module}"
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom) and node.module
+        and node.module.startswith("archcorp.") and node.module.endswith(".models")
+        and node.module.split(".")[1] in contexts
+    ]
+    assert violations == []
+
+
 def test_asyncapi_define_envelope_e_eventos_atuais():
     schema = load_asyncapi()
     assert schema["asyncapi"] == "3.0.0"
@@ -148,13 +161,14 @@ def test_envelopes_publicados_validam_contra_asyncapi(client, admin_headers, int
         "category": "OUTAGE", "description": "Validação de envelope",
     }).json()
     client.post(f"/api/v1/support/tickets/{ticket['ticketId']}/resolve", headers=admin_headers)
+    client.post(f"/api/v1/contracts/{contract['contractId']}/close", headers=admin_headers, json={"reason": "Fim do teste"})
     assert client.post("/api/v1/integration/outbox/dispatch", headers=admin_headers).json()["failed"] == 0
 
     document = load_asyncapi()
     messages = {message["name"]: key for key, message in document["components"]["messages"].items()}
     with SessionLocal() as session:
         envelopes = [event.envelope() for event in session.query(OutboxEvent)]
-    assert {envelope["eventType"] for envelope in envelopes} >= {"CustomerUpdated.v1", "ContractActivated.v1", "TicketOpened.v1", "TicketResolved.v1"}
+    assert {envelope["eventType"] for envelope in envelopes} >= {"CustomerUpdated.v1", "ContractActivated.v1", "TicketOpened.v1", "TicketResolved.v1", "ContractClosed.v1"}
     for envelope in envelopes:
         assert envelope["occurredAt"].endswith("Z")
         validator = asyncapi_validator(document, messages[envelope["eventType"]])

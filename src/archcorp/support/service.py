@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from archcorp.config import settings
@@ -61,6 +62,10 @@ class TicketService:
         enqueue(session, "TicketEntitlementReconciled.v1", "support", self.as_dict(ticket), correlation_id)
         session.commit()
         return self.as_dict(ticket)
+
+    @staticmethod
+    def count(session: Session) -> int:
+        return session.scalar(select(func.count()).select_from(Ticket)) or 0
 
     @staticmethod
     def as_dict(ticket: Ticket) -> dict:

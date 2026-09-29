@@ -75,4 +75,5 @@ class IdempotencyRecord(Base):
     key: Mapped[str] = mapped_column(String(100), primary_key=True)
     operation: Mapped[str] = mapped_column(String(100), primary_key=True)
     response: Mapped[dict] = mapped_column(JSON)
+    request_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

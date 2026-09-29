@@ -593,10 +593,58 @@ Resposta `201 Created` com `reservationId`, os mesmos campos e `status`
 `REQUESTED`. Um cliente sem consentimento recebe `422` com código
 `BUSINESS_RULE_VIOLATION`.
 
+A criação aceita `Idempotency-Key` opcional: a mesma chave com o mesmo corpo devolve
+a mesma reserva com `Idempotency-Replayed: true`; com outro corpo, `409`
+`IDEMPOTENCY_CONFLICT`. Início no passado, fim anterior ao início, moeda fora do
+padrão `^[A-Z]{3}$` ou valor com mais de duas casas recebem `422`.
+
 `POST /api/v1/contracts/reservations/{reservationId}/draft` com
-`Idempotency-Key` cria o rascunho do contrato usando os dados da reserva e devolve
-`{"reservationId": "...", "contract": {...}}`. A reserva passa a `DRAFTED` e
-acompanha a ativação (`ACTIVE`) e o encerramento (`CLOSED`) do contrato.
+`Idempotency-Key` cria o rascunho do contrato usando os dados da reserva, inclusive
+`endsOn`, e devolve `{"reservationId": "...", "contract": {...}}` na mesma
+transação que vincula a reserva. A reserva passa a `DRAFTED` e acompanha a
+ativação (`ACTIVE`) e o encerramento (`CLOSED`) do contrato.
+`POST /api/v1/contracts/reservations/{reservationId}/cancel` cancela uma reserva
+`REQUESTED` ou `DRAFTED`; o rascunho vinculado passa a `CANCELLED`.
+
+### Encerrar o contrato
+
+```http
+POST /api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/close HTTP/1.1
+Authorization: Bearer demo-admin
+Content-Type: application/json
+Idempotency-Key: demo-close-001
+X-Correlation-ID: 11111111-1111-4111-8111-111111111111
+
+{
+  "endsOn": "2027-01-08",
+  "reason": "Devolução do veículo"
+}
+```
+
+Resposta `200 OK`:
+
+```json
+{
+  "contractId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "serviceCode": "RENTAL-FLEX",
+  "startsOn": "2026-10-01",
+  "endsOn": "2027-01-08",
+  "billing": {
+    "amount": 2500.0,
+    "currency": "BRL",
+    "cycle": "MONTHLY"
+  },
+  "slaHours": 8,
+  "status": "CLOSED",
+  "eventId": "18181818-1818-4181-8181-181818181818"
+}
+```
+
+O corpo é opcional; sem `endsOn`, a data é a atual ou o início do contrato, o que
+for posterior. O encerramento publica `ContractClosed.v1`. Repetir com a mesma
+chave devolve a mesma resposta; contrato que não está `ACTIVE` recebe `409`
+`INVALID_STATE`.
 
 ### Contatos e oportunidades do CRM
 

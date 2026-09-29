@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from archcorp.config import settings
 
 
@@ -8,7 +10,8 @@ def test_reservation_to_contract_and_finance_payment(client, admin_headers):
     reservation = client.post("/api/v1/contracts/reservations", headers=admin_headers, json={
         "customerId": customer["customerId"], "vehicleGroup": "Economico",
         "protectionCode": "BASICA", "serviceCode": "RENTAL-FLEX",
-        "startsOn": "2026-10-01", "endsOn": "2026-10-04", "amount": 250,
+        "startsOn": (date.today() + timedelta(days=2)).isoformat(),
+        "endsOn": (date.today() + timedelta(days=5)).isoformat(), "amount": 250,
         "currency": "BRL", "billingCycle": "ONCE", "slaHours": 8,
     })
     assert reservation.status_code == 201, reservation.text
