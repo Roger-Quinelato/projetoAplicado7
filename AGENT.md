@@ -1,6 +1,32 @@
 # AGENT.md
 
-Estado em 27/09/2026: este arquivo contém diretrizes de evolução. Para comportamento já implementado e limites verificados, consulte `docs/ESTADO_IMPLEMENTACAO.md`; para demandas e prazos, `docs/CRONOGRAMA_EXECUCAO.md`. OIDC, tracing distribuído, fila de erro no broker e escalabilidade horizontal são metas, não funcionalidades comprovadas do protótipo.
+Estado em 27/09/2026: este arquivo contém diretrizes obrigatórias de evolução. Para comportamento já implementado e limites verificados, consulte `docs/ESTADO_IMPLEMENTACAO.md`; para demandas e prazos, `docs/CRONOGRAMA_EXECUCAO.md`. OIDC, tracing distribuído, fila de erro no broker e escalabilidade horizontal são metas, não funcionalidades comprovadas do protótipo.
+
+## Regras permanentes para agentes
+
+As regras **SEMPRE** são requisitos de execução em toda tarefa. As regras **NUNCA** são proibições. Uma meta arquitetural não comprova que a funcionalidade existe: confirme o código, os testes e `docs/ESTADO_IMPLEMENTACAO.md` antes de descrever o estado do sistema.
+
+### SEMPRE
+
+- Leia este guia, o `README.md` e as instruções da pasta que será alterada; consulte também a fonte de verdade e os contratos pertinentes antes de implementar.
+- Trate o enunciado acadêmico como fonte primária dos requisitos. Identifique premissas e pontos pendentes de validação como tais.
+- Diferencie, em toda documentação e comunicação, comportamento implementado, decisão aprovada, arquitetura desejada e hipótese ainda não validada.
+- Preserve o caráter de protótipo acadêmico: use dados sintéticos e adaptadores/simuladores; descreva cada dependência real como requisito futuro até que sua conexão seja comprovada.
+- Respeite os limites dos módulos e o proprietário dos dados. Faça mudanças estruturais somente com decisão arquitetural registrada em ADR.
+- Ao alterar comportamento, API, evento, arquitetura ou operação, atualize na mesma mudança os contratos, documentação, diagramas e rastreabilidade afetados.
+- Verifique a mudança com testes proporcionais ao risco, incluindo falhas, reentrega e idempotência quando aplicável; informe com precisão o que foi e não foi executado.
+- Antes de declarar uma publicação pronta, confirme URL HTTPS, health checks, operações de escrita/leitura e persistência após reinício, além da configuração segura de segredos.
+
+### NUNCA
+
+- Afirme ou sugira que o protótipo acessa, sincroniza ou integra sistemas reais da Localiza; não há essa conexão comprovada.
+- Apresente OIDC/OAuth, tracing distribuído, fila de erro no broker, escala horizontal, deploy público ou integração externa como implementados sem evidência verificável.
+- Inclua dados pessoais reais, credenciais, tokens, senhas, dados bancários ou conteúdo sensível de chamados em código, logs, exemplos, issues ou documentação.
+- Grave segredos no Git. Para a demonstração pública, configure `DEMO_ACCESS_TOKEN` e demais credenciais somente no ambiente seguro do provedor.
+- Acesse tabelas, classes internas, repositórios ou regras de negócio de outro módulo; use o banco compartilhado como canal de integração entre módulos.
+- Oculte falhas, capture exceções sem tratamento observável, remova ou enfraqueça testes para obter aprovação, ou marque uma entrega como concluída sem atender aos critérios deste guia.
+- Substitua sistemas corporativos, introduza microsserviços/Kubernetes ou amplie os fluxos do protótipo sem requisito explícito, necessidade demonstrada e decisão arquitetural.
+- Converta uma hipótese sobre a organização, os sistemas existentes, os responsáveis ou as datas em fato documentado.
 
 ## Missão do repositório
 

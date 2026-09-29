@@ -2,6 +2,10 @@
 
 Protótipo acadêmico conceitual de integração entre CRM, reservas e contratos, financeiro e faturamento, atendimento e gestão de processos. Usa dados sintéticos e não acessa sistemas reais da Localiza. A solução é um monólito modular com REST e outbox; o despacho executa consumidores internos e pode publicar uma cópia no RabbitMQ local.
 
+## Regras para agentes
+
+Antes de trabalhar neste repositório, leia [`AGENT.md`](AGENT.md): suas regras **SEMPRE** são obrigatórias e suas regras **NUNCA** são proibições permanentes. Agentes Claude Code também devem ler [`CLAUDE.md`](CLAUDE.md), que encaminha ao guia completo. Consulte [`docs/ESTADO_IMPLEMENTACAO.md`](docs/ESTADO_IMPLEMENTACAO.md) para distinguir funcionalidades verificadas de metas e pendências. Nunca descreva este protótipo como conectado a sistemas reais da Localiza.
+
 ## Execução rápida
 
 Requisitos: Docker Desktop com Docker Compose.
@@ -94,6 +98,7 @@ Os artefatos principais estão em:
 - `docker-compose.yml`, `migrations/`, `scripts/`, `tools/`
 
 **Meta/organização**
+- `CLAUDE.md` — instruções iniciais para Claude Code;
 - `AGENT.md`, `README.md`, `termino1.md`
 
 ### Ordem sugerida para auditoria
