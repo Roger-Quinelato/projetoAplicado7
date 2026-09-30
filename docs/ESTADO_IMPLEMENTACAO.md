@@ -8,7 +8,7 @@ Data: 27/09/2026, atualizado em 29/09/2026 com a sprint Q3 (T06–T09). Este reg
 | Reservas/contratos | Reserva idempotente com cancelamento, rascunho a partir da reserva na mesma transação, ativação idempotente com revalidação do cliente, encerramento idempotente com `ContractClosed.v1` e máquina de estados única | Sem disponibilidade real de frota, assinatura ou preço externo; Finance não consome `ContractClosed.v1` (faturamento final em T12) |
 | Financeiro | Primeira fatura por evento, pagamento simulado, saldo e vencimento | Sem PSP, conciliação bancária, nota fiscal ou cobrança real |
 | Atendimento | Abertura, SLA, atribuição, resolução e reconciliação de elegibilidade | Sem central de atendimento externa |
-| Workflow | Processo e tarefa por evento, proprietário, prazo e transições | Sem motor BPM externo |
+| Workflow | Processo e tarefa por evento, responsável, prazo herdado, transições manuais auditadas e encerramento agregado; tarefas finais não reabrem e repetição exata não duplica efeitos | Sem motor BPM externo; aceite T16 em `EXECUCAO_TAREFAS.md` |
 | Integração | Outbox/inbox, correlação, auditoria, despacho, falhas e reprocessamento | Consumidores internos são invocados pelo despachante; RabbitMQ recebe cópia opcional, não entrega aos consumidores |
 | Segurança | Papéis por token local; no modo público, segredo aleatório em variável de ambiente; inicialização PostgreSQL ativa RLS e revoga acesso Data API `anon`/`authenticated` às tabelas do protótipo | Sem OIDC/OAuth ou contas individuais; credencial pública compartilhada; RLS ainda não verificada em Supabase real |
 | Observabilidade | Logs, métricas básicas, trilha por correlação e health checks | Sem tracing distribuído ou painel externo |

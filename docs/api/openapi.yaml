@@ -4372,7 +4372,7 @@ paths:
                 code: NOT_FOUND
                 correlationId: 11111111-1111-4111-8111-111111111111
         '409':
-          description: Processo concluído ou cancelado.
+          description: Processo concluído ou cancelado (INVALID_STATE).
           content:
             application/problem+json:
               schema:
@@ -4381,7 +4381,7 @@ paths:
                 type: urn:archcorp:problem:conflict
                 title: Conflito
                 status: 409
-                detail: Processo concluído ou cancelado
+                detail: Processo concluído ou cancelado (INVALID_STATE)
                 instance: /api/v1/workflow/tasks
                 code: CONFLICT
                 correlationId: 11111111-1111-4111-8111-111111111111
@@ -4477,7 +4477,8 @@ paths:
                 code: NOT_FOUND
                 correlationId: 11111111-1111-4111-8111-111111111111
         '409':
-          description: Processo concluído ou cancelado.
+          description: Tarefa ou processo encerrado não pode ser alterado (INVALID_STATE).
+            Repetir o mesmo estado e responsável retorna 200.
           content:
             application/problem+json:
               schema:
@@ -4486,7 +4487,8 @@ paths:
                 type: urn:archcorp:problem:conflict
                 title: Conflito
                 status: 409
-                detail: Processo concluído ou cancelado
+                detail: Tarefa ou processo encerrado não pode ser alterado (INVALID_STATE).
+                  Repetir o mesmo estado e responsável retorna 200
                 instance: /api/v1/workflow/tasks/{task_id}
                 code: CONFLICT
                 correlationId: 11111111-1111-4111-8111-111111111111

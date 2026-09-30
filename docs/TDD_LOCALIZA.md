@@ -90,6 +90,21 @@ Regras verificadas em `tests/test_contracts.py`:
 - o encerramento grava data e motivo, encerra a reserva vinculada, publica
   `ContractClosed.v1` e é auditado.
 
+### Workflow
+
+Criação e edição de tarefas são restritas a `operations` e `admin`; consulta
+também permite `support` e `contracts`. A tarefa herda o prazo do processo,
+aceita atribuição de responsável e estados `OPEN`, `IN_PROGRESS`, `DONE` e
+`CANCELLED`. Estados finais não permitem edição ou reabertura (409
+`INVALID_STATE`). Repetir o mesmo estado e responsável é uma operação sem efeito,
+inclusive após encerramento, sem duplicar auditoria.
+
+Na edição manual, todas as tarefas `DONE` concluem o processo; todas finais,
+com algum cancelamento, cancelam o processo. Enquanto houver tarefas abertas,
+uma tarefa `IN_PROGRESS` coloca o processo em andamento. Criação e alteração
+efetiva são auditadas com correlação, sem título ou nome de responsável nos
+detalhes da auditoria. Verificação: `tests/test_workflow.py` e F3.
+
 ## Fluxos Tecnicos
 
 1. **F1 - Cliente para reserva/contrato:** CRM fornece `customerId`; Contracts

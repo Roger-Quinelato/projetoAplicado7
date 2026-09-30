@@ -283,6 +283,28 @@ devolve a resposta original com `Idempotency-Replayed: true` e não cria outro
 evento. Sem `Idempotency-Key`, uma repetição recebe `409`. Finance ainda não
 consome `ContractClosed.v1`; o faturamento final pertence à tarefa T12.
 
+### Ciclo manual das tarefas operacionais
+
+```mermaid
+stateDiagram-v2
+    [*] --> OPEN
+    OPEN --> IN_PROGRESS: iniciar
+    IN_PROGRESS --> OPEN: devolver à fila
+    OPEN --> DONE: concluir
+    IN_PROGRESS --> DONE: concluir
+    OPEN --> CANCELLED: cancelar
+    IN_PROGRESS --> CANCELLED: cancelar
+    DONE --> [*]
+    CANCELLED --> [*]
+```
+
+Responsável pode ser alterado enquanto a tarefa estiver aberta. Repetir o estado
+e responsável atuais não altera a tarefa nem duplica auditoria. A edição manual
+conclui o processo quando todas as tarefas estão `DONE`; se todas são finais e
+alguma foi cancelada, o processo fica `CANCELLED`. Não é possível adicionar
+tarefas ou alterar tarefas finais em processo encerrado. O encerramento por
+evento de contrato/chamado segue as regras específicas dos fluxos acima.
+
 ## Rastreabilidade operacional
 
 Depois de qualquer fluxo, o operador usa

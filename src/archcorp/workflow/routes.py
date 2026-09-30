@@ -8,8 +8,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from archcorp.infrastructure.db import get_session
+from archcorp.observability import correlation_id_var
 from archcorp.security import require_roles
 from archcorp.workflow.models import ProcessInstance, ProcessTask
+from archcorp.workflow import service
 
 
 router = APIRouter(prefix="/api/v1/workflow", tags=["Gestão de processos"])
@@ -32,7 +34,8 @@ EXAMPLE_TASK = {
     "owner": "operations",
     "dueAt": "2026-10-04T10:00:00Z",
 }
-PROCESS_CLOSED = {409: {"description": "Processo concluído ou cancelado."}}
+PROCESS_CLOSED = {409: {"description": "Processo concluído ou cancelado (INVALID_STATE)."}}
+TASK_CLOSED = {409: {"description": "Tarefa ou processo encerrado não pode ser alterado (INVALID_STATE). Repetir o mesmo estado e responsável retorna 200."}}
 
 
 class TaskInput(BaseModel):
@@ -109,33 +112,11 @@ def list_tasks(processId: UUID | None = None, session: Session = Depends(get_ses
 
 @router.post("/tasks", status_code=201, response_model=TaskResponse, responses={404: {"description": "Processo não encontrado."}, **PROCESS_CLOSED}, dependencies=[Depends(require_roles("operations", "admin"))])
 def create_task(body: TaskInput, session: Session = Depends(get_session)) -> dict:
-    process = session.get(ProcessInstance, str(body.processId))
-    if not process:
-        raise HTTPException(404, "Processo não encontrado")
-    if process.state in {"COMPLETED", "CANCELLED"}:
-        raise HTTPException(409, "Processo encerrado")
-    item = ProcessTask(process_id=process.process_id, title=body.title,
-                       owner=body.owner, due_at=process.due_at)
-    session.add(item)
-    session.commit()
+    item = service.create_task(session, str(body.processId), body.title, body.owner, correlation_id_var.get())
     return task_data(item)
 
 
-@router.patch("/tasks/{task_id}", response_model=TaskResponse, responses={404: {"description": "Tarefa não encontrada."}, **PROCESS_CLOSED}, dependencies=[Depends(require_roles("operations", "admin"))])
+@router.patch("/tasks/{task_id}", response_model=TaskResponse, responses={404: {"description": "Tarefa não encontrada."}, **TASK_CLOSED}, dependencies=[Depends(require_roles("operations", "admin"))])
 def change_task(task_id: UUID, body: TaskChange, session: Session = Depends(get_session)) -> dict:
-    item = session.get(ProcessTask, str(task_id))
-    if not item:
-        raise HTTPException(404, "Tarefa não encontrada")
-    process = session.get(ProcessInstance, item.process_id)
-    if process.state in {"COMPLETED", "CANCELLED"}:
-        raise HTTPException(409, "Processo encerrado")
-    item.state = body.state
-    if body.owner:
-        item.owner = body.owner
-    tasks = session.scalars(select(ProcessTask).where(ProcessTask.process_id == process.process_id)).all()
-    if tasks and all(task.state == "DONE" for task in tasks):
-        process.state = "COMPLETED"
-    elif body.state == "IN_PROGRESS":
-        process.state = "IN_PROGRESS"
-    session.commit()
+    item = service.change_task(session, str(task_id), body.state, body.owner, correlation_id_var.get())
     return task_data(item)

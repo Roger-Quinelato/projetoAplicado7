@@ -89,3 +89,16 @@ T15, T10, T11, T16, T12, T13, T17, T19 e T21.
   o contrato e o caminho pela reserva chega à ativação e pagamento simulado.
 - Interface local já verificada na T10. A demonstração manual está em
   `ROTEIRO_DEMONSTRACAO.md`, seção F1; não foi declarada integração real ou pública.
+
+## T16 — Workflow e F3
+
+- Estado: concluída no escopo do protótipo.
+- Correção: tarefas finais não podem reabrir; todas as tarefas finais com algum
+  cancelamento encerram o processo em `CANCELLED`. Todas `DONE` o concluem.
+  Repetição exata não duplica efeitos; criação e alteração são auditadas.
+- Prova de regressão: quatro cenários falharam antes da correção e passaram
+  depois. Prazo herdado, responsável, estados e autorização também verificados.
+- Verificação em 30/09: `pytest -q tests/test_workflow.py tests/test_flows.py
+  tests/test_extended_modules.py tests/test_contracts_and_architecture.py
+  -p no:cacheprovider`: **30 aprovados** em uma execução sequencial.
+- OpenAPI, TDD, diagrama e estado documentado atualizados. Sem motor BPM externo.
