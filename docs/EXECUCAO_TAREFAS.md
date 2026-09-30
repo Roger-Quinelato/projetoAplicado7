@@ -1,0 +1,21 @@
+# Execução das tarefas pendentes
+
+Início: 30/09/2026. Base: `main`, commit `3a3d8bd` (PR #28).
+Uma tarefa é verificada e recebe um commit antes do início da próxima.
+Este registro comprova aceite técnico local; não altera automaticamente Jira,
+Trello ou GitHub, nem comprova publicação ou integração com a Localiza.
+
+Ordem prevista, considerando esforço e dependências: T06, T07, T08, T09,
+T15, T10, T11, T16, T12, T13, T17, T19 e T21.
+
+## T06 — Contratos REST e eventos
+
+- Estado: concluída no escopo do protótipo.
+- Entrega: OpenAPI 3.1 gerado pela aplicação, respostas e erros com exemplos;
+  AsyncAPI com os seis eventos e envelope canônico; fronteiras de módulos.
+- Verificação em 30/09: `pytest -q tests/test_contracts_and_architecture.py
+  -p no:cacheprovider`: **9 aprovados**; `tools/export_openapi.py --check`: aprovado.
+- A implementação já estava incorporada pelo PR #28. Esta tarefa registra seu
+  aceite sem introduzir mudanças desnecessárias no código.
+- Limite: consumidores internos; publicação RabbitMQ opcional; nenhum sistema
+  corporativo externo foi acessado.

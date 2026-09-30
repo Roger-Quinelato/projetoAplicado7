@@ -4,6 +4,7 @@ Atualizado em 27/09/2026. O projeto é um protótipo acadêmico conceitual para 
 
 ## Fontes e responsabilidade
 
+- A execução técnica iniciada em 30/09/2026 está em [Execução das tarefas](EXECUCAO_TAREFAS.md), com aceite e evidências por tarefa. A tabela de 27/09 abaixo é histórica; o aceite local não sincroniza automaticamente os quadros externos.
 - Cronograma visual enviado: Q1 a Q7, semanas S1 a S14, módulos de escopo, requisitos/AS-IS, TO-BE, APIs, protótipo, empreendedorismo/qualidade, relatório e entrega.
 - Plano de Execução e Cronograma Detalhado da ArchCorp: estrutura de 14 semanas e entregáveis acadêmicos.
 - `modelo-comum.md`: **tipo**, **prioridade**, **status** e **tempo** são campos independentes. Prioridade não define status.
