@@ -70,6 +70,12 @@ consumidores internos, o dispatcher publica o envelope no RabbitMQ quando
 `RABBITMQ_URL` está configurado. Uma publicação concluída muda o evento para
 `PUBLISHED`.
 
+O teste `test_f2_reentrega_e_novo_evento_do_mesmo_fato_nao_duplicam_efeitos`
+recoloca o mesmo evento na fila e depois entrega outro `eventId` com o mesmo
+contrato. A inbox evita repetir o mesmo evento; as regras de Finance/Workflow
+evitam duplicar fatura e processo mesmo quando o identificador do evento muda.
+Essa prova usa consumidores internos e SQLite, sem broker externo.
+
 Cada chamada a `/api/v1/integration/outbox/dispatch` representa uma tentativa dos
 eventos que permanecem `PENDING`. Uma exceção incrementa `attempts` e registra o
 motivo. O evento muda para `FAILED` ao alcançar `RETRY_LIMIT`, que vale três por

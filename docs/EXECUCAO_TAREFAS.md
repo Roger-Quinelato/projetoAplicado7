@@ -118,3 +118,13 @@ T15, T10, T11, T16, T12, T13, T17, T19 e T21.
 - OpenAPI, TDD e estado atualizados. A atribuição anterior de faturamento final
   à T12 não constava no aceite do Jira; recorrência/acerto final permanecem futuros.
   Bloqueio por linha foi incluído para PostgreSQL, sem alegar teste em banco real.
+
+## T13 — F2, ativação para cobrança e preparação
+
+- Estado: concluída no escopo do protótipo, após T09 e T12.
+- Prova acrescentada: reentrega do mesmo `eventId` e novo evento do mesmo contrato
+  mantêm uma única fatura e um único processo de retirada. A inbox e as regras
+  de idempotência de negócio são verificadas separadamente.
+- Verificação em 30/09: `pytest -q tests/test_flows.py -p no:cacheprovider`:
+  **10 aprovados**, incluindo os três fluxos e recuperação de falha permanente.
+- Integrações atualizadas. Sem validação de RabbitMQ ou cobrança externa.
