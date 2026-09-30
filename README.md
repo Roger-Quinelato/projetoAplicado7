@@ -34,6 +34,12 @@ O arquivo `render.yaml` prepara um **Render Free** com `DATABASE_URL` (PostgreSQ
 
 ## Desenvolvimento e testes
 
+Na pasta `web`, execute `npm ci`, `npx playwright install chromium --only-shell`
+e `npm run test:browser` para verificar navegação nos cinco contextos, tratamento
+de erro e envio de formulários. Os testes usam respostas sintéticas da API;
+a verificação da URL pública permanece na T20. Formulários aguardam a resposta,
+bloqueiam novo envio e preservam os campos quando a operação falha.
+
 ```powershell
 python -m venv .venv
 ./.venv/Scripts/pip install -r requirements-dev.txt

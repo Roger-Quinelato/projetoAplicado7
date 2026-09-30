@@ -29,5 +29,11 @@ jobs:
       - name: Build frontend
         working-directory: web
         run: npm run build
+      - name: Install test browser
+        working-directory: web
+        run: npx playwright install chromium --with-deps --only-shell
+      - name: Test frontend navigation and forms
+        working-directory: web
+        run: npm run test:browser
       - name: Build deployable Docker image
         run: docker build -t archcorp-demo .

@@ -66,3 +66,15 @@ T15, T10, T11, T16, T12, T13, T17, T19 e T21.
   reconciliação, F3, reentrega e contratos de eventos.
 - Documentação de integração atualizada. Autenticação e sistemas externos seguem
   simulados; a configuração pública será verificada separadamente.
+
+## T10 — Interface dos cinco contextos
+
+- Estado: concluída para a interface local; URL HTTPS pública pertence à T20.
+- Correção: campos são preservados após erro e só são limpos após sucesso;
+  botão de formulário fica desabilitado durante envio, com `aria-busy`.
+- Prova de regressão: dois testes de navegador falharam antes da correção
+  (campos vazios após 409 e botão habilitado durante envio) e passaram depois.
+- Verificação em 30/09: `npm run test:browser`: **3 aprovados**, com navegação
+  nos cinco contextos e respostas sintéticas da API; `npm run build`: aprovado.
+- Execução documentada no README e testes incluídos no CI. Isso não comprova
+  publicação, acessibilidade completa ou todas as operações de uma URL externa.

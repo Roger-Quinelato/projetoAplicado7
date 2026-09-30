@@ -23,8 +23,16 @@ function Input({ name, label, type = 'text', required = true, value, min, step }
 function Select({ name, label, values, required = true, placeholder = 'Selecione', defaultValue }: { name: string, label: string, values: { value: string, label: string }[], required?: boolean, placeholder?: string, defaultValue?: string }) {
   return <label><Label>{label}</Label><select name={name} required={required} defaultValue={defaultValue ?? ''}><option value="">{placeholder}</option>{values.map(x => <option key={x.value} value={x.value}>{x.label}</option>)}</select></label>
 }
-function ActionForm({ children, submit, onSubmit }: { children: ReactNode, submit: string, onSubmit: (data: FormData) => void | Promise<void> }) {
-  return <form onSubmit={e => { e.preventDefault(); void onSubmit(new FormData(e.currentTarget)); e.currentTarget.reset() }}>{children}<button type="submit">{submit}</button></form>
+function ActionForm({ children, submit, onSubmit }: { children: ReactNode, submit: string, onSubmit: (data: FormData) => Promise<boolean> }) {
+  const [pending, setPending] = useState(false)
+  return <form aria-busy={pending} onSubmit={async e => {
+    e.preventDefault()
+    if (pending) return
+    const form = e.currentTarget
+    setPending(true)
+    try { if (await onSubmit(new FormData(form))) form.reset() }
+    finally { setPending(false) }
+  }}>{children}<button type="submit" disabled={pending}>{submit}</button></form>
 }
 function Table({ rows, columns, emptyText = 'Sem registros ainda.' }: { rows: Row[], columns: { key: string, label: string, render?: (row: Row) => ReactNode }[], emptyText?: string }) {
   if (!rows.length) return <p className="empty">{emptyText}</p>
@@ -70,8 +78,8 @@ export default function App() {
 
   async function act(label: string, action: () => Promise<unknown>) {
     setBusy(true); setNotice('')
-    try { await action(); await refresh(); setNotice(`${label} concluído.`) }
-    catch (err) { setNotice(`Não foi possível concluir: ${err instanceof Error ? err.message : String(err)}`) }
+    try { await action(); await refresh(); setNotice(`${label} concluído.`); return true }
+    catch (err) { setNotice(`Não foi possível concluir: ${err instanceof Error ? err.message : String(err)}`); return false }
     finally { setBusy(false) }
   }
   function login(event: FormEvent) {
