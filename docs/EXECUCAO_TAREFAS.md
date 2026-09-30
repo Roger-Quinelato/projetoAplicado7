@@ -51,3 +51,18 @@ T15, T10, T11, T16, T12, T13, T17, T19 e T21.
   conflitos de idempotência, estados/datas, autorização e encerramento do workflow.
 - Limite: faturamento de encerramento é responsabilidade da T12; frota e cobrança
   externas continuam fora do protótipo. Implementação incorporada pelo PR #28.
+
+## T15 — Atendimento e assistência
+
+- Estado: concluída no escopo do protótipo.
+- Correção: mesma chave com descrição diferente retorna 409, em vez de ocultar a
+  mudança. Pedidos novos usam hash completo; registros antigos usam o chamado
+  original, sem migração e sem copiar a descrição para eventos ou logs.
+- Prova de regressão: os dois cenários de `tests/test_support.py` falharam antes
+  da correção (201 em vez de 409) e passaram depois.
+- Verificação em 30/09: `pytest -q tests/test_support.py tests/test_flows.py
+  tests/test_extended_modules.py tests/test_contracts_and_architecture.py
+  -p no:cacheprovider`: **23 aprovados**, incluindo SLA, atribuição, resolução,
+  reconciliação, F3, reentrega e contratos de eventos.
+- Documentação de integração atualizada. Autenticação e sistemas externos seguem
+  simulados; a configuração pública será verificada separadamente.

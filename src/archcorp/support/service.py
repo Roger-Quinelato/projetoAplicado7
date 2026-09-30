@@ -7,7 +7,7 @@ from archcorp.config import settings
 from archcorp.contracts.public import ContractEntitlementPort
 from archcorp.exceptions import BusinessRuleError, IdempotencyConflictError, InvalidStateError, NotFoundError
 from archcorp.integration.models import IdempotencyRecord
-from archcorp.integration.service import audit, enqueue
+from archcorp.integration.service import IdempotencyStore, audit, enqueue
 from archcorp.support.models import Ticket
 
 
@@ -18,8 +18,15 @@ class TicketService:
     def open(self, session: Session, data: dict, idempotency_key: str, correlation_id: str) -> tuple[dict, bool]:
         stored = session.get(IdempotencyRecord, {"key": idempotency_key, "operation": "open_ticket"})
         if stored:
-            if any(stored.response[field] != data[field] for field in ("customerId", "contractId", "serviceCode", "category")):
-                raise IdempotencyConflictError("Idempotency-Key já utilizada com outro chamado")
+            if stored.request_hash:
+                IdempotencyStore.replay(session, idempotency_key, "open_ticket", data,
+                                       "Idempotency-Key já utilizada com outro chamado")
+            else:
+                # Registros anteriores ao hash preservam o replay pelo chamado original.
+                ticket = session.get(Ticket, stored.response["ticketId"])
+                if (any(stored.response[field] != data[field] for field in ("customerId", "contractId", "serviceCode", "category"))
+                        or ticket is None or ticket.description != data["description"]):
+                    raise IdempotencyConflictError("Idempotency-Key já utilizada com outro chamado")
             return stored.response, True
         if settings.contract_adapter_available:
             entitlement = self.contracts.entitlement(session, data["contractId"], data["customerId"], data["serviceCode"])
@@ -40,7 +47,7 @@ class TicketService:
         response = self.as_dict(ticket)
         enqueue(session, "TicketOpened.v1", "support", response, correlation_id)
         audit(session, correlation_id, "support", "open_ticket", "success", ticket.ticket_id, status=status)
-        session.add(IdempotencyRecord(key=idempotency_key, operation="open_ticket", response=response))
+        IdempotencyStore.save(session, idempotency_key, "open_ticket", data, response)
         session.commit()
         return response, False
 

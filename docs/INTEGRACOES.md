@@ -114,9 +114,14 @@ elegibilidade. Uma confirmação muda o chamado para `OPEN`, preenche o SLA e
 recalcula o prazo. Uma rejeição muda o estado para `REJECTED_ENTITLEMENT`. A
 reconciliação não publica um segundo `TicketOpened.v1`.
 
-A descrição do chamado permanece no banco de Support. Ela não entra no evento, nos
-logs estruturados ou na resposta da API, o que reduz a exposição de conteúdo
-sensível.
+A abertura compara todo o pedido, incluindo a descrição, para a mesma
+`Idempotency-Key`: repetição idêntica retorna a resposta original; alteração
+retorna `409 IDEMPOTENCY_CONFLICT`. Registros antigos sem hash são comparados com
+o chamado original. O hash evita copiar a descrição para o registro idempotente.
+
+A descrição do chamado permanece no banco de Support e nas consultas protegidas
+de detalhe/listagem. Ela não entra nos eventos, nos logs estruturados nem na
+resposta de abertura. Use somente conteúdo sintético.
 
 ## Fluxo auxiliar: propagação cadastral
 
