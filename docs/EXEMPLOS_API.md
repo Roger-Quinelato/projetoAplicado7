@@ -343,7 +343,7 @@ Resposta ilustrativa de `GET /api/v1/integration/failures`:
     "eventId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
     "eventType": "ContractActivated.v1",
     "attempts": 3,
-    "reason": "dependência simulada indisponível",
+    "reason": "Falha no despacho (RuntimeError)",
     "correlationId": "11111111-1111-4111-8111-111111111111"
   }
 ]

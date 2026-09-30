@@ -78,7 +78,11 @@ Essa prova usa consumidores internos e SQLite, sem broker externo.
 
 Cada chamada a `/api/v1/integration/outbox/dispatch` representa uma tentativa dos
 eventos que permanecem `PENDING`. Uma exceção incrementa `attempts` e registra o
-motivo. O evento muda para `FAILED` ao alcançar `RETRY_LIMIT`, que vale três por
+tipo do erro, sem copiar mensagem, SQL, payload ou traceback da exceção. Os
+efeitos dos consumidores e a inbox desse despacho são desfeitos por savepoint
+antes de registrar a tentativa, inclusive em erro de banco. O log usa a
+correlação original do evento. O evento muda para `FAILED` ao alcançar
+`RETRY_LIMIT`, que vale três por
 padrão. O protótipo não agenda tentativas automaticamente e não implementa atraso
 exponencial ou jitter.
 
@@ -88,6 +92,10 @@ o evento para `PENDING` e registra a ação na auditoria. Inbox e restrições �
 continuam ativas durante o novo despacho. A auditoria guarda o número anterior de
 tentativas e o contador `attempts` volta a zero, o que abre uma nova janela de três
 tentativas.
+
+Essa atomicidade cobre gravações locais dos consumidores internos. Não garante
+transação distribuída com RabbitMQ: falha após uma publicação pode causar
+reentrega, que exige idempotência também no consumidor externo futuro.
 
 ## F3: chamado com contrato de locação e SLA
 

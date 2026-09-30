@@ -19,7 +19,7 @@ class JsonFormatter(logging.Formatter):
             "level": record.levelname,
             "module": record.name,
             "operation": getattr(record, "operation", record.funcName),
-            "correlationId": correlation_id_var.get(),
+            "correlationId": getattr(record, "correlationId", correlation_id_var.get()),
             "result": getattr(record, "result", "recorded"),
             "message": record.getMessage(),
         }, ensure_ascii=False)

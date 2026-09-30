@@ -6,7 +6,7 @@ Este registro comprova aceite técnico local; não altera automaticamente Jira,
 Trello ou GitHub, nem comprova publicação ou integração com a Localiza.
 
 Ordem prevista, considerando esforço e dependências: T06, T07, T08, T09,
-T15, T10, T11, T16, T12, T13, T17, T19 e T21.
+T15, T10, T11, T16, T12, T13, T17, T18 (dependência de T19), T19 e T21.
 
 ## T06 — Contratos REST e eventos
 
@@ -128,3 +128,19 @@ T15, T10, T11, T16, T12, T13, T17, T19 e T21.
 - Verificação em 30/09: `pytest -q tests/test_flows.py -p no:cacheprovider`:
   **10 aprovados**, incluindo os três fluxos e recuperação de falha permanente.
 - Integrações atualizadas. Sem validação de RabbitMQ ou cobrança externa.
+
+## T17 — Segurança e falhas recuperáveis
+
+- Estado: endurecimento local concluído; verificação da demo publicada é T20.
+- Correções: savepoint desfaz efeitos locais e inbox do despacho com falha,
+  inclusive falha SQL; fila e logs não copiam texto/traceback da exceção;
+  log de evento preserva correlação original; credencial Unicode inválida é 401.
+- Prova de regressão: cinco cenários falharam antes das respectivas correções
+  e passaram depois. Segredo público ausente, curto ou `demo-*` impede startup.
+- Verificação em 30/09: suíte focada de recuperação, credenciais, proteção SQL,
+  fluxos, módulos e contratos: **31 aprovados**; após atualizar o exemplo de
+  motivo seguro, teste de igualdade/exemplos do OpenAPI: **1 aprovado**.
+- README, OpenAPI, exemplos, integrações, TDD e diagrama atualizados. A proteção
+  PostgreSQL foi testada com conexão simulada; não comprova RLS no Supabase.
+  Credencial pública continua compartilhada; sem OIDC, TLS publicado ou
+  transação distribuída com RabbitMQ comprovados.

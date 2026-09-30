@@ -26,6 +26,11 @@ Para executar a demonstração completa:
 
 No desenvolvimento local, as rotas protegidas aceitam tokens fixos de demonstração (`demo-admin`, `demo-commercial`, `demo-contracts`, `demo-finance`, `demo-support`, `demo-operations`). **Não há OIDC/OAuth implementado.** Com `PUBLIC_DEMO=true`, esses tokens são rejeitados e apenas `DEMO_ACCESS_TOKEN` — segredo aleatório com pelo menos 24 caracteres configurado fora do repositório — funciona. O acesso público usa uma credencial compartilhada, adequada apenas ao protótipo acadêmico. Não inserir dados pessoais reais.
 
+Falhas de despacho desfazem gravações parciais dos consumidores antes da
+retentativa. Logs e fila de falhas registram o tipo da exceção e a correlação,
+sem seu texto livre ou traceback. Os testes de segurança usam segredos
+sintéticos; a verificação do serviço publicado pertence à T20.
+
 ## Frontend e deploy gratuito
 
 Para desenvolver a interface: `cd web`, `npm ci`, `npm run dev`, com a API rodando na porta 8000. `npm run build` gera `web/dist`, servido pelo FastAPI na raiz. O Dockerfile compila a interface e usa a porta definida por `PORT`.

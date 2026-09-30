@@ -23,25 +23,26 @@ class EventDispatcher:
         processed = failed = 0
         for event in events:
             try:
-                for consumer, handler in self.handlers.get(event.event_type, []):
-                    exists = session.scalar(select(InboxEvent).where(InboxEvent.event_id == event.event_id, InboxEvent.consumer == consumer))
-                    if exists:
-                        continue
-                    handler(session, event.envelope())
-                    session.add(InboxEvent(event_id=event.event_id, consumer=consumer))
-                self._publish_broker(event.envelope())
-                event.status = "PUBLISHED"
-                event.last_error = None
+                with session.begin_nested():
+                    for consumer, handler in self.handlers.get(event.event_type, []):
+                        exists = session.scalar(select(InboxEvent).where(InboxEvent.event_id == event.event_id, InboxEvent.consumer == consumer))
+                        if exists:
+                            continue
+                        handler(session, event.envelope())
+                        session.add(InboxEvent(event_id=event.event_id, consumer=consumer))
+                    self._publish_broker(event.envelope())
+                    event.status = "PUBLISHED"
+                    event.last_error = None
                 processed += 1
                 COUNTERS["events_published_total"] += 1
             except Exception as exc:
                 event.attempts += 1
-                event.last_error = str(exc)[:500]
+                event.last_error = f"Falha no despacho ({type(exc).__name__})"
                 if event.attempts >= settings.retry_limit:
                     event.status = "FAILED"
                     COUNTERS["events_failed_total"] += 1
                 failed += 1
-                logger.exception("Falha ao despachar evento", extra={"operation": "dispatch_event", "result": "failure"})
+                logger.error(event.last_error, extra={"operation": "dispatch_event", "result": "failure", "correlationId": event.correlation_id})
             session.commit()
         return {"processed": processed, "failed": failed}
 

@@ -90,6 +90,21 @@ Regras verificadas em `tests/test_contracts.py`:
 - o encerramento grava data e motivo, encerra a reserva vinculada, publica
   `ContractClosed.v1` e é auditado.
 
+### Recuperação e privacidade
+
+Um despacho usa savepoint para desfazer efeitos locais e inbox quando um
+consumidor ou a publicação falha. Depois registra a tentativa e o tipo do erro;
+a sessão continua utilizável inclusive após falha SQL. Retentar não duplica
+efeitos. Logs de despacho usam a correlação original do evento; logs HTTP e
+fila de falhas não incluem o texto livre ou traceback da exceção.
+
+O modo público exige segredo externo com pelo menos 24 caracteres e rejeita
+tokens `demo-*`; ainda é uma credencial compartilhada com papéis de administrador
+do protótipo, sem contas individuais/OIDC. Credencial inválida, inclusive Unicode,
+recebe 401. Evidências: `tests/test_dispatch_recovery.py`,
+`tests/test_demo_credentials.py`, matriz de papéis e proteção SQL simulada.
+Segurança PostgreSQL/Supabase e HTTPS publicados continuam pendentes em T20.
+
 ### Financeiro
 
 `ContractActivated.v1` cria uma única fatura por contrato, com vencimento em

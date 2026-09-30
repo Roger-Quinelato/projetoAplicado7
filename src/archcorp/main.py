@@ -272,7 +272,7 @@ FAILURE_LIST_RESPONSES = {
                         "eventId": EXAMPLE_CONTRACT_EVENT_ID,
                         "eventType": "ContractActivated.v1",
                         "attempts": 3,
-                        "reason": "dependência simulada indisponível",
+                        "reason": "Falha no despacho (RuntimeError)",
                         "correlationId": EXAMPLE_CORRELATION_ID,
                     }
                 ]
@@ -379,8 +379,8 @@ async def correlation_middleware(request: Request, call_next):
     try:
         try:
             response = await call_next(request)
-        except Exception:
-            logger.exception("Erro não tratado", extra={"operation": request.url.path, "result": "failure"})
+        except Exception as exc:
+            logger.error(f"Erro não tratado ({type(exc).__name__})", extra={"operation": request.url.path, "result": "failure"})
             response = problem_response(request, 500, "Erro interno inesperado")
         response.headers["X-Correlation-ID"] = correlation_id
         logger.info("Requisição concluída", extra={"operation": request.url.path, "result": response.status_code})

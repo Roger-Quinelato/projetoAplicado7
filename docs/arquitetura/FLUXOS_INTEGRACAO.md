@@ -130,7 +130,8 @@ sequenceDiagram
         Dispatcher-->>API: processed 1, failed 0
         API-->>Operador: 200
     else Exceção durante o despacho
-        Dispatcher->>Outbox: Incrementar attempts e registrar motivo
+        Dispatcher->>Dispatcher: Rollback do savepoint (efeitos locais e inbox)
+        Dispatcher->>Outbox: Incrementar attempts e registrar tipo do erro
         alt attempts menor que RETRY_LIMIT
             Dispatcher-->>API: processed 0, failed 1<br/>Evento continua PENDING
         else attempts igual ou maior que RETRY_LIMIT
@@ -149,6 +150,10 @@ Cada chamada ao dispatcher realiza uma tentativa. O protótipo não possui
 agendador, atraso exponencial ou jitter. O operador precisa chamar o despacho
 novamente após corrigir a causa. A inbox e as restrições únicas permanecem ativas
 no reprocessamento.
+
+Motivo e log de falha omitem texto livre e traceback da exceção; a correlação
+do evento permite investigar sem expor seus dados. O savepoint protege efeitos
+no banco local, sem transação distribuída com RabbitMQ.
 
 ## F3: chamado com contrato de locação e SLA
 
