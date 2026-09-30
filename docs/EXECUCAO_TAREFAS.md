@@ -78,3 +78,14 @@ T15, T10, T11, T16, T12, T13, T17, T19 e T21.
   nos cinco contextos e respostas sintéticas da API; `npm run build`: aprovado.
 - Execução documentada no README e testes incluídos no CI. Isso não comprova
   publicação, acessibilidade completa ou todas as operações de uma URL externa.
+
+## T11 — F1, cliente para reserva e contrato
+
+- Estado: concluída no escopo do protótipo, após aceite de T08, T09 e T10.
+- Verificação em 30/09: testes
+  `tests/test_flows.py::test_f1_cria_rascunho_sem_recadastro_e_reutiliza_idempotencia`
+  e `tests/test_extended_modules.py::test_reservation_to_contract_and_finance_payment`:
+  **2 aprovados**. O mesmo UUID cadastral chega ao rascunho, a repetição preserva
+  o contrato e o caminho pela reserva chega à ativação e pagamento simulado.
+- Interface local já verificada na T10. A demonstração manual está em
+  `ROTEIRO_DEMONSTRACAO.md`, seção F1; não foi declarada integração real ou pública.
