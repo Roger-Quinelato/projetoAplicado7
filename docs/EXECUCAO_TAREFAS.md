@@ -19,3 +19,14 @@ T15, T10, T11, T16, T12, T13, T17, T19 e T21.
   aceite sem introduzir mudanças desnecessárias no código.
 - Limite: consumidores internos; publicação RabbitMQ opcional; nenhum sistema
   corporativo externo foi acessado.
+
+## T07 — Fundação, migrações e dados sintéticos
+
+- Estado: concluída no escopo local; validação PostgreSQL publicada pertence à T20.
+- Entrega: UUID global e consulta de legado, conflito de unicidade em 409,
+  contrato de erro com correlação, carga sintética idempotente e Alembic aditivo.
+- Verificação em 30/09: `pytest -q tests/test_foundation.py -p no:cacheprovider`:
+  **10 aprovados**, incluindo upgrade de banco vazio/antigo, ausência de divergência
+  dos modelos e geração de SQL offline para PostgreSQL.
+- Limite: SQL offline não comprova execução no Supabase/Render; nenhum banco
+  publicado foi usado. A implementação aceita já estava no PR #28.
