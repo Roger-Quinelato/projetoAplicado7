@@ -22,7 +22,22 @@
 - Não executado: Docker neste host, PostgreSQL/Supabase real, RabbitMQ,
   HTTPS público, persistência após reinício publicado ou OIDC. T20 continua pendente.
 - Cada tarefa e seu aceite estão em `EXECUCAO_TAREFAS.md`. Relatório e slides
-  serão atualizados na T19 a partir dessas evidências.
+  foram atualizados na T19 a partir dessas evidências.
+
+## Revisão documental em 30/09/2026 (T19)
+
+- Relatório regenerado e renderizado: **18 páginas** inspecionadas, sem cortes,
+  sobreposições ou tabelas quebradas. Corrigidas as afirmações de OIDC e de
+  preservação de tentativas no reprocessamento; incluídos resultados da T18.
+- Apresentação regenerada: **15 slides** inspecionados. Validadores aprovaram
+  integridade, geometria, fontes Arial e reimportação pelo artifact-tool.
+  SHA-256 do PPTX: `c0e255066eb6fe19284e6541059d355b8799a40183c212a1e8c6634ebfba8c8e`.
+- **Nove diagramas Mermaid** atuais renderizados sem erro. Matriz, DDD,
+  atributos de qualidade e estado da implementação alinhados aos testes.
+- Artefatos oficiais em `output/`; imagens e recibos de QA locais em `tmp/`
+  e `.codex-finalizer/`. Publicação e vínculos externos pertencem à T21.
+- Limites preservados: enunciado específico Localiza ausente, premissas de
+  negócio e equipe a validar; sem alegar infraestrutura externa comprovada.
 
 ## Verificação histórica em 27/09/2026
 

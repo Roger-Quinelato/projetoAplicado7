@@ -70,8 +70,9 @@ SLA, cobrança, prioridade ou estado dos processos.
 | Integration | IDs legados, correlação, outbox, inbox, auditoria e falhas | APIs operacionais e dispatcher | Mapeamentos, correlação e registros de entrega | tabelas `integration_*` |
 
 A API pública usa o prefixo `/api/v1`. O OpenAPI documenta as operações HTTP,
-e o AsyncAPI documenta `CustomerUpdated.v1`, `ContractActivated.v1` e
-`TicketOpened.v1`. Mudanças compatíveis adicionam campos opcionais; mudanças
+e o AsyncAPI documenta `CustomerUpdated.v1`, `ContractActivated.v1`,
+`ContractClosed.v1`, `TicketOpened.v1`, `TicketEntitlementReconciled.v1` e
+`TicketResolved.v1`. Mudanças compatíveis adicionam campos opcionais; mudanças
 incompatíveis criam nova versão.
 
 ## Fluxo de informações
@@ -138,8 +139,9 @@ disponibilidade, tecnologia ou ritmo de mudança.
 
 ## Segurança, privacidade e operação
 
-O adaptador local simula tokens OIDC e aplica papéis por rota. A substituição por
-um provedor real preserva a porta de autenticação. A API valida entradas,
+O adaptador local usa tokens fixos e aplica papéis por rota, sem implementar
+OIDC. No modo público, exige segredo externo compartilhado. Identidade individual
+por provedor OIDC é evolução futura. A API valida entradas,
 minimiza dados compartilhados e não inclui a descrição do chamado nos eventos.
 Logs não devem registrar tokens, senhas, documentos completos, CNH, placa
 completa, dados bancários ou conteúdo sensível. TLS é obrigatório fora da

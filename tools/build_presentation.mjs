@@ -7,7 +7,7 @@ const workspaceDir = "C:/ProjetoAplicado7";
 const SKILL_DIR = "C:/Users/roger/.codex/plugins/cache/openai-primary-runtime/presentations/26.909.12148/skills/presentations";
 const TMP_DIR = path.join(workspaceDir, "tmp/presentation-build");
 const FINAL_PPTX = path.join(workspaceDir, "output/Apresentacao_Cenario_4.pptx");
-const VALIDATED_PPTX = path.join(TMP_DIR, "Apresentacao_Cenario_4_validada.pptx");
+const VALIDATED_PPTX = path.join(TMP_DIR, "Apresentacao_Cenario_4_2026-09-30_validada.pptx");
 const RUNTIME_PYTHON = "C:/Users/roger/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe";
 const utils = await import(pathToFileURL(path.join(SKILL_DIR, "container_tools/artifact_tool_utils.mjs")).href);
 const { resolvePresentationFont, makeNativeBulletParagraphs, finalizePresentation } = utils;
@@ -59,11 +59,11 @@ function notes(slide, text) {
 {
   const slide = deck.slides.add();
   slide.background.fill = C.navy;
-  textbox(slide, "Arquitetura de Integração\npara Empresa de Serviços", { left: 90, top: 170, width: 900, height: 190 }, 54, C.white, true);
+  textbox(slide, "Arquitetura de Integração\nno Cenário Localiza", { left: 90, top: 170, width: 900, height: 190 }, 54, C.white, true);
   textbox(slide, "Projeto Aplicado  |  Cenário 4", { left: 94, top: 390, width: 600, height: 50 }, 27, "#C8DFE2");
   const accent = slide.shapes.add({ geometry: "rect", position: { left: 95, top: 130, width: 180, height: 10 }, fill: C.rust, line: { fill: "none", width: 0 } });
-  textbox(slide, "Equipe do Projeto Aplicado\n27 de setembro de 2026 · em revisão", { left: 94, top: 560, width: 520, height: 70 }, 20, C.white);
-  notes(slide, "Fonte principal: Projeto Aplicado Localiza, enunciado acadêmico fornecido ao projeto, 2026.");
+  textbox(slide, "Equipe do Projeto Aplicado\n30 de setembro de 2026 · em revisão", { left: 94, top: 560, width: 520, height: 70 }, 20, C.white);
+  notes(slide, "Fonte: Guia.pdf e plano local. Enunciado específico Localiza não localizado no checkout. Projeto conceitual, sem acesso aos sistemas da organização.");
 }
 
 // 2
@@ -82,11 +82,11 @@ function notes(slide, text) {
 {
   const slide = base("Arquitetura atual AS IS");
   const nodes = [
-    box(slide, "CRM", { left: 80, top: 210, width: 170, height: 85 }),
-    box(slide, "Reservas e contratos", { left: 320, top: 210, width: 180, height: 85 }),
-    box(slide, "Financeiro e faturamento", { left: 570, top: 210, width: 180, height: 85 }),
-    box(slide, "Atendimento e assistência 24h", { left: 820, top: 210, width: 180, height: 85 }),
-    box(slide, "Processos", { left: 1070, top: 210, width: 150, height: 85 }),
+    box(slide, "CRM", { left: 80, top: 210, width: 170, height: 110 }),
+    box(slide, "Reservas e contratos", { left: 320, top: 210, width: 180, height: 110 }),
+    box(slide, "Financeiro e faturamento", { left: 570, top: 210, width: 180, height: 110 }),
+    box(slide, "Atendimento e assistência 24h", { left: 820, top: 210, width: 180, height: 110 }),
+    box(slide, "Processos", { left: 1070, top: 210, width: 150, height: 110 }),
   ];
   for (let i = 0; i < nodes.length - 1; i++) slide.shapes.connect(nodes[i], nodes[i + 1], { kind: "straight", fromSide: "right", toSide: "left", line: { style: "dashed", fill: C.rust, width: 2 }, tail: { type: "arrow", width: "sm", length: "sm" } });
   textbox(slide, "Premissa de modelagem", { left: 80, top: 130, width: 420, height: 40 }, 24, C.rust, true);
@@ -107,7 +107,7 @@ function notes(slide, text) {
 {
   const slide = base("Decisão arquitetural");
   textbox(slide, "SOA pragmática em monólito modular", { left: 110, top: 145, width: 1000, height: 70 }, 36, C.navy, true);
-  bullets(slide, ["Portas e adaptadores preservam as fronteiras dos contextos", "REST atende respostas imediatas; eventos representam fatos confirmados", "PostgreSQL e RabbitMQ sustentam a demonstração local", "Extração futura depende de métricas de escala, disponibilidade ou cadência"], { left: 130, top: 255, width: 1000, height: 310 }, 27);
+  bullets(slide, ["Portas e adaptadores preservam as fronteiras dos contextos", "REST atende respostas imediatas; eventos representam fatos confirmados", "SQLite verificado; PostgreSQL e RabbitMQ previstos no Compose", "Extração futura depende de métricas de escala, disponibilidade ou cadência"], { left: 130, top: 255, width: 1000, height: 310 }, 27);
   textbox(slide, "ADR 001 aceito para o protótipo acadêmico", { left: 130, top: 590, width: 800, height: 42 }, 22, C.rust, true);
   notes(slide, "Fonte: docs/adr/ADR-001-integracao-empresa-de-servicos.md. Opções consideradas: REST ponto a ponto, microsserviços completos, ESB central e monólito modular orientado a serviços.");
 }
@@ -162,7 +162,7 @@ function notes(slide, text) {
   const ct = box(slide, "Contracts\nACTIVE", { left: 80, top: 260, width: 200, height: 100 }, C.pale);
   const outbox = box(slide, "Outbox\nContractActivated", { left: 370, top: 260, width: 260, height: 100 }, C.navy, C.white);
   const finance = box(slide, "Finance\n1 cobrança", { left: 770, top: 180, width: 220, height: 90 }, "#E7F2EF");
-  const workflow = box(slide, "Workflow\n1 preparação de retirada", { left: 770, top: 360, width: 220, height: 90 }, "#E7F2EF");
+  const workflow = box(slide, "Workflow\n1 preparação de retirada", { left: 770, top: 360, width: 220, height: 110 }, "#E7F2EF");
   slide.shapes.connect(ct, outbox, { fromSide: "right", toSide: "left", kind: "straight", line: { style: "solid", fill: C.teal, width: 3 }, tail: { type: "arrow", width: "med", length: "med" } });
   slide.shapes.connect(outbox, finance, { fromSide: "right", toSide: "left", kind: "elbow", line: { style: "solid", fill: C.teal, width: 3 }, tail: { type: "arrow", width: "med", length: "med" } });
   slide.shapes.connect(outbox, workflow, { fromSide: "right", toSide: "left", kind: "elbow", line: { style: "solid", fill: C.teal, width: 3 }, tail: { type: "arrow", width: "med", length: "med" } });
@@ -186,7 +186,7 @@ function notes(slide, text) {
 
 // 11
 {
-  const slide = base("Interoperabilidade e reservas e contratos");
+  const slide = base("Interoperabilidade e contratos técnicos");
   bullets(slide, ["UUID global com identificadores legados associados", "JSON UTF 8, UTC ISO 8601 e moeda explícita", "OpenAPI para REST e AsyncAPI para eventos", "Fonte oficial vence; divergência fica auditada", "Mudança incompatível cria uma nova versão"], { left: 95, top: 145, width: 720, height: 410 }, 26);
   box(slide, "eventId\neventType\neventVersion\noccurredAt\ncorrelationId\ncausationId\nproducer\npayload", { left: 900, top: 140, width: 250, height: 390 }, C.navy, C.white);
   textbox(slide, "Envelope obrigatório", { left: 920, top: 555, width: 250, height: 40 }, 23, C.teal, true);
@@ -197,9 +197,9 @@ function notes(slide, text) {
 {
   const slide = base("Confiabilidade segurança e observabilidade");
   textbox(slide, "Confiabilidade", { left: 90, top: 145, width: 300, height: 45 }, 27, C.teal, true);
-  bullets(slide, ["Outbox e inbox", "Idempotency Key", "Fila de falha e reprocessamento"], { left: 85, top: 210, width: 340, height: 220 }, 22);
+  bullets(slide, ["Outbox e inbox", "Idempotency Key", "Rollback local e reprocessamento auditado"], { left: 85, top: 210, width: 340, height: 220 }, 22);
   textbox(slide, "Segurança", { left: 475, top: 145, width: 260, height: 45 }, 27, C.teal, true);
-  bullets(slide, ["Tokens locais ou segredo público e RBAC", "Validação na fronteira", "Dados mínimos em logs e eventos"], { left: 470, top: 210, width: 340, height: 220 }, 22);
+  bullets(slide, ["Tokens locais ou segredo público e RBAC", "Validação na fronteira", "Exceções sem texto livre em logs e fila"], { left: 470, top: 210, width: 340, height: 220 }, 22);
   textbox(slide, "Observabilidade", { left: 850, top: 145, width: 300, height: 45 }, 27, C.teal, true);
   bullets(slide, ["Correlação ponta a ponta", "Logs JSON e métricas", "Health checks e auditoria"], { left: 845, top: 210, width: 340, height: 220 }, 22);
   textbox(slide, "Falha permanente testada após três tentativas e reprocessamento auditado", { left: 170, top: 505, width: 930, height: 70 }, 26, C.rust, true);
@@ -209,7 +209,7 @@ function notes(slide, text) {
 // 13
 {
   const slide = base("Evolução e viabilidade");
-  bullets(slide, ["Novos sistemas entram por adaptadores", "Campos opcionais permitem evolução compatível", "API sem estado e consumidores por fila permitem escala", "Extração de módulo exige métricas e novo ADR", "Docker Compose limita custo da demonstração"], { left: 90, top: 145, width: 720, height: 390 }, 27);
+  bullets(slide, ["Novos sistemas entram por adaptadores", "Campos opcionais permitem evolução compatível", "Escala por réplicas/fila é uma evolução futura", "Extração de módulo exige métricas e novo ADR", "Docker Compose limita custo da demonstração"], { left: 90, top: 145, width: 720, height: 390 }, 27);
   textbox(slide, "Indicadores", { left: 890, top: 145, width: 240, height: 45 }, 28, C.teal, true);
   bullets(slide, ["Tempo de ativação", "Recadastro", "SLA incorreto", "Falhas por integração", "Tempo de diagnóstico"], { left: 850, top: 220, width: 330, height: 330 }, 23);
   notes(slide, "Fonte: docs/EVOLUCAO_MANUTENCAO.md e docs/VISAO_NEGOCIO.md.");
@@ -218,18 +218,18 @@ function notes(slide, text) {
 // 14
 {
   const slide = base("Demonstração e resultados");
-  textbox(slide, "Suíte ampliada", { left: 105, top: 145, width: 380, height: 60 }, 34, C.green, true);
-  textbox(slide, "p95  6,36 ms", { left: 800, top: 145, width: 330, height: 60 }, 34, C.green, true);
-  bullets(slide, ["F1 cria rascunho sem recadastro", "F2 cria uma cobrança e uma preparação de retirada", "F3 registra SLA e inicia resolução", "Falha controlada preserva e reconcilia o chamado", "Rastreabilidade reúne auditoria e eventos"], { left: 170, top: 250, width: 900, height: 300 }, 28);
-  textbox(slide, "Premissas do AS IS seguem para validação com a organização", { left: 250, top: 590, width: 800, height: 42 }, 23, C.rust, true);
-  notes(slide, "Fonte: docs/EVIDENCIAS_VALIDACAO.md. Medição local em 13 de setembro de 2026 com 200 consultas de prontidão.");
+  textbox(slide, "84 testes Python", { left: 105, top: 145, width: 380, height: 60 }, 34, C.green, true);
+  textbox(slide, "p95  3,68 ms", { left: 800, top: 145, width: 330, height: 60 }, 34, C.green, true);
+  bullets(slide, ["F1 cria rascunho sem recadastro", "F2 cria uma cobrança e uma preparação de retirada", "F3 registra SLA e inicia resolução", "11 testes de navegador, incluindo axe e teclado", "Falha SQL desfeita e pagamentos auditados"], { left: 170, top: 250, width: 900, height: 300 }, 28);
+  textbox(slide, "Verificação local; HTTPS e infraestrutura externa pendentes", { left: 250, top: 590, width: 800, height: 42 }, 23, C.rust, true);
+  notes(slide, "Fonte: docs/EVIDENCIAS_VALIDACAO.md, 30/09/2026. p95 de /health/ready em 200 consultas SQLite, sem concorrência. Axe em sete telas com dados sintéticos não comprova WCAG completa.");
 }
 
 // 15
 {
   const slide = base("Conclusões e próximos passos");
   textbox(slide, "Conclusões", { left: 90, top: 145, width: 430, height: 48 }, 29, C.teal, true);
-  bullets(slide, ["A arquitetura integrou os três fluxos obrigatórios", "Reservas e contratos e fronteiras permitem evolução incremental", "Outbox, inbox e correlação tornam falhas recuperáveis"], { left: 85, top: 215, width: 520, height: 255 }, 24);
+  bullets(slide, ["A arquitetura integrou os três fluxos obrigatórios", "Contratos técnicos e fronteiras permitem evolução incremental", "Outbox, inbox e correlação tornam falhas recuperáveis"], { left: 85, top: 215, width: 520, height: 255 }, 24);
   textbox(slide, "Limites e evolução", { left: 700, top: 145, width: 430, height: 48 }, 29, C.teal, true);
   bullets(slide, ["Validar premissas e interfaces do AS IS", "Publicar e testar a demo gratuita com dados sintéticos", "Adicionar identidade individual e retentativas com atraso"], { left: 695, top: 215, width: 500, height: 255 }, 24);
   textbox(slide, "Próxima ação: validar a solução com dados, volumes e responsáveis reais", { left: 165, top: 545, width: 950, height: 62 }, 25, C.rust, true);
@@ -246,9 +246,7 @@ const requirements = { explicitTotalSlideCount: 15, requiredNativeTableOwnerSlid
 const stagingDir = path.join(workspaceDir, ".codex-finalizer");
 await fs.mkdir(stagingDir, { recursive: true });
 await fs.mkdir(path.dirname(FINAL_PPTX), { recursive: true });
-await fs.rm(VALIDATED_PPTX, { force: true });
-await fs.rm(path.join(stagingDir, "Apresentacao_Cenario_4.validation.json"), { force: true });
-const candidatePath = path.join(stagingDir, "cenario4-candidate.pptx");
+const candidatePath = path.join(stagingDir, "cenario4-2026-09-30-candidate.pptx");
 await (await PresentationFile.exportPptx(deck)).save(candidatePath);
 await finalizePresentation({
   ...requirements,
@@ -262,7 +260,7 @@ await finalizePresentation({
   requiredNativeTableOwnerSlides: [],
   fontPolicy: { basis: "design", families: [family] },
   verifyArtifactToolImport: true,
-  receiptPath: path.join(stagingDir, "Apresentacao_Cenario_4.validation.json"),
+  receiptPath: path.join(stagingDir, "Apresentacao_Cenario_4_2026-09-30.validation.json"),
 });
 await fs.copyFile(VALIDATED_PPTX, FINAL_PPTX);
 console.log(FINAL_PPTX);

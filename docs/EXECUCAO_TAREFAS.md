@@ -49,7 +49,7 @@ T15, T10, T11, T16, T12, T13, T17, T18 (dependência de T19), T19 e T21.
 - Verificação em 30/09: `pytest -q tests/test_contracts.py -p no:cacheprovider`:
   **11 aprovados**, cobrindo período inválido, consentimento/elegibilidade,
   conflitos de idempotência, estados/datas, autorização e encerramento do workflow.
-- Limite: faturamento de encerramento é responsabilidade da T12; frota e cobrança
+- Limite: faturamento de encerramento é evolução futura; frota e cobrança
   externas continuam fora do protótipo. Implementação incorporada pelo PR #28.
 
 ## T15 — Atendimento e assistência
@@ -155,3 +155,15 @@ T15, T10, T11, T16, T12, T13, T17, T18 (dependência de T19), T19 e T21.
 - Evidências e limites em `EVIDENCIAS_VALIDACAO.md`; execução no README e CI.
   Sem certificação WCAG completa, carga concorrente, infraestrutura externa ou
   publicação comprovadas. T18 foi executada antes da T19 por sua dependência.
+
+## T19 — Documentação, relatório e apresentação
+
+- Estado: concluída localmente, após T18; publicação externa é T21.
+- Entrega: documentação alinhada a pagamentos, estados finais, rollback,
+  privacidade, autenticação local e evidências atuais. Corrigidas afirmações
+  desatualizadas de OIDC e reprocessamento, sem ampliar o escopo implementado.
+- Verificação em 30/09: **18 páginas** de relatório e **15 slides** renderizados
+  e inspecionados; integridade, geometria, fontes e reimportação do PPTX aprovadas;
+  **nove diagramas Mermaid** renderizados sem erro. Rastreabilidade atualizada.
+- Nomes/contribuições e premissas do domínio continuam a validar. Enunciado
+  específico Localiza não localizado; Guia.pdf e plano local são as fontes.

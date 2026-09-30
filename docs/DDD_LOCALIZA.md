@@ -51,7 +51,10 @@
 
 - `CustomerUpdated.v1`: CRM alterou dado cadastral relevante.
 - `ContractActivated.v1`: contrato de locacao foi ativado.
+- `ContractClosed.v1`: contrato ativo foi encerrado; fecha preparação pendente.
 - `TicketOpened.v1`: chamado de atendimento foi registrado.
+- `TicketEntitlementReconciled.v1`: elegibilidade e prazo foram reconciliados.
+- `TicketResolved.v1`: chamado foi resolvido; conclui processo de resolução.
 
 ## Invariantes
 

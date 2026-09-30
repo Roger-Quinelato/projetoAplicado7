@@ -3,7 +3,7 @@
 > Estado de execução em 27/09/2026: consulte [Estado da implementação](../ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](../CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
 
 Os diagramas abaixo representam o comportamento implementado para F1, F2 e F3.
-Eles complementam `docs/INTEGRACOES.md` e usam os reservas e contratos de
+Eles complementam `docs/INTEGRACOES.md` e usam os contratos técnicos de
 `docs/api/openapi.yaml` e `docs/events/asyncapi.yaml`. Os payloads completos estão
 em `docs/EXEMPLOS_API.md`.
 

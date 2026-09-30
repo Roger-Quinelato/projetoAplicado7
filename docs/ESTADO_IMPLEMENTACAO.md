@@ -1,6 +1,8 @@
 # Estado verificado da implementação
 
-Data: 27/09/2026, atualizado em 29/09/2026 com a sprint Q3 (T06–T09). Este registro separa o que o código local executa, o que a documentação projeta e o que ainda depende de validação externa. A execução no Render/Supabase não foi verificada nesta data.
+Data: 30/09/2026. Este registro inclui a sprint Q3 incorporada pelo PR #28 e a
+execução sequencial em `EXECUCAO_TAREFAS.md`. Separa código verificado localmente,
+metas e validação externa. Render/Supabase não foram verificados nesta data.
 
 | Área | Existe no repositório | Limite verificado |
 |---|---|---|
@@ -12,7 +14,7 @@ Data: 27/09/2026, atualizado em 29/09/2026 com a sprint Q3 (T06–T09). Este reg
 | Integração | Outbox/inbox, correlação, auditoria, despacho com rollback dos efeitos locais em falha, motivo sem texto da exceção e reprocessamento | Consumidores internos são invocados pelo despachante; RabbitMQ recebe cópia opcional, não entrega aos consumidores; sem transação distribuída |
 | Segurança | Papéis por token local; no modo público, segredo aleatório em variável de ambiente; inicialização PostgreSQL ativa RLS e revoga acesso Data API `anon`/`authenticated` às tabelas do protótipo | Sem OIDC/OAuth ou contas individuais; credencial pública compartilhada; RLS ainda não verificada em Supabase real |
 | Observabilidade | Logs, métricas básicas, trilha por correlação e health checks | Sem tracing distribuído ou painel externo |
-| Interface | React/TypeScript com telas e ações dos cinco contextos; build e inspeção local de cadastro aprovados | Falta teste na URL HTTPS pública |
+| Interface | React/TypeScript nos cinco contextos; formulários preservam dados após erro; 11 testes de navegador, incluindo axe/teclado, e build aprovados | API sintética nos testes de navegador; sem conformidade WCAG completa ou URL HTTPS pública comprovadas |
 | Dados e migrações | UUID global por entidade; mapeamento `integration_legacy_ids` com consulta por API; esquema versionado com Alembic e migrações aditivas (ADR-002); carga sintética idempotente em `scripts/seed_sintetico.py` | Upgrade automático verificado em SQLite nos testes; PostgreSQL do Supabase/Render não verificado |
 | Contrato de erro | Corpo único `application/problem+json` (RFC 9457) com `code` e `correlationId`; unicidade violada retorna `409` | `detail` de `422` mantém a lista da versão 1 por compatibilidade |
 | Hospedagem | Dockerfile único, `render.yaml`, URL relativa e banco configurável; imagem Docker compilada no GitHub Actions | Contas Render/Supabase, inicialização PostgreSQL e teste HTTPS ainda pendentes |

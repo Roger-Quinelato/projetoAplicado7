@@ -7,7 +7,7 @@
 | PRD-01 | Contexto, problema, publico-alvo, valor e escopo do produto Localiza | `docs/PRD_LOCALIZA.md` e `docs/VISAO_NEGOCIO.md` | Revisão contra eixo de Empreendedorismo do guia | Atendido |
 | DDD-01 | Linguagem ubiqua, contextos e regras de dominio | `docs/DDD_LOCALIZA.md` | Revisão de aderencia aos sistemas do Cenario 4 | Atendido |
 | TDD-01 | Desenho tecnico, componentes, contratos e fluxos | `docs/TDD_LOCALIZA.md`, OpenAPI, AsyncAPI e ADR-001 | Revisão contra itens 3, 4, 5 e 7 do guia | Atendido |
-| ASIS-01 | Sistemas, setores, usuários, processos, dados, dependências e problemas | `docs/arquitetura/AS_IS.md` | Revisão contra páginas 2 e 3 do enunciado | Atendido com premissas identificadas |
+| ASIS-01 | Sistemas, setores, usuários, processos, dados, dependências e problemas | `docs/arquitetura/AS_IS.md` | Guia.pdf e plano local; enunciado específico Localiza ausente | Atendido com premissas identificadas |
 | RF-01 | Referência única de cliente | UUID em CRM, `integration_legacy_ids` e `GET /integration/legacy-ids/{sourceSystem}/{legacyId}` | `test_f1_cria_rascunho_sem_recadastro_e_reutiliza_idempotencia` e `test_identificador_legado_resolve_uuid_global` | Atendido |
 | RF-02 | Reserva/contrato de locação a partir do CRM | `CustomerReader`, `POST /contracts/reservations`, `POST /contracts/drafts` e rascunho a partir da reserva | Teste F1 e `tests/test_contracts.py` | Atendido |
 | RF-03 | Ativação da locação cria cobrança e preparação de retirada | Outbox, Finance e Workflow | Teste F2 com repetição | Atendido |
@@ -24,16 +24,20 @@
 | DATA-01 | Dados sintéticos e migração aditiva | `docs/DADOS_SINTETICOS.md`, `scripts/seed_sintetico.py`, ADR-002 e migrações Alembic | `test_carga_sintetica_e_idempotente`, `test_migracoes_criam_esquema_sem_divergencia_dos_modelos` e `test_migracoes_sao_aditivas` | Atendido em SQLite; PostgreSQL publicado pendente |
 | CRM-01 | CRM completo: clientes, contatos e oportunidades com validação e autorização | `src/archcorp/crm/` | `tests/test_crm.py` | Atendido |
 | CTR-01 | Reservas e contratos: reserva, rascunho, ativação idempotente e encerramento | `src/archcorp/contracts/` e `ContractClosed.v1` | `tests/test_contracts.py`, `test_composicao_da_aplicacao_nao_le_modelos_dos_contextos` | Atendido; Finance não consome o encerramento |
+| FIN-01 | Fatura, pagamento simulado e inadimplência por vencimento (T12) | `src/archcorp/finance/` | `tests/test_finance.py`: centavos, parcial/total, repetição, excesso, vencimento e auditoria | Atendido localmente; acerto final/recorrência futuros |
+| WF-01 | Tarefas, prazos, responsáveis e estados finais (T16) | `src/archcorp/workflow/` | `tests/test_workflow.py` e F3 | Atendido localmente |
+| REC-01 | Falha desfaz efeitos locais e não expõe exceção (T17) | Dispatcher com savepoint e logs seguros | `tests/test_dispatch_recovery.py` | Atendido; sem transação distribuída com broker |
+| A11Y-01 | Verificação local de acessibilidade (T18) | Playwright e axe, contraste corrigido | Sete telas varridas e navegação Tab/Enter; `web/tests/accessibility.spec.ts` | Sem violações automáticas detectadas; sem certificação WCAG completa |
 | QUA-01 | Pelo menos cinco atributos de qualidade | `docs/ATRIBUTOS_QUALIDADE.md` | Matriz com nove atributos | Atendido |
 | EVO-01 | Escalabilidade, manutenção e evolução | `docs/EVOLUCAO_MANUTENCAO.md` | Revisão das perguntas do enunciado | Atendido |
 | NEG-01 | Público, problema, valor, benefícios e viabilidade | `docs/VISAO_NEGOCIO.md` | Revisão do eixo de empreendedorismo | Atendido |
 | DEMO-01 | Três fluxos funcionando | API e `scripts/demo.ps1` | Testes F1, F2 e F3 | Atendido |
-| DOC-01 | Diagramas atual e proposto, componentes, integração e comunicação | arquivos em `docs/arquitetura` e relatório | Sete blocos Mermaid renderizados sem erro e figuras do relatório inspecionadas | Atendido |
+| DOC-01 | Diagramas atual e proposto, componentes, integração e comunicação | arquivos em `docs/arquitetura` e apresentação | Nove blocos Mermaid atuais renderizados sem erro em 30/09; diagramas dos slides inspecionados | Atendido |
 | DOC-02 | APIs e exemplos de requisição e resposta | `docs/api/openapi.yaml` (gerado por `tools/export_openapi.py`), `docs/events/asyncapi.yaml` e `docs/EXEMPLOS_API.md` | Igualdade com `app.openapi()`, validação OpenAPI 3.1, exemplo em toda resposta 2xx JSON, erros em problem+json e exemplos AsyncAPI validados contra os schemas | Atendido |
-| DOC-03 | Relatório técnico de 15 a 20 páginas | `output/Relatorio_Tecnico_Cenario_4.docx` | 18 páginas renderizadas e inspecionadas integralmente | Atendido; regenerar após revisão Localiza |
-| DOC-04 | Apresentação técnica | `output/Apresentacao_Cenario_4.pptx` | Pacote validado e 15 slides renderizados e inspecionados | Atendido; regenerar após revisão Localiza |
+| DOC-03 | Relatório técnico de 15 a 20 páginas | `output/Relatorio_Tecnico_Cenario_4.docx` | 18 páginas atualizadas, renderizadas e inspecionadas em 30/09 | Atendido localmente; nomes/contribuições e premissas a validar |
+| DOC-04 | Apresentação técnica | `output/Apresentacao_Cenario_4.pptx` | Integridade, geometria, fontes e reimportação aprovadas; 15 slides inspecionados em 30/09 | Atendido localmente; publicação T21 pendente |
 | SEC-01 | OIDC/OAuth 2.0, papéis e privacidade | adaptador bearer local, RBAC e minimização; matriz em `docs/TDD_LOCALIZA.md` | `test_matriz_de_autorizacao_do_crm` (401/403 por papel) e revisão de payload/log | Atendido no escopo simulado; sem OIDC |
-| OBS-01 | Logs, métricas, traces e health checks | middleware, `/metrics`, `/health/*`, correlação e auditoria | testes HTTP e roteiro | Atendido; trace distribuído representado pela correlação no monólito |
+| OBS-01 | Logs, métricas, correlação e health checks; tracing futuro | middleware, `/metrics`, `/health/*`, correlação e auditoria | testes HTTP e roteiro | Atendido no monólito; sem tracing distribuído |
 
 ## Evidências externas pendentes
 
@@ -56,4 +60,7 @@ Produtos, tecnologias, volumes, responsáveis e fluxos reais da organização n�
 | Demonstração prática | `docs/ROTEIRO_DEMONSTRACAO.md` e `scripts/demo.ps1` |
 | Relatório técnico e apresentação | `output/Relatorio_Tecnico_Cenario_4.docx` e `output/Apresentacao_Cenario_4.pptx` |
 
-Os resultados da execução local estão registrados em `docs/EVIDENCIAS_VALIDACAO.md`: 13 testes aprovados, contratos sincronizados e p95 local de 6,36 ms em 200 consultas.
+Resultados em 30/09/2026 em `docs/EVIDENCIAS_VALIDACAO.md`: **84 testes Python**,
+**11 de navegador**, build aprovado e p95 local de prontidão de **3,68 ms** em
+200 consultas. `EXECUCAO_TAREFAS.md` relaciona cada aceite ao seu commit; publicação
+e integração com sistemas reais continuam pendentes.

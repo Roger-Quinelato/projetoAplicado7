@@ -159,7 +159,7 @@ add_page_number(section.footer.paragraphs[0])
 p = doc.add_paragraph(style="Title")
 p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 p.paragraph_format.space_before = Pt(115)
-p.add_run("Arquitetura de Integração para Empresa de Serviços")
+p.add_run("Arquitetura de Integração no Cenário Localiza")
 sub = doc.add_paragraph()
 sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
 sub.add_run("Projeto Aplicado Cenário 4").bold = True
@@ -167,20 +167,20 @@ sub.paragraph_format.space_before = Pt(18)
 meta = doc.add_paragraph()
 meta.alignment = WD_ALIGN_PARAGRAPH.CENTER
 meta.paragraph_format.space_before = Pt(150)
-meta.add_run("Equipe do Projeto Aplicado — nomes e contribuições pendentes\n27 de setembro de 2026\nRelatório técnico em revisão")
+meta.add_run("Equipe do Projeto Aplicado — nomes e contribuições pendentes\n30 de setembro de 2026\nRelatório técnico em revisão")
 
 # Página 2
 page(doc, "Resumo")
 para(doc, "A organização do Cenário 4 utiliza CRM, sistema de reservas e contratos, sistema financeiro e faturamento, sistema de atendimento e assistência 24h e gestão de processos operacionais. O enunciado associa o crescimento da organização a duplicidade de dados, lançamentos manuais, integrações frágeis e processos fragmentados. Este trabalho propõe e implementa uma arquitetura orientada a serviços entregue como monólito modular, com APIs REST para interações imediatas e eventos para efeitos desacoplados.")
 para(doc, "O método combinou análise do enunciado, levantamento de requisitos, modelagem AS-IS e TO-BE, registro de decisão arquitetural, implementação incremental e verificação automatizada. O protótipo separa os contextos CRM, Contracts, Finance, Support, Workflow e Integration. As fronteiras usam portas públicas; cada contexto controla seus dados e regras. A entrega confiável emprega outbox, inbox, idempotência, correlação e reprocessamento auditado.")
-para(doc, "A avaliação histórica de setembro executou 13 testes automatizados; a suíte ampliada inclui agora reservas, pagamentos simulados, resolução de chamados e proteção da demo pública. Os três fluxos obrigatórios funcionaram no banco de testes: cliente do CRM para contrato; ativação para primeira fatura e preparação de retirada; chamado com contrato e SLA. A medição anterior de 200 consultas locais de prontidão teve p95 de 6,36 ms e não representa latência em hospedagem pública.")
+para(doc, "Em 30/09/2026, 84 testes Python e 11 testes de navegador passaram. F1, F2 e F3 preservaram identidade e efeitos únicos. A avaliação incluiu centavos e auditoria financeira, estados finais de tarefas, recuperação após erro SQL e privacidade de exceções. A varredura axe em sete telas não detectou violações automáticas; isso não comprova WCAG completa. Em 200 consultas locais de prontidão, o p95 foi 3,68 ms, sem carga concorrente ou hospedagem pública.")
 para(doc, "Palavras-chave: arquitetura de sistemas corporativos; SOA; monólito modular; integração; REST; eventos; interoperabilidade.")
 
 # Página 3
 page(doc, "1 Introdução")
 doc.add_heading("1.1 Contexto e problema", level=2)
-para(doc, "A Localiza recebeu a tarefa de modernizar uma organização que acumulou aplicações distintas ao crescer. Para o Cenário 4, o documento define cinco sistemas: CRM, reservas e contratos, financeiro e faturamento, atendimento e assistência 24h e gestão de processos operacionais [1]. A falta de comunicação adequada cria duplicidade, recadastro, dificuldade de manutenção e baixa capacidade de evolução.")
-para(doc, "O problema arquitetural envolve propriedade de dados e coordenação entre sistemas. Uma chamada bem-sucedida não basta quando uma ativação precisa produzir cobrança e preparação de retirada, pois uma falha intermediária pode perder o fato ou repetir efeitos. A solução precisa definir reservas e contratos, responsabilidades, consistência e recuperação.")
+para(doc, "Este projeto acadêmico modela a integração de cinco capacidades do cenário de locação: CRM, reservas e contratos, financeiro e faturamento, atendimento e assistência 24h e gestão de processos operacionais. O Guia.pdf orienta a análise arquitetural e as entregas [1]; o plano local define os três fluxos. Produtos, interfaces e dificuldades reais da Localiza são premissas a validar, sem acesso a seus sistemas.")
+para(doc, "O problema arquitetural envolve propriedade de dados e coordenação entre sistemas. Uma chamada bem-sucedida não basta quando uma ativação precisa produzir cobrança e preparação de retirada, pois uma falha intermediária pode perder o fato ou repetir efeitos. A solução precisa definir contratos técnicos, responsabilidades, consistência e recuperação.")
 doc.add_heading("1.2 Objetivos", level=2)
 para(doc, "O objetivo geral consiste em demonstrar uma arquitetura executável que integre os cinco sistemas sem substituir suas capacidades completas. Os objetivos específicos abrangem identidade global de cliente, três fluxos integrados, contratos versionados, entrega idempotente, observabilidade, segurança, avaliação de qualidade e uma estratégia de evolução.")
 doc.add_heading("1.3 Organização do relatório", level=2)
@@ -215,21 +215,21 @@ para(doc, "A Equipe do Projeto Aplicado conduziu análise, modelagem, implementa
 doc.add_heading("3.2 Recursos", level=2)
 table(doc, ["Finalidade", "Recurso"], [
     ["Desenvolvimento", "Python, FastAPI e SQLAlchemy"],
-    ["Persistência", "PostgreSQL na demonstração e SQLite nos testes"],
-    ["Mensageria", "RabbitMQ e outbox persistida"],
-    ["Reservas e contratos", "OpenAPI 3.1 e AsyncAPI 3.0"],
+    ["Persistência", "SQLite verificado; PostgreSQL previsto no Compose"],
+    ["Mensageria", "Outbox verificada; cópia RabbitMQ opcional"],
+    ["Contratos técnicos", "OpenAPI 3.1 e AsyncAPI 3.0, seis eventos"],
     ["Execução", "Docker Compose e PowerShell"],
-    ["Verificação", "Pytest, testes de arquitetura e medição local"],
+    ["Verificação", "Pytest, Playwright/axe, contratos e medição local"],
 ], [2.0, 4.7])
 doc.add_heading("3.3 Procedimento", level=2)
-para(doc, "O trabalho seguiu seis ciclos: descoberta; reservas e contratos e fundação; adaptadores; fluxos; qualidade; e entrega. Cada mudança relacionou requisito, decisão, implementação e evidência. A equipe tratou detalhes organizacionais ausentes como premissas e preservou o enunciado como fonte prioritária.")
+para(doc, "O trabalho seguiu descoberta, contratos técnicos e fundação, adaptadores, fluxos, qualidade e entrega. Cada tarefa foi verificada e comitada antes da próxima. Alembic aditivo e carga sintética idempotente foram testados em SQLite; o SQL PostgreSQL foi gerado offline, sem execução em nuvem. O enunciado específico Localiza não foi localizado no checkout; o Guia.pdf e o plano local sustentam as premissas explícitas.")
 
 # Página 7
 page(doc, "4 Cenário atual AS IS")
 para(doc, "O enunciado confirma os cinco sistemas, mas não identifica produtos, interfaces ou tecnologia. A análise separa essa evidência das premissas usadas para construir a demonstração. Essa distinção evita apresentar como observação uma troca manual que ainda precisa de entrevista.")
 table(doc, ["Sistema", "Usuários", "Dados oficiais"], [
     ["CRM", "Comercial e canais digitais", "Cliente, contatos, consentimentos e oportunidade"],
-    ["Reservas e contratos", "Jurídico e reservas e contratos", "Reserva, contrato de locação, grupo de veículo, vigência, proteções e SLA"],
+    ["Reservas e contratos", "Operação e jurídico", "Reserva, contrato de locação, grupo de veículo, vigência, proteções e SLA"],
     ["Financeiro e faturamento", "Financeiro e faturamento", "Pré-autorização, cobrança, fatura, pagamento, caução, multa e inadimplência"],
     ["Atendimento e assistência 24h", "Agentes", "Chamado, assistência, prioridade, histórico e resolução"],
     ["Gestão de processos operacionais", "Operações e gestão", "Instância, tarefa, responsável, prazo e estado operacional"],
@@ -293,7 +293,7 @@ table(doc, ["Camada", "Elementos", "Regra de dependência"], [
     ["Saída", "SQLAlchemy, RabbitMQ e logs", "Implementa adaptadores substituíveis"],
 ], [1.15, 2.6, 2.9])
 doc.add_heading("6.2 Segurança", level=2)
-para(doc, "O protótipo simula tokens OIDC e aplica papéis comercial e canais digitais, reservas e contratos, financeiro e faturamento, atendimento e assistência 24h, operações e administrador. Validação ocorre na fronteira. Eventos não carregam documentos, dados bancários ou descrição de chamado. O ambiente real deve usar um provedor OIDC e TLS no gateway.")
+para(doc, "O protótipo usa tokens locais com papéis; no modo público exige segredo externo compartilhado, sem OIDC ou contas individuais. Validação ocorre na fronteira. Eventos omitem descrição de chamado e dados bancários. Logs e fila de falhas omitem texto livre e traceback de exceções, preservando tipo e correlação. PostgreSQL/RLS e TLS publicados ainda dependem de validação na T20.")
 
 # Página 12
 page(doc, "7 Integração F1 Cliente para reserva/contrato")
@@ -316,8 +316,8 @@ table(doc, ["Consumidor", "Efeito", "Proteção contra duplicidade"], [
     ["Workflow", "Processo de preparação de retirada", "Tipo e referência únicos"],
     ["Integration", "Publicação e auditoria", "eventId por consumidor na inbox"],
 ], [1.45, 2.15, 3.05])
-para(doc, "Uma falha mantém o evento pendente até nova chamada de despacho. Após três tentativas, o evento passa a FAILED com motivo e correlação. Um operador autorizado pode agendar o reprocessamento. A operação preserva o contador acumulado; uma nova falha retorna imediatamente a FAILED. Inbox e restrições únicas continuam válidas, portanto um efeito já confirmado não se repete.")
-para(doc, "O teste F2 repetiu a ativação e o despacho e encontrou uma cobrança e uma preparação de retirada. Essa evidência atende ao requisito de demonstração de reentrega.")
+para(doc, "Uma falha desfaz efeitos locais e inbox do despacho por savepoint, inclusive em erro SQL. Depois incrementa attempts e registra tipo do erro e correlação, sem texto da exceção. Após três tentativas o evento fica FAILED. O reprocessamento explícito é auditado e zera attempts, abrindo nova janela de tentativas; não existe agendador ou atraso automático. Publicação no broker não participa de transação distribuída.")
+para(doc, "O teste F2 reentregou o mesmo eventId e outro evento de ativação para o mesmo contrato, mantendo uma fatura e um processo. Finance também valida pagamentos parciais/totais, moeda, saldo, precisão de centavos, auditoria e inadimplência por vencimento. Recorrência, multas e acerto final não são implementados.")
 
 # Página 14
 page(doc, "9 Integração F3 Chamado com SLA")
@@ -328,20 +328,20 @@ table(doc, ["Condição", "Estado do chamado", "Ação"], [
     ["Consulta indisponível", "PENDING_ENTITLEMENT", "Preserva solicitação"],
     ["Consulta restaurada", "OPEN ou REJECTED_ENTITLEMENT", "Reconcilia com auditoria"],
 ], [2.1, 2.0, 2.55])
-para(doc, "O evento omite a descrição do chamado. Workflow recebe apenas os identificadores, categoria, prioridade, estado e SLA necessários ao processo. O teste de degradação abriu o chamado pendente e o reconciliou depois que Contracts voltou. A reconciliação atualiza o prazo do processo de resolução no Workflow.")
+para(doc, "O evento omite a descrição do chamado. A reconciliação atualiza o prazo do Workflow; a resolução conclui suas tarefas. Tarefas manuais herdam prazo, aceitam responsável e são auditadas. Tarefas finais não reabrem; repetir estado e responsável não duplica efeitos. Todas DONE concluem o processo; todas finais com algum cancelamento o cancelam. Indisponibilidade preserva o chamado para reconciliação.")
 
 # Página 15
 page(doc, "10 Qualidade arquitetural")
 table(doc, ["Atributo", "Estratégia", "Evidência"], [
-    ["Interoperabilidade", "UUID, formatos e reservas e contratos", "OpenAPI e AsyncAPI"],
+    ["Interoperabilidade", "UUID, formatos e contratos técnicos", "OpenAPI e AsyncAPI"],
     ["Confiabilidade", "Outbox, inbox e idempotência", "F2 sem duplicidade"],
-    ["Segurança", "RBAC, validação e minimização", "Teste 403"],
+    ["Segurança", "RBAC, validação e minimização", "401/403 e privacidade de falha"],
     ["Observabilidade", "Correlação, logs, métricas e auditoria", "Consulta da operação"],
     ["Manutenibilidade", "Portas e teste de fronteira", "Zero importação cruzada"],
     ["Disponibilidade", "Estado pendente e reconciliação", "Teste de indisponibilidade"],
-    ["Desempenho", "API sem estado e índices", "p95 de 6,36 ms"],
-    ["Escalabilidade", "Consumidores idempotentes", "Escala por fila possível"],
-    ["Testabilidade", "Suíte e adaptadores", "Verificar suíte ampliada antes da submissão"],
+    ["Desempenho", "API sem estado e índices", "p95 local de 3,68 ms"],
+    ["Escalabilidade", "Consumidores idempotentes", "Evolução futura; sem medição de escala"],
+    ["Testabilidade", "Suíte e adaptadores", "84 testes Python; 11 de navegador"],
 ], [1.35, 2.7, 2.6])
 para(doc, "As medições representam o ambiente local e não substituem capacidade planejada com volumes reais. A equipe deve registrar hardware e amostra quando repetir o teste na apresentação.")
 
@@ -360,7 +360,7 @@ para(doc, "Custos, equipe, prazo e infraestrutura de produção não foram infor
 page(doc, "12 Resultados e considerações finais")
 doc.add_heading("12.1 Resultados", level=2)
 para(doc, "A entrega local implementou os cinco contextos com interface web, API e persistência. Os três fluxos integrados funcionaram em testes; repetição não duplicou cobrança ou processo; falha de dependência preservou o chamado; e reprocessamento manteve rastreabilidade. OpenAPI e AsyncAPI documentam os contratos. A publicação HTTPS no Render/Supabase permanece dependente de acesso às contas e teste de persistência. Os nomes e as contribuições dos integrantes devem ser registrados antes da submissão.")
-para(doc, "Os componentes permanecem organizados por responsabilidade. REST atende decisões imediatas e eventos desacoplam os efeitos posteriores. O ADR registra por que a equipe evitou microsserviços completos e um ESB com regras centrais. A arquitetura permite evolução porque as portas e reservas e contratos continuam válidos quando um adaptador ou módulo muda.")
+para(doc, "Os componentes permanecem organizados por responsabilidade. REST atende decisões imediatas e eventos desacoplam os efeitos posteriores. O ADR registra por que a equipe evitou microsserviços completos e um ESB com regras centrais. A arquitetura permite evolução porque as portas e contratos técnicos continuam válidos quando um adaptador ou módulo muda.")
 doc.add_heading("12.2 Desafios e aprendizados", level=2)
 para(doc, "Os principais desafios foram preservar fronteiras mesmo com um banco e um processo compartilhados, coordenar efeitos assíncronos sem duplicidade e manter a mesma correlação em HTTP, auditoria e eventos. A implementação mostrou que contratos versionados não bastam sozinhos: outbox, inbox, idempotência, estados de recuperação e evidências precisam ser projetados junto com o fluxo.")
 doc.add_heading("12.3 Limitações, riscos e evolução", level=2)
@@ -370,7 +370,7 @@ para(doc, "Os próximos passos são validar o AS-IS com a disciplina, publicar e
 # Página 18
 page(doc, "Referências")
 refs = [
-    "[1] ARCHCORP. Plano de Execução e Cronograma Detalhado. Material acadêmico fornecido ao projeto, 2026.",
+    "[1] GUIA do Projeto Aplicado. Guia.pdf, material acadêmico disponível no repositório, 2026. Escopo do cenário: PLANO_IMPLEMENTACAO_CENARIO_4.md. Enunciado específico Localiza não localizado no checkout.",
     "[2] BASS, Len; CLEMENTS, Paul; KAZMAN, Rick. Software Architecture in Practice. 4. ed. Boston: Addison-Wesley, 2021.",
     "[3] HOHPE, Gregor; WOOLF, Bobby. Enterprise Integration Patterns. Boston: Addison-Wesley, 2003.",
     "[4] NEWMAN, Sam. Building Microservices. 2. ed. Sebastopol: O'Reilly Media, 2021.",
@@ -384,9 +384,9 @@ for ref in refs:
     p.paragraph_format.left_indent = Inches(0.25)
     p.paragraph_format.first_line_indent = Inches(-0.25)
     p.paragraph_format.space_after = Pt(9)
-para(doc, "Documentos complementares do repositório: ADR-001; requisitos; plano de implementação; matriz de rastreabilidade; arquitetura AS-IS, TO-BE e fluxos de integração; exemplos de API; reservas e contratos OpenAPI e AsyncAPI; roteiro de demonstração; evidências de validação.")
+para(doc, "Documentos complementares do repositório: ADR-001; requisitos; plano de implementação; matriz de rastreabilidade; arquitetura AS-IS, TO-BE e fluxos de integração; exemplos de API; contratos OpenAPI e AsyncAPI; roteiro de demonstração; evidências de validação.")
 
-doc.core_properties.title = "Arquitetura de Integração para Empresa de Serviços"
+doc.core_properties.title = "Arquitetura de Integração no Cenário Localiza"
 doc.core_properties.subject = "Projeto Aplicado Cenário 4"
 doc.core_properties.author = "Equipe do Projeto Aplicado"
 OUT.parent.mkdir(parents=True, exist_ok=True)
