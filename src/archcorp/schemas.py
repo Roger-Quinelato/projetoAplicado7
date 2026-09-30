@@ -95,6 +95,7 @@ class PartialUpdate(BaseModel):
 
     @model_validator(mode="after")
     def at_least_one_value(self):
+        """Exige ao menos um campo e rejeita null nos campos que não aceitam remoção."""
         provided = self.model_dump(exclude_unset=True)
         if not provided:
             raise ValueError("Informe ao menos um campo para atualizar")

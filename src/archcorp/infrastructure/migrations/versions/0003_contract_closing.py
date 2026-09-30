@@ -15,6 +15,7 @@ depends_on = None
 
 
 def upgrade() -> None:
+    """Acrescenta data e motivo de encerramento do contrato e a impressão digital de idempotência."""
     with op.batch_alter_table('contracts_contracts', schema=None) as batch_op:
         batch_op.add_column(sa.Column('ends_on', sa.Date(), nullable=True))
         batch_op.add_column(sa.Column('close_reason', sa.String(length=200), nullable=True))
@@ -24,6 +25,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Remove os campos de encerramento e a impressão digital de idempotência."""
     with op.batch_alter_table('integration_idempotency', schema=None) as batch_op:
         batch_op.drop_column('request_hash')
 

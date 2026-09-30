@@ -8,6 +8,7 @@ from archcorp.infrastructure.db import Base
 
 
 def utcnow() -> datetime:
+    """Devolve o horário atual em UTC."""
     return datetime.now(timezone.utc)
 
 
@@ -26,6 +27,7 @@ class OutboxEvent(Base):
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     def envelope(self) -> dict:
+        """Monta o envelope do evento com occurredAt em ISO 8601 UTC."""
         occurred_at = self.occurred_at if self.occurred_at.tzinfo else self.occurred_at.replace(tzinfo=timezone.utc)
         return {
             "eventId": self.event_id,

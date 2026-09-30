@@ -73,6 +73,7 @@ IDEMPOTENCY_RESPONSE_HEADERS = {
 }
 
 def validation_problem_response(description: str, instance: str, field: str, rule_summary: str, rule_detail: str) -> dict:
+    """Documenta um 422 com exemplos de regra de negócio e de validação do corpo."""
     invalid = [{"type": "uuid_parsing", "loc": ["body", field], "msg": "Input should be a valid UUID", "input": "not-a-uuid"}]
     return {
         "description": description,
@@ -342,6 +343,7 @@ dispatcher = EventDispatcher({
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    """Valida o segredo da demo pública, aplica as migrações e protege as tabelas antes de atender."""
     if settings.public_demo and (not settings.demo_access_token or len(settings.demo_access_token) < 24 or settings.demo_access_token.startswith("demo-")):
         raise RuntimeError("PUBLIC_DEMO exige DEMO_ACCESS_TOKEN aleatório com pelo menos 24 caracteres")
     with engine.begin() as connection:
@@ -358,6 +360,7 @@ install_problem_openapi(app)
 
 @app.middleware("http")
 async def correlation_middleware(request: Request, call_next):
+    """Propaga X-Correlation-ID na requisição, nos logs e na resposta; 400 se não for UUID."""
     supplied = request.headers.get("X-Correlation-ID")
     try:
         correlation_id = str(UUID(supplied)) if supplied else str(uuid4())
@@ -384,6 +387,7 @@ async def correlation_middleware(request: Request, call_next):
 
 @app.get("/health/live", response_model=HealthResponse, response_model_exclude_none=True, tags=["Operação"])
 def live() -> dict:
+    """Informa que o processo está no ar."""
     return {"status": "UP"}
 
 
@@ -394,6 +398,7 @@ def live() -> dict:
     responses={503: {"description": "Banco indisponível."}},
 )
 def ready(session: Session = Depends(get_session)) -> dict:
+    """Informa se o banco responde; 503 quando indisponível."""
     try:
         session.execute(text("SELECT 1"))
         return {"status": "UP", "database": "UP"}
@@ -409,6 +414,7 @@ def ready(session: Session = Depends(get_session)) -> dict:
                      "content": {"text/plain": {"example": "archcorp_requests_total{operation=\"GET_/health/live\",status=\"200\"} 1\n"}}}},
 )
 def metrics() -> str:
+    """Expõe contadores e latência no formato de texto do Prometheus."""
     return render_metrics()
 
 
@@ -428,6 +434,7 @@ def create_contract_draft(
     ),
     session: Session = Depends(get_session),
 ) -> dict:
+    """Cria rascunho de contrato para cliente elegível; repetir a Idempotency-Key devolve a mesma resposta."""
     draft_data = body.model_dump()
     draft_data["customerId"] = str(draft_data["customerId"])
     result, replay = contracts.create_draft(session, draft_data, idempotency_key, correlation_id_var.get())
@@ -450,6 +457,7 @@ def activate_contract(
     ),
     session: Session = Depends(get_session),
 ) -> dict:
+    """Ativa o contrato e grava ContractActivated.v1, que gera cobrança e preparação de retirada."""
     result, replay = contracts.activate(session, str(contract_id), idempotency_key, correlation_id_var.get())
     set_replay(response, replay)
     return result
@@ -463,6 +471,7 @@ def activate_contract(
     responses=ENTITLEMENT_RESPONSES,
 )
 def entitlement(contract_id: UUID, customerId: UUID, serviceCode: str, session: Session = Depends(get_session)) -> dict:
+    """Consulta se o contrato ativo cobre cliente e serviço e qual o SLA."""
     return contracts.entitlement(session, str(contract_id), str(customerId), serviceCode)
 
 
@@ -482,6 +491,7 @@ def open_ticket(
     ),
     session: Session = Depends(get_session),
 ) -> dict:
+    """Abre chamado com SLA do contrato; sem Contracts disponível, fica pendente de elegibilidade."""
     ticket_data = body.model_dump(mode="json")
     result, replay = tickets.open(session, ticket_data, idempotency_key, correlation_id_var.get())
     set_replay(response, replay)
@@ -496,6 +506,7 @@ def open_ticket(
     responses=RECONCILIATION_RESPONSES,
 )
 def reconcile_ticket(ticket_id: UUID, session: Session = Depends(get_session)) -> dict:
+    """Revalida a elegibilidade de um chamado pendente e publica o resultado."""
     return tickets.reconcile(session, str(ticket_id), correlation_id_var.get())
 
 
@@ -507,6 +518,7 @@ def reconcile_ticket(ticket_id: UUID, session: Session = Depends(get_session)) -
     responses=DISPATCH_RESPONSES,
 )
 def dispatch_outbox(session: Session = Depends(get_session)) -> dict:
+    """Despacha os eventos pendentes da outbox aos consumidores internos."""
     return dispatcher.dispatch_pending(session)
 
 
@@ -518,6 +530,7 @@ def dispatch_outbox(session: Session = Depends(get_session)) -> dict:
     responses=FAILURE_LIST_RESPONSES,
 )
 def list_failures(session: Session = Depends(get_session)) -> list[dict]:
+    """Lista eventos que atingiram o limite de tentativas."""
     failures = session.scalars(select(OutboxEvent).where(OutboxEvent.status == "FAILED")).all()
     return [{"eventId": e.event_id, "eventType": e.event_type, "attempts": e.attempts, "reason": e.last_error, "correlationId": e.correlation_id} for e in failures]
 
@@ -530,6 +543,7 @@ def list_failures(session: Session = Depends(get_session)) -> list[dict]:
     responses=REPROCESS_RESPONSES,
 )
 def reprocess(event_id: UUID, session: Session = Depends(get_session)) -> dict:
+    """Recoloca um evento com falha em PENDING para novo despacho, com auditoria."""
     event = session.get(OutboxEvent, str(event_id))
     if not event or event.status != "FAILED":
         raise HTTPException(status_code=404, detail="Falha não encontrada")
@@ -555,6 +569,7 @@ def reprocess(event_id: UUID, session: Session = Depends(get_session)) -> dict:
     },
 )
 def resolve_legacy_id(source_system: str, legacy_id: str, session: Session = Depends(get_session)) -> dict:
+    """Resolve um identificador legado para o UUID global."""
     mapping = LegacyIdService.resolve(session, source_system, legacy_id)
     if not mapping:
         raise HTTPException(status_code=404, detail="Identificador legado não encontrado")
@@ -569,6 +584,7 @@ def resolve_legacy_id(source_system: str, legacy_id: str, session: Session = Dep
     responses=OPERATION_TRACE_RESPONSES,
 )
 def operation_trace(correlation_id: UUID, session: Session = Depends(get_session)) -> dict:
+    """Mostra a auditoria e os eventos de uma operação pelo correlationId."""
     correlation_value = str(correlation_id)
     entries = session.scalars(select(AuditLog).where(AuditLog.correlation_id == correlation_value).order_by(AuditLog.occurred_at)).all()
     events = session.scalars(select(OutboxEvent).where(OutboxEvent.correlation_id == correlation_value).order_by(OutboxEvent.occurred_at)).all()
@@ -577,6 +593,7 @@ def operation_trace(correlation_id: UUID, session: Session = Depends(get_session
 
 @app.get("/api/v1/demo/state", response_model=DemoStateResponse, tags=["Demonstração"], dependencies=[Depends(require_roles("admin"))])
 def demo_state(session: Session = Depends(get_session)) -> dict:
+    """Resume a quantidade de registros de cada módulo."""
     return {"customers": CustomerService.count(session), "contracts": ContractService.count(session), "invoices": count_invoices(session),
             "tickets": TicketService.count(session), "processes": count_processes(session), "legacyMappings": LegacyIdService.count(session)}
 
@@ -593,10 +610,12 @@ if web_dist.is_dir():
 
     @app.get("/", include_in_schema=False)
     def web_home() -> FileResponse:
+        """Entrega a interface web compilada."""
         return FileResponse(web_dist / "index.html")
 
     @app.get("/{path:path}", include_in_schema=False)
     def web_fallback(path: str) -> FileResponse:
+        """Entrega a interface para rotas do frontend; rotas de API inexistentes devolvem 404."""
         if path.startswith(("api/", "health/", "assets/")):
             raise HTTPException(404, "Rota não encontrada")
         return FileResponse(web_dist / "index.html")

@@ -17,9 +17,11 @@ EventHandler = Callable[[Session, dict], None]
 
 class EventDispatcher:
     def __init__(self, handlers: dict[str, list[tuple[str, EventHandler]]]):
+        """Recebe, por tipo de evento, a lista de consumidores (nome, handler)."""
         self.handlers = handlers
 
     def dispatch_pending(self, session: Session) -> dict:
+        """Entrega os eventos pendentes aos consumidores sem repetir os já registrados na inbox; falhas contam tentativas até FAILED."""
         events = session.scalars(select(OutboxEvent).where(OutboxEvent.status == "PENDING").order_by(OutboxEvent.occurred_at)).all()
         processed = failed = 0
         for event in events:
@@ -48,6 +50,7 @@ class EventDispatcher:
 
     @staticmethod
     def _publish_broker(envelope: dict) -> None:
+        """Publica uma cópia do envelope no RabbitMQ quando RABBITMQ_URL está configurado."""
         if not settings.rabbitmq_url:
             return
         import pika
@@ -66,10 +69,12 @@ class EventDispatcher:
 
 
 def audit(session: Session, correlation_id: str, module: str, operation: str, result: str, entity_id: str | None = None, **details) -> None:
+    """Registra uma entrada de auditoria vinculada ao correlationId."""
     session.add(AuditLog(correlation_id=correlation_id, module=module, operation=operation, result=result, entity_id=entity_id, details=details))
 
 
 def enqueue(session: Session, event_type: str, producer: str, payload: dict, correlation_id: str, causation_id: str | None = None) -> OutboxEvent:
+    """Grava um evento na outbox na mesma transação da mudança de negócio."""
     event = OutboxEvent(event_type=event_type, producer=producer, payload=payload, correlation_id=correlation_id, causation_id=causation_id)
     session.add(event)
     return event
@@ -80,6 +85,7 @@ class LegacyIdService:
 
     @staticmethod
     def register(session: Session, entity_type: str, global_id: str, source_system: str, legacy_id: str) -> LegacyIdMapping:
+        """Associa o identificador legado ao UUID global; repetir a mesma associação não duplica."""
         existing = LegacyIdService.resolve(session, source_system, legacy_id)
         if existing:
             if existing.global_id != global_id:
@@ -91,12 +97,14 @@ class LegacyIdService:
 
     @staticmethod
     def resolve(session: Session, source_system: str, legacy_id: str) -> LegacyIdMapping | None:
+        """Busca o mapeamento de um identificador legado."""
         return session.scalar(select(LegacyIdMapping).where(
             LegacyIdMapping.source_system == source_system, LegacyIdMapping.legacy_id == legacy_id,
         ))
 
     @staticmethod
     def legacy_ids_by_global_id(session: Session, global_ids: list[str], source_system: str) -> dict[str, str]:
+        """Mapeia UUIDs globais aos identificadores legados de um sistema de origem."""
         rows = session.execute(select(LegacyIdMapping.global_id, LegacyIdMapping.legacy_id).where(
             LegacyIdMapping.global_id.in_(global_ids), LegacyIdMapping.source_system == source_system,
         ).order_by(LegacyIdMapping.id.desc()))
@@ -104,10 +112,12 @@ class LegacyIdService:
 
     @staticmethod
     def count(session: Session) -> int:
+        """Conta os mapeamentos gravados."""
         return count_rows(session, LegacyIdMapping)
 
     @staticmethod
     def as_dict(mapping: LegacyIdMapping) -> dict:
+        """Serializa o mapeamento no formato da API."""
         return {"entityType": mapping.entity_type, "globalId": mapping.global_id,
                 "sourceSystem": mapping.source_system, "legacyId": mapping.legacy_id}
 
@@ -117,11 +127,13 @@ class IdempotencyStore:
 
     @staticmethod
     def fingerprint(request: dict) -> str:
+        """Calcula o SHA-256 da requisição em JSON canônico."""
         canonical = json.dumps(request, sort_keys=True, default=str, separators=(",", ":"))
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     @classmethod
     def replay(cls, session: Session, key: str, operation: str, request: dict, conflict_message: str) -> dict | None:
+        """Devolve a resposta guardada para a chave; levanta conflito se a requisição mudou."""
         stored = session.get(IdempotencyRecord, {"key": key, "operation": operation})
         if not stored:
             return None
@@ -131,9 +143,11 @@ class IdempotencyStore:
 
     @staticmethod
     def previous(session: Session, operation: str) -> dict | None:
+        """Devolve a resposta de qualquer execução anterior da operação, se houver."""
         stored = session.scalar(select(IdempotencyRecord).where(IdempotencyRecord.operation == operation))
         return stored.response if stored else None
 
     @classmethod
     def save(cls, session: Session, key: str, operation: str, request: dict, response: dict) -> None:
+        """Guarda a resposta e a impressão digital da requisição."""
         session.add(IdempotencyRecord(key=key, operation=operation, response=response, request_hash=cls.fingerprint(request)))

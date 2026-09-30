@@ -15,8 +15,10 @@ class CustomerData:
 
     @property
     def can_contract(self) -> bool:
+        """Indica se o cliente está ativo, elegível e com consentimento para originar reserva ou contrato."""
         return self.active and self.eligible and self.consent_service
 
 
 class CustomerReader(Protocol):
-    def get(self, session: Session, customer_id: str) -> CustomerData | None: ...
+    def get(self, session: Session, customer_id: str) -> CustomerData | None:
+        """Lê os dados públicos do cliente ou devolve None."""

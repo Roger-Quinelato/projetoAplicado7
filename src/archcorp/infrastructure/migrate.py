@@ -32,12 +32,14 @@ MODEL_MODULES = (
 
 
 def load_models() -> type[Base]:
+    """Importa os modelos de todos os módulos para preencher os metadados."""
     for module in MODEL_MODULES:
         import_module(module)
     return Base
 
 
 def alembic_config(connection: Connection | None = None) -> Config:
+    """Monta a configuração do Alembic, opcionalmente com uma conexão já aberta."""
     config = Config()
     config.set_main_option("script_location", str(MIGRATIONS_DIR))
     if connection is not None:
@@ -46,6 +48,7 @@ def alembic_config(connection: Connection | None = None) -> Config:
 
 
 def upgrade_to_head(connection: Connection) -> None:
+    """Carimba bancos criados por create_all e aplica as migrações até `head`."""
     config = alembic_config(connection)
     tables = set(inspect(connection).get_table_names())
     if "alembic_version" not in tables and "crm_customers" in tables:

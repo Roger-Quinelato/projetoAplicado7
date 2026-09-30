@@ -7,6 +7,7 @@ target_metadata = load_models().metadata
 
 
 def run(connection) -> None:
+    """Executa as migrações na conexão informada, em modo batch no SQLite."""
     context.configure(
         connection=connection,
         target_metadata=target_metadata,

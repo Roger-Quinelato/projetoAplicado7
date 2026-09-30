@@ -9,14 +9,17 @@ from archcorp.workflow.models import ProcessInstance, ProcessTask
 
 
 def _find_process(session: Session, process_type: str, reference_id: str) -> ProcessInstance | None:
+    """Busca o processo de um tipo vinculado à referência."""
     return session.scalar(select(ProcessInstance).where(ProcessInstance.process_type == process_type, ProcessInstance.reference_id == reference_id))
 
 
 def _tasks(session: Session, process: ProcessInstance) -> list[ProcessTask]:
+    """Lista as tarefas do processo."""
     return list(session.scalars(select(ProcessTask).where(ProcessTask.process_id == process.process_id)))
 
 
 def _start(session: Session, envelope: dict, process_type: str, reference_field: str, due_hours: int) -> None:
+    """Inicia o processo e sua primeira tarefa uma única vez por referência."""
     payload = envelope["payload"]
     reference_id = payload[reference_field]
     if _find_process(session, process_type, reference_id):
@@ -29,14 +32,17 @@ def _start(session: Session, envelope: dict, process_type: str, reference_field:
 
 
 def handle_contract_activated(session: Session, envelope: dict) -> None:
+    """Consumidor de ContractActivated.v1: inicia a preparação de retirada (72 h)."""
     _start(session, envelope, "ONBOARDING", "contractId", 72)
 
 
 def handle_ticket_opened(session: Session, envelope: dict) -> None:
+    """Consumidor de TicketOpened.v1: inicia a resolução com o prazo do SLA."""
     _start(session, envelope, "TICKET_RESOLUTION", "ticketId", envelope["payload"].get("slaHours") or 24)
 
 
 def handle_ticket_entitlement_reconciled(session: Session, envelope: dict) -> None:
+    """Consumidor de TicketEntitlementReconciled.v1: ajusta o prazo ou cancela a resolução."""
     payload = envelope["payload"]
     process = _find_process(session, "TICKET_RESOLUTION", payload["ticketId"])
     if not process:
@@ -54,6 +60,7 @@ def handle_ticket_entitlement_reconciled(session: Session, envelope: dict) -> No
 
 
 def handle_ticket_resolved(session: Session, envelope: dict) -> None:
+    """Consumidor de TicketResolved.v1: conclui o processo e suas tarefas."""
     process = _find_process(session, "TICKET_RESOLUTION", envelope["payload"]["ticketId"])
     if not process:
         return
@@ -64,6 +71,7 @@ def handle_ticket_resolved(session: Session, envelope: dict) -> None:
 
 
 def count_processes(session: Session) -> int:
+    """Conta os processos gravados."""
     return count_rows(session, ProcessInstance)
 
 

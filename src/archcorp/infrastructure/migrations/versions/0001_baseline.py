@@ -15,6 +15,7 @@ depends_on = None
 
 
 def upgrade() -> None:
+    """Cria as tabelas iniciais de todos os módulos."""
     op.create_table('contracts_contracts',
     sa.Column('contract_id', sa.String(length=36), nullable=False),
     sa.Column('customer_id', sa.String(length=36), nullable=False),
@@ -220,6 +221,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Remove as tabelas criadas pela baseline."""
     with op.batch_alter_table('workflow_tasks', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_workflow_tasks_process_id'))
 

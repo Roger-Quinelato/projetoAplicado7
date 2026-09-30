@@ -18,6 +18,7 @@ START = date(2026, 9, 4)
 
 
 def main() -> None:
+    """Cria no Jira as demandas ainda não confirmadas no registro local, de forma retomável."""
     if not OUTPUT.exists():
         raise SystemExit("Ledger local docs/JIRA_SYNC.json ausente; confira o Jira antes de publicar para evitar duplicatas")
     confirmed = json.loads(OUTPUT.read_text(encoding="utf-8"))

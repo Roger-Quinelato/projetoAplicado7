@@ -12,9 +12,11 @@ from archcorp.support.models import Ticket
 
 class TicketService:
     def __init__(self, contracts: ContractEntitlementPort):
+        """Recebe a porta de elegibilidade de contratos."""
         self.contracts = contracts
 
     def open(self, session: Session, data: dict, idempotency_key: str, correlation_id: str) -> tuple[dict, bool]:
+        """Abre chamado com prioridade e SLA; sem Contracts, fica pendente. Idempotente pela Idempotency-Key."""
         request = {field: data[field] for field in ("customerId", "contractId", "serviceCode", "category")}
         stored = IdempotencyStore.replay(session, idempotency_key, "open_ticket", request, "Idempotency-Key já utilizada com outro chamado")
         if stored:
@@ -43,6 +45,7 @@ class TicketService:
         return response, False
 
     def reconcile(self, session: Session, ticket_id: str, correlation_id: str) -> dict:
+        """Revalida a elegibilidade do chamado pendente e publica TicketEntitlementReconciled.v1."""
         ticket = get_or_raise(session, Ticket, ticket_id, "Chamado não encontrado")
         if ticket.status != "PENDING_ENTITLEMENT":
             raise InvalidStateError("Somente chamado pendente pode ser reconciliado")
@@ -61,10 +64,12 @@ class TicketService:
 
     @staticmethod
     def count(session: Session) -> int:
+        """Conta os chamados gravados."""
         return count_rows(session, Ticket)
 
     @staticmethod
     def as_dict(ticket: Ticket) -> dict:
+        """Serializa o chamado no formato da API e dos eventos."""
         return {
             "ticketId": ticket.ticket_id, "customerId": ticket.customer_id, "contractId": ticket.contract_id,
             "serviceCode": ticket.service_code, "category": ticket.category, "status": ticket.status,

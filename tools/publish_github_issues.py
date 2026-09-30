@@ -24,6 +24,7 @@ STATUS_COLORS = {"Em revisão": "fbca04", "Em andamento": "1f6feb", "Planejado":
 
 
 def gh(*args: str) -> str:
+    """Executa o GitHub CLI e devolve a saída."""
     result = subprocess.run(
         ["gh", *args], capture_output=True, text=True, encoding="utf-8", check=True
     )
@@ -31,6 +32,7 @@ def gh(*args: str) -> str:
 
 
 def gh_api(method: str, endpoint: str, payload: dict) -> dict:
+    """Chama a API do GitHub pelo CLI com corpo JSON."""
     result = subprocess.run(
         ["gh", "api", "--method", method, endpoint, "--input", "-"],
         input=json.dumps(payload, ensure_ascii=False),
@@ -43,6 +45,7 @@ def gh_api(method: str, endpoint: str, payload: dict) -> dict:
 
 
 def tasks() -> list[dict[str, str]]:
+    """Lê as 22 demandas canônicas do cronograma."""
     result = []
     for line in SCHEDULE.read_text(encoding="utf-8").splitlines():
         cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
@@ -55,6 +58,7 @@ def tasks() -> list[dict[str, str]]:
 
 
 def main() -> None:
+    """Cria as issues ausentes, com marcos e etiquetas, sem duplicar as existentes."""
     existing = gh("issue", "list", "--repo", REPOSITORY, "--state", "all", "--limit", "200", "--json", "number,title,url")
     issues = json.loads(existing)
     found = {}

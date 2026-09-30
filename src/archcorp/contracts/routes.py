@@ -36,10 +36,12 @@ def configure(contracts: ContractService) -> None:
 
 
 def contract_service() -> ContractService:
+    """Dependência FastAPI que entrega o ContractService configurado na composição."""
     return _Services.contracts
 
 
 def reservation_service() -> ReservationService:
+    """Dependência FastAPI que entrega o ReservationService configurado na composição."""
     return _Services.reservations
 
 
@@ -89,6 +91,7 @@ class ReservationInput(BaseModel):
 
     @model_validator(mode="after")
     def valid_period(self):
+        """Rejeita período com fim antes do início ou início no passado."""
         if self.endsOn < self.startsOn:
             raise ValueError("Fim da reserva anterior ao início")
         if self.startsOn < date.today():
@@ -157,6 +160,7 @@ class ContractClosedResponse(ContractResponse):
 
 
 def set_replay(response: Response, replay: bool) -> None:
+    """Preenche o cabeçalho Idempotency-Replayed da resposta."""
     response.headers["Idempotency-Replayed"] = str(replay).lower()
 
 
@@ -180,6 +184,7 @@ def create_reservation(
     session: Session = Depends(get_session),
     service: ReservationService = Depends(reservation_service),
 ) -> dict:
+    """Registra reserva para cliente elegível; com Idempotency-Key, repetir a chamada devolve a mesma reserva."""
     result, replay = service.create(session, body.model_dump(mode="python") | {"customerId": str(body.customerId)}, idempotency_key, correlation_id_var.get())
     set_replay(response, replay)
     return result
@@ -187,6 +192,7 @@ def create_reservation(
 
 @router.get("/reservations", response_model=list[ReservationResponse], dependencies=[Depends(RESERVATION_ACTORS)])
 def list_reservations(customerId: UUID | None = None, session: Session = Depends(get_session)) -> list[dict]:
+    """Lista até 200 reservas, das mais recentes para as mais antigas, com filtro opcional por cliente."""
     query = select(Reservation).order_by(Reservation.starts_on.desc()).limit(200)
     if customerId:
         query = query.where(Reservation.customer_id == str(customerId))
@@ -195,6 +201,7 @@ def list_reservations(customerId: UUID | None = None, session: Session = Depends
 
 @router.get("/reservations/{reservation_id}", response_model=ReservationResponse, responses={404: {"description": "Reserva não encontrada."}}, dependencies=[Depends(RESERVATION_ACTORS)])
 def get_reservation(reservation_id: UUID, session: Session = Depends(get_session)) -> dict:
+    """Consulta uma reserva pelo identificador global."""
     return ReservationService.to_dict(ReservationService.require(session, str(reservation_id)))
 
 
@@ -216,6 +223,7 @@ def draft_from_reservation(
     session: Session = Depends(get_session),
     service: ReservationService = Depends(reservation_service),
 ) -> dict:
+    """Gera o rascunho de contrato a partir da reserva, sem recadastrar o cliente, na mesma transação."""
     result, replay = service.draft(session, str(reservation_id), idempotency_key, correlation_id_var.get())
     set_replay(response, replay)
     return result
@@ -235,6 +243,7 @@ def cancel_reservation(reservation_id: UUID, session: Session = Depends(get_sess
 
 @router.get("", response_model=list[ContractResponse], dependencies=[Depends(CONTRACT_READERS)])
 def list_contracts(customerId: UUID | None = None, session: Session = Depends(get_session)) -> list[dict]:
+    """Lista até 200 contratos, dos mais recentes para os mais antigos, com filtro opcional por cliente."""
     query = select(Contract).order_by(Contract.starts_on.desc()).limit(200)
     if customerId:
         query = query.where(Contract.customer_id == str(customerId))
@@ -243,6 +252,7 @@ def list_contracts(customerId: UUID | None = None, session: Session = Depends(ge
 
 @router.get("/{contract_id}", response_model=ContractResponse, responses={404: {"description": "Contrato não encontrado."}}, dependencies=[Depends(CONTRACT_READERS)])
 def get_contract(contract_id: UUID, session: Session = Depends(get_session)) -> dict:
+    """Consulta um contrato pelo identificador global."""
     return ContractService.to_dict(ContractService.require(session, str(contract_id)))
 
 

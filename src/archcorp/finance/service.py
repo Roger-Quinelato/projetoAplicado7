@@ -9,6 +9,7 @@ from archcorp.integration.service import audit
 
 
 def handle_contract_activated(session: Session, envelope: dict) -> None:
+    """Consumidor de ContractActivated.v1: cria a primeira fatura do contrato uma única vez."""
     payload = envelope["payload"]
     if session.scalar(select(Invoice).where(Invoice.contract_id == payload["contractId"])):
         return
@@ -23,4 +24,5 @@ def handle_contract_activated(session: Session, envelope: dict) -> None:
 
 
 def count_invoices(session: Session) -> int:
+    """Conta as faturas gravadas."""
     return count_rows(session, Invoice)

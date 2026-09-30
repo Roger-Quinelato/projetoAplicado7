@@ -30,6 +30,7 @@ DRAFTS = [
 
 @contextmanager
 def api_client(base_url: str | None):
+    """Abre um cliente HTTP para a URL informada ou, sem ela, para a aplicação em processo."""
     if base_url:
         import httpx
         with httpx.Client(base_url=base_url, timeout=10) as client:
@@ -42,6 +43,7 @@ def api_client(base_url: str | None):
 
 
 def seed(client, token: str) -> dict:
+    """Cria clientes e rascunhos sintéticos pela API; execuções repetidas não duplicam registros."""
     headers = {"Authorization": f"Bearer {token}"}
     customers: dict[str, str] = {}
     created = 0
@@ -67,6 +69,7 @@ def seed(client, token: str) -> dict:
 
 
 def main() -> None:
+    """Lê os argumentos da linha de comando e imprime o resultado da carga em JSON."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--base-url", help="URL da API; sem ela, usa a aplicação em processo")
     parser.add_argument("--token", default="demo-admin", help="Token com papel admin")
