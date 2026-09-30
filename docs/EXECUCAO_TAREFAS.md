@@ -30,3 +30,13 @@ T15, T10, T11, T16, T12, T13, T17, T19 e T21.
   dos modelos e geração de SQL offline para PostgreSQL.
 - Limite: SQL offline não comprova execução no Supabase/Render; nenhum banco
   publicado foi usado. A implementação aceita já estava no PR #28.
+
+## T08 — CRM
+
+- Estado: concluída no escopo do protótipo.
+- Entrega: clientes filtrados/paginados e inativação, contatos CRUD,
+  oportunidades com estados finais, validação, autorização e auditoria.
+- Verificação em 30/09: `pytest -q tests/test_crm.py -p no:cacheprovider`:
+  **14 aprovados**, incluindo telefone/e-mail inválido, duplicidade, PATCH vazio,
+  cliente inativo, recursos ausentes e matriz de papéis (401/403).
+- A implementação já estava no PR #28; dados e autenticação seguem simulados.
