@@ -40,3 +40,14 @@ T15, T10, T11, T16, T12, T13, T17, T19 e T21.
   **14 aprovados**, incluindo telefone/e-mail inválido, duplicidade, PATCH vazio,
   cliente inativo, recursos ausentes e matriz de papéis (401/403).
 - A implementação já estava no PR #28; dados e autenticação seguem simulados.
+
+## T09 — Reservas e contratos
+
+- Estado: concluída no escopo do protótipo.
+- Entrega: reserva e rascunho transacionais, cancelamento, ativação com
+  revalidação cadastral, encerramento idempotente e `ContractClosed.v1`.
+- Verificação em 30/09: `pytest -q tests/test_contracts.py -p no:cacheprovider`:
+  **11 aprovados**, cobrindo período inválido, consentimento/elegibilidade,
+  conflitos de idempotência, estados/datas, autorização e encerramento do workflow.
+- Limite: faturamento de encerramento é responsabilidade da T12; frota e cobrança
+  externas continuam fora do protótipo. Implementação incorporada pelo PR #28.
