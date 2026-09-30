@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from archcorp.infrastructure.db import get_session
+from archcorp.schemas import EXAMPLE_CONTRACT_ID, EXAMPLE_CUSTOMER_ID
 from archcorp.security import require_roles
 from archcorp.workflow.models import ProcessInstance, ProcessTask
 
@@ -18,8 +19,8 @@ router = APIRouter(prefix="/api/v1/workflow", tags=["Gestão de processos"])
 EXAMPLE_PROCESS = {
     "processId": "13131313-1313-4131-8131-131313131313",
     "processType": "ONBOARDING",
-    "referenceId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-    "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "referenceId": EXAMPLE_CONTRACT_ID,
+    "customerId": EXAMPLE_CUSTOMER_ID,
     "state": "STARTED",
     "owner": "operations",
     "dueAt": "2026-10-04T10:00:00Z",

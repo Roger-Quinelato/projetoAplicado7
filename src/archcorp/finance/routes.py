@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from archcorp.finance.models import Invoice, Payment
 from archcorp.infrastructure.db import get_session
+from archcorp.schemas import EXAMPLE_CONTRACT_ID, EXAMPLE_CUSTOMER_ID
 from archcorp.security import require_roles
 
 
@@ -18,8 +19,8 @@ router = APIRouter(prefix="/api/v1/finance", tags=["Financeiro e faturamento"])
 
 EXAMPLE_INVOICE = {
     "invoiceId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
-    "contractId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-    "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "contractId": EXAMPLE_CONTRACT_ID,
+    "customerId": EXAMPLE_CUSTOMER_ID,
     "amount": 2500.0,
     "currency": "BRL",
     "dueDate": "2026-10-11",

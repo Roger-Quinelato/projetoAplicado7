@@ -1,14 +1,14 @@
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import func, select, update
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from archcorp.contracts.domain import ContractStatus, ReservationStatus, ensure_contract_transition, ensure_reservation_transition
 from archcorp.contracts.models import Contract, Reservation
 from archcorp.crm.public import CustomerData, CustomerReader
 from archcorp.exceptions import BusinessRuleError, ConflictError, InvalidStateError, NotFoundError
-from archcorp.integration.models import IdempotencyRecord
+from archcorp.infrastructure.db import count_rows, get_or_raise
 from archcorp.integration.service import IdempotencyStore, audit, enqueue
 
 
@@ -22,7 +22,7 @@ class ContractService:
 
     def eligible_customer(self, session: Session, customer_id: str) -> CustomerData:
         customer = self.customers.get(session, customer_id)
-        if not customer or not customer.active or not customer.eligible or not customer.consent_service:
+        if not customer or not customer.can_contract:
             raise BusinessRuleError("Cliente inexistente ou inelegível")
         return customer
 
@@ -61,14 +61,14 @@ class ContractService:
 
     def activate(self, session: Session, contract_id: str, idempotency_key: str, correlation_id: str) -> tuple[dict, bool]:
         operation = f"activate_contract:{contract_id}"
-        stored = session.get(IdempotencyRecord, {"key": idempotency_key, "operation": operation})
+        stored = IdempotencyStore.replay(session, idempotency_key, operation, {}, "Idempotency-Key já utilizada com outra ativação")
         if stored:
-            return stored.response, True
-        contract = self._require(session, contract_id)
+            return stored, True
+        contract = self.require(session, contract_id)
         if contract.status == ContractStatus.ACTIVE:
-            previous = session.scalar(select(IdempotencyRecord).where(IdempotencyRecord.operation == operation))
+            previous = IdempotencyStore.previous(session, operation)
             if previous:
-                return previous.response, True
+                return previous, True
             raise InvalidStateError("Contrato já ativo sem registro da ativação original")
         ensure_contract_transition(contract.status, ContractStatus.ACTIVE)
         self.eligible_customer(session, contract.customer_id)
@@ -81,7 +81,7 @@ class ContractService:
         event = enqueue(session, "ContractActivated.v1", "contracts", payload, correlation_id)
         session.flush()
         response = {**payload, "eventId": event.event_id}
-        session.add(IdempotencyRecord(key=idempotency_key, operation=operation, response=response))
+        IdempotencyStore.save(session, idempotency_key, operation, {}, response)
         audit(session, correlation_id, "contracts", "activate_contract", "success", contract.contract_id)
         session.commit()
         return response, False
@@ -93,11 +93,11 @@ class ContractService:
             stored = IdempotencyStore.replay(session, idempotency_key, operation, request, "Idempotency-Key já utilizada com outro encerramento")
             if stored:
                 return stored, True
-        contract = self._require(session, contract_id)
+        contract = self.require(session, contract_id)
         if contract.status == ContractStatus.CLOSED and idempotency_key:
-            previous = session.scalar(select(IdempotencyRecord).where(IdempotencyRecord.operation == operation))
+            previous = IdempotencyStore.previous(session, operation)
             if previous:
-                return previous.response, True
+                return previous, True
         ensure_contract_transition(contract.status, ContractStatus.CLOSED)
         ends_on = data.get("endsOn") or max(date.today(), contract.starts_on)
         if ends_on < contract.starts_on:
@@ -109,14 +109,11 @@ class ContractService:
         if reservation:
             ensure_reservation_transition(reservation.status, ReservationStatus.CLOSED)
             reservation.status = ReservationStatus.CLOSED
-        payload = {**self.to_dict(contract), "closeReason": contract.close_reason}
-        event = enqueue(session, "ContractClosed.v1", "contracts", payload, correlation_id)
+        contract_data = self.to_dict(contract)
+        event = enqueue(session, "ContractClosed.v1", "contracts", {**contract_data, "closeReason": contract.close_reason}, correlation_id)
         session.flush()
-        response = {**self.to_dict(contract), "eventId": event.event_id}
-        if idempotency_key:
-            IdempotencyStore.save(session, idempotency_key, operation, request, response)
-        else:
-            session.add(IdempotencyRecord(key=f"auto:{event.event_id}", operation=operation, response=response))
+        response = {**contract_data, "eventId": event.event_id}
+        IdempotencyStore.save(session, idempotency_key or f"auto:{event.event_id}", operation, request, response)
         audit(session, correlation_id, "contracts", "close_contract", "success", contract.contract_id, endsOn=ends_on.isoformat())
         session.commit()
         return response, False
@@ -127,14 +124,11 @@ class ContractService:
 
     @staticmethod
     def count(session: Session) -> int:
-        return session.scalar(select(func.count()).select_from(Contract)) or 0
+        return count_rows(session, Contract)
 
     @staticmethod
-    def _require(session: Session, contract_id: str) -> Contract:
-        contract = session.get(Contract, contract_id)
-        if not contract:
-            raise NotFoundError("Contrato não encontrado")
-        return contract
+    def require(session: Session, contract_id: str) -> Contract:
+        return get_or_raise(session, Contract, contract_id, "Contrato não encontrado")
 
     @staticmethod
     def _reservation_of(session: Session, contract_id: str) -> Reservation | None:
@@ -169,7 +163,7 @@ class ReservationService:
         customer = self.contracts.customers.get(session, data["customerId"])
         if not customer:
             raise NotFoundError("Cliente não encontrado")
-        if not customer.active or not customer.eligible or not customer.consent_service:
+        if not customer.can_contract:
             raise BusinessRuleError("Cliente inelegível ou sem consentimento")
         reservation = Reservation(
             customer_id=data["customerId"], vehicle_group=data["vehicleGroup"], protection_code=data["protectionCode"],
@@ -186,9 +180,9 @@ class ReservationService:
         return response, False
 
     def draft(self, session: Session, reservation_id: str, idempotency_key: str, correlation_id: str) -> tuple[dict, bool]:
-        reservation = self._require(session, reservation_id)
+        reservation = self.require(session, reservation_id)
         if reservation.contract_id:
-            contract = session.get(Contract, reservation.contract_id)
+            contract = ContractService.require(session, reservation.contract_id)
             return {"reservationId": reservation.reservation_id, "contract": ContractService.to_dict(contract)}, True
         ensure_reservation_transition(reservation.status, ReservationStatus.DRAFTED)
         data = {"customerId": reservation.customer_id, "serviceCode": reservation.service_code,
@@ -202,12 +196,12 @@ class ReservationService:
         return {"reservationId": reservation.reservation_id, "contract": contract}, replay
 
     def cancel(self, session: Session, reservation_id: str, correlation_id: str) -> dict:
-        reservation = self._require(session, reservation_id)
+        reservation = self.require(session, reservation_id)
         if reservation.status == ReservationStatus.CANCELLED:
             return self.to_dict(reservation)
         ensure_reservation_transition(reservation.status, ReservationStatus.CANCELLED)
         if reservation.contract_id:
-            contract = session.get(Contract, reservation.contract_id)
+            contract = ContractService.require(session, reservation.contract_id)
             ensure_contract_transition(contract.status, ContractStatus.CANCELLED)
             contract.status = ContractStatus.CANCELLED
         reservation.status = ReservationStatus.CANCELLED
@@ -216,11 +210,8 @@ class ReservationService:
         return self.to_dict(reservation)
 
     @staticmethod
-    def _require(session: Session, reservation_id: str) -> Reservation:
-        reservation = session.get(Reservation, reservation_id)
-        if not reservation:
-            raise NotFoundError("Reserva não encontrada")
-        return reservation
+    def require(session: Session, reservation_id: str) -> Reservation:
+        return get_or_raise(session, Reservation, reservation_id, "Reserva não encontrada")
 
     @staticmethod
     def to_dict(item: Reservation) -> dict:

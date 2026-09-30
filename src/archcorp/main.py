@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from archcorp.contracts.routes import configure as configure_contracts, router as contracts_router
+from archcorp.contracts.routes import configure as configure_contracts, router as contracts_router, set_replay
 from archcorp.contracts.service import ContractService
 from archcorp.crm.service import CustomerService
 from archcorp.crm.routes import router as crm_router
@@ -33,6 +33,7 @@ from archcorp.schemas import (
     EXAMPLE_CONTRACT_ID,
     EXAMPLE_CORRELATION_ID,
     EXAMPLE_PENDING_TICKET_RESPONSE,
+    EXAMPLE_TICKET_ID,
     EXAMPLE_TICKET_RESPONSE,
     IDEMPOTENCY_KEY_MAX_LENGTH,
     ContractActivationResponse,
@@ -57,14 +58,6 @@ from archcorp.workflow.routes import router as workflow_router
 from archcorp.workflow.service import count_processes, handle_contract_activated as workflow_contract_activated, handle_contract_closed as workflow_contract_closed, handle_ticket_opened, handle_ticket_entitlement_reconciled, handle_ticket_resolved
 
 
-CORRELATION_REQUEST_PARAMETER = {
-    "name": "X-Correlation-ID",
-    "in": "header",
-    "required": False,
-    "description": "UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.",
-    "schema": {"type": "string", "format": "uuid"},
-    "example": EXAMPLE_CORRELATION_ID,
-}
 CORRELATION_RESPONSE_HEADER = {
     "description": "UUID usado para correlacionar a requisição, os logs e os eventos.",
     "schema": {"type": "string", "format": "uuid"},
@@ -156,11 +149,11 @@ CONTRACT_ACTIVATION_RESPONSES = {
     },
     404: {
         "description": "Contrato não encontrado.",
-        "content": problem_content(problem_example(404, "Contrato não encontrado", "/api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/activate")),
+        "content": problem_content(problem_example(404, "Contrato não encontrado", f"/api/v1/contracts/{EXAMPLE_CONTRACT_ID}/activate")),
     },
     409: {
         "description": "Contrato já encerrado ou estado incompatível para ativação.",
-        "content": problem_content(problem_example(409, "Somente contrato em rascunho pode ser ativado", "/api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/activate", "INVALID_STATE")),
+        "content": problem_content(problem_example(409, "Somente contrato em rascunho pode ser ativado", f"/api/v1/contracts/{EXAMPLE_CONTRACT_ID}/activate", "INVALID_STATE")),
     },
 }
 ENTITLEMENT_RESPONSES = {
@@ -243,11 +236,11 @@ RECONCILIATION_RESPONSES = {
     },
     404: {
         "description": "Chamado não encontrado.",
-        "content": problem_content(problem_example(404, "Chamado não encontrado", "/api/v1/support/tickets/dddddddd-dddd-4ddd-8ddd-dddddddddddd/reconcile")),
+        "content": problem_content(problem_example(404, "Chamado não encontrado", f"/api/v1/support/tickets/{EXAMPLE_TICKET_ID}/reconcile")),
     },
     409: {
         "description": "Chamado não está pendente de elegibilidade.",
-        "content": problem_content(problem_example(409, "Somente chamado pendente pode ser reconciliado", "/api/v1/support/tickets/dddddddd-dddd-4ddd-8ddd-dddddddddddd/reconcile", "INVALID_STATE")),
+        "content": problem_content(problem_example(409, "Somente chamado pendente pode ser reconciliado", f"/api/v1/support/tickets/{EXAMPLE_TICKET_ID}/reconcile", "INVALID_STATE")),
     },
 }
 DISPATCH_RESPONSES = {
@@ -296,7 +289,7 @@ REPROCESS_RESPONSES = {
     },
     404: {
         "description": "Evento com falha não encontrado.",
-        "content": problem_content(problem_example(404, "Falha não encontrada", "/api/v1/integration/failures/cccccccc-cccc-4ccc-8ccc-cccccccccccc/reprocess")),
+        "content": problem_content(problem_example(404, "Falha não encontrada", f"/api/v1/integration/failures/{EXAMPLE_CONTRACT_EVENT_ID}/reprocess")),
     },
 }
 OPERATION_TRACE_RESPONSES = {
@@ -426,7 +419,6 @@ def metrics() -> str:
     tags=["Reservas e contratos"],
     dependencies=[Depends(require_roles("commercial", "contracts", "admin"))],
     responses=CONTRACT_DRAFT_RESPONSES,
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def create_contract_draft(
     body: ContractDraftCreate,
@@ -439,7 +431,7 @@ def create_contract_draft(
     draft_data = body.model_dump()
     draft_data["customerId"] = str(draft_data["customerId"])
     result, replay = contracts.create_draft(session, draft_data, idempotency_key, correlation_id_var.get())
-    response.headers["Idempotency-Replayed"] = str(replay).lower()
+    set_replay(response, replay)
     return result
 
 
@@ -449,7 +441,6 @@ def create_contract_draft(
     tags=["Reservas e contratos"],
     dependencies=[Depends(require_roles("contracts", "admin"))],
     responses=CONTRACT_ACTIVATION_RESPONSES,
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def activate_contract(
     contract_id: UUID,
@@ -460,7 +451,7 @@ def activate_contract(
     session: Session = Depends(get_session),
 ) -> dict:
     result, replay = contracts.activate(session, str(contract_id), idempotency_key, correlation_id_var.get())
-    response.headers["Idempotency-Replayed"] = str(replay).lower()
+    set_replay(response, replay)
     return result
 
 
@@ -470,7 +461,6 @@ def activate_contract(
     tags=["Reservas e contratos"],
     dependencies=[Depends(require_roles("support", "admin"))],
     responses=ENTITLEMENT_RESPONSES,
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def entitlement(contract_id: UUID, customerId: UUID, serviceCode: str, session: Session = Depends(get_session)) -> dict:
     return contracts.entitlement(session, str(contract_id), str(customerId), serviceCode)
@@ -483,7 +473,6 @@ def entitlement(contract_id: UUID, customerId: UUID, serviceCode: str, session: 
     tags=["Atendimento e assistência 24h"],
     dependencies=[Depends(require_roles("support", "admin"))],
     responses=TICKET_RESPONSES,
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def open_ticket(
     body: TicketCreate,
@@ -495,7 +484,7 @@ def open_ticket(
 ) -> dict:
     ticket_data = body.model_dump(mode="json")
     result, replay = tickets.open(session, ticket_data, idempotency_key, correlation_id_var.get())
-    response.headers["Idempotency-Replayed"] = str(replay).lower()
+    set_replay(response, replay)
     return result
 
 
@@ -505,7 +494,6 @@ def open_ticket(
     tags=["Atendimento e assistência 24h"],
     dependencies=[Depends(require_roles("support", "operations", "admin"))],
     responses=RECONCILIATION_RESPONSES,
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def reconcile_ticket(ticket_id: UUID, session: Session = Depends(get_session)) -> dict:
     return tickets.reconcile(session, str(ticket_id), correlation_id_var.get())
@@ -517,7 +505,6 @@ def reconcile_ticket(ticket_id: UUID, session: Session = Depends(get_session)) -
     tags=["Integração"],
     dependencies=[Depends(require_roles("operations", "admin"))],
     responses=DISPATCH_RESPONSES,
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def dispatch_outbox(session: Session = Depends(get_session)) -> dict:
     return dispatcher.dispatch_pending(session)
@@ -529,7 +516,6 @@ def dispatch_outbox(session: Session = Depends(get_session)) -> dict:
     tags=["Integração"],
     dependencies=[Depends(require_roles("operations", "admin"))],
     responses=FAILURE_LIST_RESPONSES,
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def list_failures(session: Session = Depends(get_session)) -> list[dict]:
     failures = session.scalars(select(OutboxEvent).where(OutboxEvent.status == "FAILED")).all()
@@ -542,7 +528,6 @@ def list_failures(session: Session = Depends(get_session)) -> list[dict]:
     tags=["Integração"],
     dependencies=[Depends(require_roles("operations", "admin"))],
     responses=REPROCESS_RESPONSES,
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def reprocess(event_id: UUID, session: Session = Depends(get_session)) -> dict:
     event = session.get(OutboxEvent, str(event_id))
@@ -568,7 +553,6 @@ def reprocess(event_id: UUID, session: Session = Depends(get_session)) -> dict:
             "content": problem_content(problem_example(404, "Identificador legado não encontrado", "/api/v1/integration/legacy-ids/CRM/WEB-LOCALIZA-9999")),
         },
     },
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def resolve_legacy_id(source_system: str, legacy_id: str, session: Session = Depends(get_session)) -> dict:
     mapping = LegacyIdService.resolve(session, source_system, legacy_id)
@@ -583,7 +567,6 @@ def resolve_legacy_id(source_system: str, legacy_id: str, session: Session = Dep
     tags=["Integração"],
     dependencies=[Depends(require_roles("operations", "admin"))],
     responses=OPERATION_TRACE_RESPONSES,
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def operation_trace(correlation_id: UUID, session: Session = Depends(get_session)) -> dict:
     correlation_value = str(correlation_id)

@@ -2,10 +2,11 @@ import hashlib
 import json
 from collections.abc import Callable
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from archcorp.config import settings
+from archcorp.infrastructure.db import count_rows
 from archcorp.exceptions import ConflictError, IdempotencyConflictError
 from archcorp.integration.models import AuditLog, IdempotencyRecord, InboxEvent, LegacyIdMapping, OutboxEvent
 from archcorp.observability import COUNTERS, logger
@@ -95,12 +96,15 @@ class LegacyIdService:
         ))
 
     @staticmethod
-    def legacy_ids(session: Session, global_id: str) -> list[LegacyIdMapping]:
-        return list(session.scalars(select(LegacyIdMapping).where(LegacyIdMapping.global_id == global_id).order_by(LegacyIdMapping.id)))
+    def legacy_ids_by_global_id(session: Session, global_ids: list[str], source_system: str) -> dict[str, str]:
+        rows = session.execute(select(LegacyIdMapping.global_id, LegacyIdMapping.legacy_id).where(
+            LegacyIdMapping.global_id.in_(global_ids), LegacyIdMapping.source_system == source_system,
+        ).order_by(LegacyIdMapping.id.desc()))
+        return {global_id: legacy_id for global_id, legacy_id in rows}
 
     @staticmethod
     def count(session: Session) -> int:
-        return session.scalar(select(func.count()).select_from(LegacyIdMapping)) or 0
+        return count_rows(session, LegacyIdMapping)
 
     @staticmethod
     def as_dict(mapping: LegacyIdMapping) -> dict:
@@ -124,6 +128,11 @@ class IdempotencyStore:
         if stored.request_hash and stored.request_hash != cls.fingerprint(request):
             raise IdempotencyConflictError(conflict_message)
         return stored.response
+
+    @staticmethod
+    def previous(session: Session, operation: str) -> dict | None:
+        stored = session.scalar(select(IdempotencyRecord).where(IdempotencyRecord.operation == operation))
+        return stored.response if stored else None
 
     @classmethod
     def save(cls, session: Session, key: str, operation: str, request: dict, response: dict) -> None:

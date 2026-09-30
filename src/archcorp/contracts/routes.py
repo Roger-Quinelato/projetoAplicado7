@@ -195,7 +195,7 @@ def list_reservations(customerId: UUID | None = None, session: Session = Depends
 
 @router.get("/reservations/{reservation_id}", response_model=ReservationResponse, responses={404: {"description": "Reserva não encontrada."}}, dependencies=[Depends(RESERVATION_ACTORS)])
 def get_reservation(reservation_id: UUID, session: Session = Depends(get_session)) -> dict:
-    return ReservationService.to_dict(ReservationService._require(session, str(reservation_id)))
+    return ReservationService.to_dict(ReservationService.require(session, str(reservation_id)))
 
 
 @router.post(
@@ -243,7 +243,7 @@ def list_contracts(customerId: UUID | None = None, session: Session = Depends(ge
 
 @router.get("/{contract_id}", response_model=ContractResponse, responses={404: {"description": "Contrato não encontrado."}}, dependencies=[Depends(CONTRACT_READERS)])
 def get_contract(contract_id: UUID, session: Session = Depends(get_session)) -> dict:
-    return ContractService.to_dict(ContractService._require(session, str(contract_id)))
+    return ContractService.to_dict(ContractService.require(session, str(contract_id)))
 
 
 @router.post(

@@ -1,15 +1,15 @@
 from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+from fastapi import APIRouter, Depends, Query, Response
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy.orm import Session
 
 from archcorp.crm.models import Contact, Customer, Opportunity
 from archcorp.crm.service import MAX_PAGE_SIZE, ContactService, CustomerService, OpportunityService
 from archcorp.infrastructure.db import get_session
 from archcorp.observability import correlation_id_var
-from archcorp.schemas import EXAMPLE_CUSTOMER_ID, EXAMPLE_CUSTOMER_RESPONSE, CustomerCreate, CustomerResponse, CustomerUpdate, Name
+from archcorp.schemas import EXAMPLE_CUSTOMER_ID, EXAMPLE_CUSTOMER_RESPONSE, CustomerCreate, CustomerResponse, CustomerUpdate, Name, PartialUpdate
 from archcorp.security import require_roles
 
 
@@ -51,21 +51,14 @@ class ContactInput(BaseModel):
     phone: str | None = Field(default=None, pattern=PHONE_PATTERN, description="Telefone no formato E.164.")
 
 
-class ContactUpdate(BaseModel):
+class ContactUpdate(PartialUpdate):
     model_config = ConfigDict(json_schema_extra={"examples": [{"phone": "+5531988880000"}]})
+    non_nullable = frozenset({"name", "email"})
+    null_message = "Nome e e-mail do contato não aceitam null"
 
     name: Name | None = None
     email: EmailStr | None = None
     phone: str | None = Field(default=None, pattern=PHONE_PATTERN, description="Telefone E.164; null remove o telefone.")
-
-    @model_validator(mode="after")
-    def at_least_one_value(self):
-        provided = self.model_dump(exclude_unset=True)
-        if not provided:
-            raise ValueError("Informe ao menos um campo para atualizar")
-        if provided.get("name", "") is None or provided.get("email", "") is None:
-            raise ValueError("Nome e e-mail do contato não aceitam null")
-        return self
 
 
 class OpportunityInput(BaseModel):
@@ -76,23 +69,16 @@ class OpportunityInput(BaseModel):
     notes: str | None = Field(default=None, max_length=2000)
 
 
-class OpportunityUpdate(BaseModel):
+class OpportunityUpdate(PartialUpdate):
     """Altera estado, título ou notas. OPEN pode ir para WON ou LOST; WON e LOST são finais."""
 
     model_config = ConfigDict(json_schema_extra={"examples": [{"status": "WON"}, {"title": "Renovação de frota 2027 - fase 2", "notes": "Revisar volume"}]})
+    non_nullable = frozenset({"status", "title"})
+    null_message = "Estado e título da oportunidade não aceitam null"
 
     status: Literal["OPEN", "WON", "LOST"] | None = None
     title: Name | None = None
     notes: str | None = Field(default=None, max_length=2000)
-
-    @model_validator(mode="after")
-    def at_least_one_value(self):
-        provided = self.model_dump(exclude_unset=True)
-        if not provided:
-            raise ValueError("Informe ao menos um campo para atualizar")
-        if provided.get("status", "") is None or provided.get("title", "") is None:
-            raise ValueError("Estado e título da oportunidade não aceitam null")
-        return self
 
 
 class ContactResponse(BaseModel):
@@ -115,10 +101,14 @@ class OpportunityResponse(BaseModel):
     notes: str | None
 
 
-def customer_data(session: Session, item: Customer) -> dict:
+def customer_data(item: Customer, legacy_id: str | None) -> dict:
     return {"customerId": item.customer_id, "name": item.name, "email": item.email,
             "eligible": item.eligible, "consentService": item.consent_service, "active": item.active,
-            "legacyId": CustomerService.legacy_id(session, item.customer_id)}
+            "legacyId": legacy_id}
+
+
+def customer_with_legacy_id(session: Session, item: Customer) -> dict:
+    return customer_data(item, CustomerService.legacy_ids(session, [item.customer_id]).get(item.customer_id))
 
 
 def contact_data(item: Contact) -> dict:
@@ -144,7 +134,7 @@ def opportunity_data(item: Opportunity) -> dict:
 )
 def create_customer(body: CustomerCreate, session: Session = Depends(get_session)) -> dict:
     customer = customers.create(session, body.model_dump(mode="json"), correlation_id_var.get())
-    return customer_data(session, customer)
+    return customer_data(customer, body.legacyId)
 
 
 @router.get("/customers", response_model=list[CustomerResponse], dependencies=[Depends(CUSTOMER_READERS)])
@@ -157,12 +147,13 @@ def list_customers(
     session: Session = Depends(get_session),
 ) -> list[dict]:
     items = customers.list(session, email=email, legacy_id=legacyId, active=active, limit=limit, offset=offset)
-    return [customer_data(session, x) for x in items]
+    legacy_ids = CustomerService.legacy_ids(session, [x.customer_id for x in items])
+    return [customer_data(x, legacy_ids.get(x.customer_id)) for x in items]
 
 
 @router.get("/customers/{customer_id}", response_model=CustomerResponse, responses=CUSTOMER_NOT_FOUND, dependencies=[Depends(CUSTOMER_READERS)])
 def get_customer(customer_id: UUID, session: Session = Depends(get_session)) -> dict:
-    return customer_data(session, CustomerService.require(session, str(customer_id)))
+    return customer_with_legacy_id(session, CustomerService.require(session, str(customer_id)))
 
 
 @router.patch(
@@ -173,15 +164,13 @@ def get_customer(customer_id: UUID, session: Session = Depends(get_session)) -> 
 )
 def update_customer(customer_id: UUID, body: CustomerUpdate, session: Session = Depends(get_session)) -> dict:
     customer = customers.update(session, str(customer_id), body.model_dump(exclude_unset=True, mode="json"), correlation_id_var.get())
-    if not customer:
-        raise HTTPException(status_code=404, detail="Cliente não encontrado")
-    return customer_data(session, customer)
+    return customer_with_legacy_id(session, customer)
 
 
 @router.post("/customers/{customer_id}/deactivate", response_model=CustomerResponse, responses=CUSTOMER_NOT_FOUND, dependencies=[Depends(CRM_WRITERS)])
 def deactivate_customer(customer_id: UUID, session: Session = Depends(get_session)) -> dict:
     """Inativa o cliente sem apagar o histórico; cliente inativo não origina reserva nem contrato."""
-    return customer_data(session, customers.deactivate(session, str(customer_id), correlation_id_var.get()))
+    return customer_with_legacy_id(session, customers.deactivate(session, str(customer_id), correlation_id_var.get()))
 
 
 @router.post("/contacts", status_code=201, response_model=ContactResponse,

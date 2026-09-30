@@ -16,6 +16,7 @@ from sqlalchemy.exc import IntegrityError
 
 from archcorp.exceptions import DomainError
 from archcorp.observability import correlation_id_var, logger
+from archcorp.schemas import EXAMPLE_CONTRACT_ID, EXAMPLE_CORRELATION_ID
 
 
 PROBLEM_MEDIA_TYPE = "application/problem+json"
@@ -42,9 +43,9 @@ class ProblemDetails(BaseModel):
                     "title": "Recurso não encontrado",
                     "status": 404,
                     "detail": "Contrato não encontrado",
-                    "instance": "/api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                    "instance": f"/api/v1/contracts/{EXAMPLE_CONTRACT_ID}",
                     "code": "NOT_FOUND",
-                    "correlationId": "11111111-1111-4111-8111-111111111111",
+                    "correlationId": EXAMPLE_CORRELATION_ID,
                 }
             ]
         }
@@ -66,6 +67,20 @@ def problem_type(code: str) -> str:
     return "urn:archcorp:problem:" + code.lower().replace("_", "-")
 
 
+def problem_body(status: int, detail: Any, instance: str, correlation_id: str, code: str | None = None) -> dict[str, Any]:
+    default_code, title = STATUS_CODES.get(status, (f"HTTP_{status}", "Erro HTTP"))
+    code = code or default_code
+    return {
+        "type": problem_type(code),
+        "title": title,
+        "status": status,
+        "detail": detail,
+        "instance": instance,
+        "code": code,
+        "correlationId": correlation_id,
+    }
+
+
 def problem_response(
     request: Request,
     status: int,
@@ -75,17 +90,7 @@ def problem_response(
     errors: list[dict[str, Any]] | None = None,
     headers: dict[str, str] | None = None,
 ) -> JSONResponse:
-    default_code, title = STATUS_CODES.get(status, (f"HTTP_{status}", "Erro HTTP"))
-    code = code or default_code
-    body: dict[str, Any] = {
-        "type": problem_type(code),
-        "title": title,
-        "status": status,
-        "detail": detail,
-        "instance": request.url.path,
-        "code": code,
-        "correlationId": correlation_id_var.get(),
-    }
+    body = problem_body(status, detail, request.url.path, correlation_id_var.get(), code)
     if errors is not None:
         body["errors"] = errors
     return JSONResponse(
@@ -132,17 +137,7 @@ def problem_content(example: dict[str, Any] | None = None, examples: dict[str, A
 
 
 def problem_example(status: int, detail: Any, instance: str, code: str | None = None) -> dict[str, Any]:
-    default_code, title = STATUS_CODES.get(status, (f"HTTP_{status}", "Erro HTTP"))
-    code = code or default_code
-    return {
-        "type": problem_type(code),
-        "title": title,
-        "status": status,
-        "detail": detail,
-        "instance": instance,
-        "code": code,
-        "correlationId": "11111111-1111-4111-8111-111111111111",
-    }
+    return problem_body(status, detail, instance, EXAMPLE_CORRELATION_ID, code)
 
 
 def install_problem_openapi(app: FastAPI) -> None:
@@ -180,7 +175,7 @@ CORRELATION_PARAMETER = {
     "required": False,
     "description": "UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.",
     "schema": {"type": "string", "format": "uuid"},
-    "example": "11111111-1111-4111-8111-111111111111",
+    "example": EXAMPLE_CORRELATION_ID,
 }
 DEFAULT_PROBLEMS = {
     "401": ("Token ausente ou inválido.", "Token ausente ou inválido"),
