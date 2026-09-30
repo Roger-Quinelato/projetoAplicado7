@@ -15,11 +15,13 @@ depends_on = None
 
 
 def upgrade() -> None:
+    """Acrescenta a situação ativa/inativa do cliente."""
     with op.batch_alter_table('crm_customers', schema=None) as batch_op:
         batch_op.add_column(sa.Column('active', sa.Boolean(), server_default=sa.true(), nullable=False))
 
 
 def downgrade() -> None:
+    """Remove a situação ativa/inativa do cliente."""
     with op.batch_alter_table('crm_customers', schema=None) as batch_op:
         batch_op.drop_column('active')
 

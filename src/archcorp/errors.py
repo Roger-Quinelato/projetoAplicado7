@@ -5,6 +5,7 @@ O corpo mantém o campo `detail` usado pelos clientes da versão 1 e acrescenta
 continua sendo a lista de erros do FastAPI para não quebrar clientes existentes;
 a mesma lista também é exposta em `errors`.
 """
+from copy import deepcopy
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
@@ -16,6 +17,7 @@ from sqlalchemy.exc import IntegrityError
 
 from archcorp.exceptions import DomainError
 from archcorp.observability import correlation_id_var, logger
+from archcorp.schemas import EXAMPLE_CONTRACT_ID, EXAMPLE_CORRELATION_ID
 
 
 PROBLEM_MEDIA_TYPE = "application/problem+json"
@@ -42,9 +44,9 @@ class ProblemDetails(BaseModel):
                     "title": "Recurso não encontrado",
                     "status": 404,
                     "detail": "Contrato não encontrado",
-                    "instance": "/api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                    "instance": f"/api/v1/contracts/{EXAMPLE_CONTRACT_ID}",
                     "code": "NOT_FOUND",
-                    "correlationId": "11111111-1111-4111-8111-111111111111",
+                    "correlationId": EXAMPLE_CORRELATION_ID,
                 }
             ]
         }
@@ -63,7 +65,23 @@ class ProblemDetails(BaseModel):
 
 
 def problem_type(code: str) -> str:
+    """Converte o código do erro na URN usada no campo `type`."""
     return "urn:archcorp:problem:" + code.lower().replace("_", "-")
+
+
+def problem_body(status: int, detail: Any, instance: str, correlation_id: str, code: str | None = None) -> dict[str, Any]:
+    """Monta o corpo problem+json comum à resposta real e aos exemplos do OpenAPI."""
+    default_code, title = STATUS_CODES.get(status, (f"HTTP_{status}", "Erro HTTP"))
+    code = code or default_code
+    return {
+        "type": problem_type(code),
+        "title": title,
+        "status": status,
+        "detail": detail,
+        "instance": instance,
+        "code": code,
+        "correlationId": correlation_id,
+    }
 
 
 def problem_response(
@@ -75,17 +93,8 @@ def problem_response(
     errors: list[dict[str, Any]] | None = None,
     headers: dict[str, str] | None = None,
 ) -> JSONResponse:
-    default_code, title = STATUS_CODES.get(status, (f"HTTP_{status}", "Erro HTTP"))
-    code = code or default_code
-    body: dict[str, Any] = {
-        "type": problem_type(code),
-        "title": title,
-        "status": status,
-        "detail": detail,
-        "instance": request.url.path,
-        "code": code,
-        "correlationId": correlation_id_var.get(),
-    }
+    """Devolve uma resposta application/problem+json com o correlationId da requisição."""
+    body = problem_body(status, detail, request.url.path, correlation_id_var.get(), code)
     if errors is not None:
         body["errors"] = errors
     return JSONResponse(
@@ -97,24 +106,29 @@ def problem_response(
 
 
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    """Converte HTTPException em problem+json."""
     return problem_response(request, exc.status_code, exc.detail, headers=getattr(exc, "headers", None))
 
 
 async def domain_error_handler(request: Request, exc: DomainError) -> JSONResponse:
+    """Converte DomainError em problem+json com o código de negócio."""
     return problem_response(request, exc.status_code, exc.detail, code=exc.code)
 
 
 async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """Converte erro de validação em 422 problem+json, mantendo `detail` como lista."""
     errors = jsonable_encoder(exc.errors())
     return problem_response(request, 422, errors, errors=errors)
 
 
 async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSONResponse:
+    """Converte violação de unicidade do banco em 409 problem+json."""
     logger.warning("Violação de unicidade ou integridade", extra={"operation": request.url.path, "result": "conflict"})
     return problem_response(request, 409, "Conflito com registro existente", code="CONFLICT")
 
 
 def register_error_handlers(app: FastAPI) -> None:
+    """Registra na aplicação os handlers que produzem problem+json."""
     app.add_exception_handler(HTTPException, http_exception_handler)
     app.add_exception_handler(DomainError, domain_error_handler)
     app.add_exception_handler(RequestValidationError, validation_error_handler)
@@ -132,17 +146,8 @@ def problem_content(example: dict[str, Any] | None = None, examples: dict[str, A
 
 
 def problem_example(status: int, detail: Any, instance: str, code: str | None = None) -> dict[str, Any]:
-    default_code, title = STATUS_CODES.get(status, (f"HTTP_{status}", "Erro HTTP"))
-    code = code or default_code
-    return {
-        "type": problem_type(code),
-        "title": title,
-        "status": status,
-        "detail": detail,
-        "instance": instance,
-        "code": code,
-        "correlationId": "11111111-1111-4111-8111-111111111111",
-    }
+    """Monta um exemplo de erro para o OpenAPI com correlationId fixo."""
+    return problem_body(status, detail, instance, EXAMPLE_CORRELATION_ID, code)
 
 
 def install_problem_openapi(app: FastAPI) -> None:
@@ -150,6 +155,7 @@ def install_problem_openapi(app: FastAPI) -> None:
     original = app.openapi
 
     def openapi() -> dict:
+        """Gera o OpenAPI uma única vez e completa as respostas de erro de cada operação."""
         if app.openapi_schema:
             return app.openapi_schema
         schema = original()
@@ -180,7 +186,7 @@ CORRELATION_PARAMETER = {
     "required": False,
     "description": "UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.",
     "schema": {"type": "string", "format": "uuid"},
-    "example": "11111111-1111-4111-8111-111111111111",
+    "example": EXAMPLE_CORRELATION_ID,
 }
 DEFAULT_PROBLEMS = {
     "401": ("Token ausente ou inválido.", "Token ausente ou inválido"),
@@ -194,7 +200,7 @@ def document_problem_responses(path: str, operation: dict) -> None:
     responses = operation.setdefault("responses", {})
     parameters = operation.setdefault("parameters", [])
     if path.startswith("/api/") and not any(p.get("name") == "X-Correlation-ID" for p in parameters):
-        parameters.append(CORRELATION_PARAMETER)
+        parameters.append(deepcopy(CORRELATION_PARAMETER))
     expected = []
     if operation.get("security"):
         expected += ["401", "403"]

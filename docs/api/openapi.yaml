@@ -10,6 +10,7 @@ paths:
       tags:
       - Operação
       summary: Live
+      description: Informa que o processo está no ar.
       operationId: live_health_live_get
       responses:
         '200':
@@ -24,6 +25,7 @@ paths:
       tags:
       - Operação
       summary: Ready
+      description: Informa se o banco responde; 503 quando indisponível.
       operationId: ready_health_ready_get
       responses:
         '200':
@@ -52,6 +54,7 @@ paths:
       tags:
       - Operação
       summary: Metrics
+      description: Expõe contadores e latência no formato de texto do Prometheus.
       operationId: metrics_metrics_get
       responses:
         '200':
@@ -70,6 +73,8 @@ paths:
       tags:
       - Reservas e contratos
       summary: Create Contract Draft
+      description: Cria rascunho de contrato para cliente elegível; repetir a Idempotency-Key
+        devolve a mesma resposta.
       operationId: create_contract_draft_api_v1_contracts_drafts_post
       security:
       - HTTPBearer: []
@@ -250,6 +255,8 @@ paths:
       tags:
       - Reservas e contratos
       summary: Activate Contract
+      description: Ativa o contrato e grava ContractActivated.v1, que gera cobrança
+        e preparação de retirada.
       operationId: activate_contract_api_v1_contracts__contract_id__activate_post
       security:
       - HTTPBearer: []
@@ -428,6 +435,7 @@ paths:
       tags:
       - Reservas e contratos
       summary: Entitlement
+      description: Consulta se o contrato ativo cobre cliente e serviço e qual o SLA.
       operationId: entitlement_api_v1_contracts__contract_id__entitlement_get
       security:
       - HTTPBearer: []
@@ -563,6 +571,8 @@ paths:
       tags:
       - Atendimento e assistência 24h
       summary: Open Ticket
+      description: Abre chamado com SLA do contrato; sem Contracts disponível, fica
+        pendente de elegibilidade.
       operationId: open_ticket_api_v1_support_tickets_post
       security:
       - HTTPBearer: []
@@ -748,6 +758,7 @@ paths:
       tags:
       - Atendimento e assistência 24h
       summary: List Tickets
+      description: Lista até 200 chamados.
       operationId: list_tickets_api_v1_support_tickets_get
       security:
       - HTTPBearer: []
@@ -790,8 +801,7 @@ paths:
                 code: FORBIDDEN
                 correlationId: 11111111-1111-4111-8111-111111111111
       parameters:
-      - &id002
-        name: X-Correlation-ID
+      - name: X-Correlation-ID
         in: header
         required: false
         description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
@@ -804,6 +814,7 @@ paths:
       tags:
       - Atendimento e assistência 24h
       summary: Reconcile Ticket
+      description: Revalida a elegibilidade de um chamado pendente e publica o resultado.
       operationId: reconcile_ticket_api_v1_support_tickets__ticket_id__reconcile_post
       security:
       - HTTPBearer: []
@@ -953,19 +964,11 @@ paths:
       tags:
       - Integração
       summary: Dispatch Outbox
+      description: Despacha os eventos pendentes da outbox aos consumidores internos.
       operationId: dispatch_outbox_api_v1_integration_outbox_dispatch_post
-      security:
-      - HTTPBearer: []
       responses:
         '200':
           description: Resumo do despacho dos eventos pendentes.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DispatchResponse'
-              example:
-                processed: 1
-                failed: 0
           headers:
             X-Correlation-ID:
               description: UUID usado para correlacionar a requisição, os logs e os
@@ -974,6 +977,13 @@ paths:
                 type: string
                 format: uuid
               example: 11111111-1111-4111-8111-111111111111
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispatchResponse'
+              example:
+                processed: 1
+                failed: 0
         '400':
           description: Cabeçalho de correlação inválido.
           content:
@@ -1016,6 +1026,8 @@ paths:
                 instance: /api/v1/contracts/drafts
                 code: FORBIDDEN
                 correlationId: 11111111-1111-4111-8111-111111111111
+      security:
+      - HTTPBearer: []
       parameters:
       - name: X-Correlation-ID
         in: header
@@ -1030,25 +1042,11 @@ paths:
       tags:
       - Integração
       summary: List Failures
+      description: Lista eventos que atingiram o limite de tentativas.
       operationId: list_failures_api_v1_integration_failures_get
-      security:
-      - HTTPBearer: []
       responses:
         '200':
           description: Eventos que atingiram o limite de tentativas.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/FailureResponse'
-                title: Response List Failures Api V1 Integration Failures Get
-              example:
-              - eventId: cccccccc-cccc-4ccc-8ccc-cccccccccccc
-                eventType: ContractActivated.v1
-                attempts: 3
-                reason: dependência simulada indisponível
-                correlationId: 11111111-1111-4111-8111-111111111111
           headers:
             X-Correlation-ID:
               description: UUID usado para correlacionar a requisição, os logs e os
@@ -1057,6 +1055,19 @@ paths:
                 type: string
                 format: uuid
               example: 11111111-1111-4111-8111-111111111111
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/FailureResponse'
+                type: array
+                title: Response List Failures Api V1 Integration Failures Get
+              example:
+              - eventId: cccccccc-cccc-4ccc-8ccc-cccccccccccc
+                eventType: ContractActivated.v1
+                attempts: 3
+                reason: dependência simulada indisponível
+                correlationId: 11111111-1111-4111-8111-111111111111
         '400':
           description: Cabeçalho de correlação inválido.
           content:
@@ -1099,6 +1110,8 @@ paths:
                 instance: /api/v1/contracts/drafts
                 code: FORBIDDEN
                 correlationId: 11111111-1111-4111-8111-111111111111
+      security:
+      - HTTPBearer: []
       parameters:
       - name: X-Correlation-ID
         in: header
@@ -1113,6 +1126,8 @@ paths:
       tags:
       - Integração
       summary: Reprocess
+      description: Recoloca um evento com falha em PENDING para novo despacho, com
+        auditoria.
       operationId: reprocess_api_v1_integration_failures__event_id__reprocess_post
       security:
       - HTTPBearer: []
@@ -1228,6 +1243,7 @@ paths:
       tags:
       - Integração
       summary: Resolve Legacy Id
+      description: Resolve um identificador legado para o UUID global.
       operationId: resolve_legacy_id_api_v1_integration_legacy_ids__source_system___legacy_id__get
       security:
       - HTTPBearer: []
@@ -1337,6 +1353,7 @@ paths:
       tags:
       - Integração
       summary: Operation Trace
+      description: Mostra a auditoria e os eventos de uma operação pelo correlationId.
       operationId: operation_trace_api_v1_operations__correlation_id__get
       security:
       - HTTPBearer: []
@@ -1463,6 +1480,7 @@ paths:
       tags:
       - Demonstração
       summary: Demo State
+      description: Resume a quantidade de registros de cada módulo.
       operationId: demo_state_api_v1_demo_state_get
       responses:
         '200':
@@ -1502,12 +1520,21 @@ paths:
       security:
       - HTTPBearer: []
       parameters:
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
   /api/v1/crm/customers:
     post:
       tags:
       - CRM
       summary: Create Customer
+      description: Cadastra cliente com identificador global e, opcionalmente, o identificador
+        legado do CRM.
       operationId: create_customer_api_v1_crm_customers_post
       security:
       - HTTPBearer: []
@@ -1592,11 +1619,20 @@ paths:
                 errors:
                 - *id001
       parameters:
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
     get:
       tags:
       - CRM
       summary: List Customers
+      description: Lista clientes com filtros por e-mail, identificador legado e situação,
+        com paginação.
       operationId: list_customers_api_v1_crm_customers_get
       security:
       - HTTPBearer: []
@@ -1644,7 +1680,14 @@ paths:
           minimum: 0
           default: 0
           title: Offset
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       responses:
         '200':
           description: Successful Response
@@ -1705,6 +1748,7 @@ paths:
       tags:
       - CRM
       summary: Get Customer
+      description: Consulta um cliente pelo identificador global.
       operationId: get_customer_api_v1_crm_customers__customer_id__get
       security:
       - HTTPBearer: []
@@ -1716,7 +1760,14 @@ paths:
           type: string
           format: uuid
           title: Customer Id
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       responses:
         '200':
           description: Successful Response
@@ -1787,6 +1838,8 @@ paths:
       tags:
       - CRM
       summary: Update Customer
+      description: Altera nome, e-mail, elegibilidade ou consentimento; nome ou e-mail
+        alterados publicam CustomerUpdated.v1.
       operationId: update_customer_api_v1_crm_customers__customer_id__patch
       security:
       - HTTPBearer: []
@@ -1798,7 +1851,14 @@ paths:
           type: string
           format: uuid
           title: Customer Id
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       requestBody:
         required: true
         content:
@@ -1903,7 +1963,14 @@ paths:
           type: string
           format: uuid
           title: Customer Id
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       responses:
         '200':
           description: Successful Response
@@ -1975,6 +2042,7 @@ paths:
       tags:
       - CRM
       summary: Create Contact
+      description: Cadastra contato de um cliente existente.
       operationId: create_contact_api_v1_crm_contacts_post
       security:
       - HTTPBearer: []
@@ -2065,11 +2133,19 @@ paths:
                 errors:
                 - *id001
       parameters:
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
     get:
       tags:
       - CRM
       summary: List Contacts
+      description: Lista contatos, com filtro opcional por cliente.
       operationId: list_contacts_api_v1_crm_contacts_get
       security:
       - HTTPBearer: []
@@ -2083,7 +2159,14 @@ paths:
             format: uuid
           - type: 'null'
           title: Customerid
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       responses:
         '200':
           description: Successful Response
@@ -2144,6 +2227,7 @@ paths:
       tags:
       - CRM
       summary: Get Contact
+      description: Consulta um contato.
       operationId: get_contact_api_v1_crm_contacts__contact_id__get
       security:
       - HTTPBearer: []
@@ -2155,7 +2239,14 @@ paths:
           type: string
           format: uuid
           title: Contact Id
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       responses:
         '200':
           description: Successful Response
@@ -2226,6 +2317,7 @@ paths:
       tags:
       - CRM
       summary: Update Contact
+      description: Altera nome, e-mail ou telefone do contato.
       operationId: update_contact_api_v1_crm_contacts__contact_id__patch
       security:
       - HTTPBearer: []
@@ -2237,7 +2329,14 @@ paths:
           type: string
           format: uuid
           title: Contact Id
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       requestBody:
         required: true
         content:
@@ -2328,6 +2427,7 @@ paths:
       tags:
       - CRM
       summary: Delete Contact
+      description: Remove o contato.
       operationId: delete_contact_api_v1_crm_contacts__contact_id__delete
       security:
       - HTTPBearer: []
@@ -2339,7 +2439,14 @@ paths:
           type: string
           format: uuid
           title: Contact Id
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       responses:
         '204':
           description: Successful Response
@@ -2407,6 +2514,7 @@ paths:
       tags:
       - CRM
       summary: Create Opportunity
+      description: Cria oportunidade em aberto para um cliente existente.
       operationId: create_opportunity_api_v1_crm_opportunities_post
       security:
       - HTTPBearer: []
@@ -2483,11 +2591,19 @@ paths:
                 errors:
                 - *id001
       parameters:
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
     get:
       tags:
       - CRM
       summary: List Opportunities
+      description: Lista oportunidades, com filtros por cliente e estado.
       operationId: list_opportunities_api_v1_crm_opportunities_get
       security:
       - HTTPBearer: []
@@ -2513,7 +2629,14 @@ paths:
             type: string
           - type: 'null'
           title: Status
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       responses:
         '200':
           description: Successful Response
@@ -2574,6 +2697,7 @@ paths:
       tags:
       - CRM
       summary: Get Opportunity
+      description: Consulta uma oportunidade.
       operationId: get_opportunity_api_v1_crm_opportunities__opportunity_id__get
       security:
       - HTTPBearer: []
@@ -2585,7 +2709,14 @@ paths:
           type: string
           format: uuid
           title: Opportunity Id
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       responses:
         '200':
           description: Successful Response
@@ -2656,6 +2787,8 @@ paths:
       tags:
       - CRM
       summary: Update Opportunity
+      description: Altera estado, título ou notas; OPEN pode ir para WON ou LOST,
+        que são finais.
       operationId: update_opportunity_api_v1_crm_opportunities__opportunity_id__patch
       security:
       - HTTPBearer: []
@@ -2667,7 +2800,14 @@ paths:
           type: string
           format: uuid
           title: Opportunity Id
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       requestBody:
         required: true
         content:
@@ -2759,6 +2899,8 @@ paths:
       tags:
       - Reservas e contratos
       summary: Create Reservation
+      description: Registra reserva para cliente elegível; com Idempotency-Key, repetir
+        a chamada devolve a mesma reserva.
       operationId: create_reservation_api_v1_contracts_reservations_post
       security:
       - HTTPBearer: []
@@ -2776,7 +2918,14 @@ paths:
           title: Idempotency-Key
         description: Opcional; quando informado, repetir a chamada devolve a mesma
           reserva.
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       requestBody:
         required: true
         content:
@@ -2873,6 +3022,8 @@ paths:
       tags:
       - Reservas e contratos
       summary: List Reservations
+      description: Lista até 200 reservas, das mais recentes para as mais antigas,
+        com filtro opcional por cliente.
       operationId: list_reservations_api_v1_contracts_reservations_get
       security:
       - HTTPBearer: []
@@ -2886,7 +3037,14 @@ paths:
             format: uuid
           - type: 'null'
           title: Customerid
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       responses:
         '200':
           description: Successful Response
@@ -2947,6 +3105,7 @@ paths:
       tags:
       - Reservas e contratos
       summary: Get Reservation
+      description: Consulta uma reserva pelo identificador global.
       operationId: get_reservation_api_v1_contracts_reservations__reservation_id__get
       security:
       - HTTPBearer: []
@@ -2958,7 +3117,14 @@ paths:
           type: string
           format: uuid
           title: Reservation Id
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       responses:
         '200':
           description: Successful Response
@@ -3030,6 +3196,8 @@ paths:
       tags:
       - Reservas e contratos
       summary: Draft From Reservation
+      description: Gera o rascunho de contrato a partir da reserva, sem recadastrar
+        o cliente, na mesma transação.
       operationId: draft_from_reservation_api_v1_contracts_reservations__reservation_id__draft_post
       security:
       - HTTPBearer: []
@@ -3048,7 +3216,14 @@ paths:
           type: string
           maxLength: 100
           title: Idempotency-Key
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       responses:
         '200':
           description: Successful Response
@@ -3154,7 +3329,14 @@ paths:
           type: string
           format: uuid
           title: Reservation Id
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       responses:
         '200':
           description: Successful Response
@@ -3240,6 +3422,8 @@ paths:
       tags:
       - Reservas e contratos
       summary: List Contracts
+      description: Lista até 200 contratos, dos mais recentes para os mais antigos,
+        com filtro opcional por cliente.
       operationId: list_contracts_api_v1_contracts_get
       security:
       - HTTPBearer: []
@@ -3253,7 +3437,14 @@ paths:
             format: uuid
           - type: 'null'
           title: Customerid
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       responses:
         '200':
           description: Successful Response
@@ -3314,6 +3505,7 @@ paths:
       tags:
       - Reservas e contratos
       summary: Get Contract
+      description: Consulta um contrato pelo identificador global.
       operationId: get_contract_api_v1_contracts__contract_id__get
       security:
       - HTTPBearer: []
@@ -3325,7 +3517,14 @@ paths:
           type: string
           format: uuid
           title: Contract Id
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       responses:
         '200':
           description: Successful Response
@@ -3422,7 +3621,14 @@ paths:
           title: Idempotency-Key
         description: Opcional; com a chave, repetir o encerramento devolve a mesma
           resposta.
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       requestBody:
         content:
           application/json:
@@ -3521,6 +3727,7 @@ paths:
       tags:
       - Financeiro e faturamento
       summary: List Invoices
+      description: Lista até 200 faturas, da maior para a menor data de vencimento.
       operationId: list_invoices_api_v1_finance_invoices_get
       responses:
         '200':
@@ -3563,12 +3770,20 @@ paths:
       security:
       - HTTPBearer: []
       parameters:
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
   /api/v1/finance/invoices/{invoice_id}:
     get:
       tags:
       - Financeiro e faturamento
       summary: Get Invoice
+      description: Consulta uma fatura com o valor já pago.
       operationId: get_invoice_api_v1_finance_invoices__invoice_id__get
       security:
       - HTTPBearer: []
@@ -3580,7 +3795,14 @@ paths:
           type: string
           format: uuid
           title: Invoice Id
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       responses:
         '200':
           description: Successful Response
@@ -3652,6 +3874,8 @@ paths:
       tags:
       - Financeiro e faturamento
       summary: Record Payment
+      description: Registra pagamento simulado; a mesma referência com o mesmo valor
+        devolve o pagamento existente.
       operationId: record_payment_api_v1_finance_invoices__invoice_id__payments_post
       security:
       - HTTPBearer: []
@@ -3663,7 +3887,14 @@ paths:
           type: string
           format: uuid
           title: Invoice Id
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       requestBody:
         required: true
         content:
@@ -3752,6 +3983,7 @@ paths:
       tags:
       - Financeiro e faturamento
       summary: List Payments
+      description: Lista pagamentos, com filtro opcional por fatura.
       operationId: list_payments_api_v1_finance_payments_get
       security:
       - HTTPBearer: []
@@ -3765,7 +3997,14 @@ paths:
             format: uuid
           - type: 'null'
           title: Invoiceid
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       responses:
         '200':
           description: Successful Response
@@ -3826,6 +4065,7 @@ paths:
       tags:
       - Atendimento e assistência 24h
       summary: Get Ticket
+      description: Consulta um chamado.
       operationId: get_ticket_api_v1_support_tickets__ticket_id__get
       security:
       - HTTPBearer: []
@@ -3837,7 +4077,14 @@ paths:
           type: string
           format: uuid
           title: Ticket Id
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       responses:
         '200':
           description: Successful Response
@@ -3909,6 +4156,7 @@ paths:
       tags:
       - Atendimento e assistência 24h
       summary: Assign Ticket
+      description: Define o responsável de um chamado aberto ou pendente.
       operationId: assign_ticket_api_v1_support_tickets__ticket_id__assign_post
       security:
       - HTTPBearer: []
@@ -3920,7 +4168,14 @@ paths:
           type: string
           format: uuid
           title: Ticket Id
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       requestBody:
         required: true
         content:
@@ -4012,6 +4267,7 @@ paths:
       tags:
       - Atendimento e assistência 24h
       summary: Resolve Ticket
+      description: Resolve o chamado aberto e publica TicketResolved.v1.
       operationId: resolve_ticket_api_v1_support_tickets__ticket_id__resolve_post
       security:
       - HTTPBearer: []
@@ -4023,7 +4279,14 @@ paths:
           type: string
           format: uuid
           title: Ticket Id
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       responses:
         '200':
           description: Successful Response
@@ -4109,6 +4372,7 @@ paths:
       tags:
       - Gestão de processos
       summary: List Processes
+      description: Lista até 200 processos.
       operationId: list_processes_api_v1_workflow_processes_get
       responses:
         '200':
@@ -4151,12 +4415,20 @@ paths:
       security:
       - HTTPBearer: []
       parameters:
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
   /api/v1/workflow/processes/{process_id}:
     get:
       tags:
       - Gestão de processos
       summary: Get Process
+      description: Consulta um processo.
       operationId: get_process_api_v1_workflow_processes__process_id__get
       security:
       - HTTPBearer: []
@@ -4168,7 +4440,14 @@ paths:
           type: string
           format: uuid
           title: Process Id
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       responses:
         '200':
           description: Successful Response
@@ -4240,6 +4519,7 @@ paths:
       tags:
       - Gestão de processos
       summary: List Tasks
+      description: Lista até 200 tarefas, com filtro opcional por processo.
       operationId: list_tasks_api_v1_workflow_tasks_get
       security:
       - HTTPBearer: []
@@ -4253,7 +4533,14 @@ paths:
             format: uuid
           - type: 'null'
           title: Processid
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       responses:
         '200':
           description: Successful Response
@@ -4313,6 +4600,7 @@ paths:
       tags:
       - Gestão de processos
       summary: Create Task
+      description: Cria tarefa em processo não encerrado, com o prazo do processo.
       operationId: create_task_api_v1_workflow_tasks_post
       security:
       - HTTPBearer: []
@@ -4403,12 +4691,21 @@ paths:
                 errors:
                 - *id001
       parameters:
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
   /api/v1/workflow/tasks/{task_id}:
     patch:
       tags:
       - Gestão de processos
       summary: Change Task
+      description: Altera estado ou responsável da tarefa; o processo é concluído
+        quando todas as tarefas terminam.
       operationId: change_task_api_v1_workflow_tasks__task_id__patch
       security:
       - HTTPBearer: []
@@ -4420,7 +4717,14 @@ paths:
           type: string
           format: uuid
           title: Task Id
-      - *id002
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
       requestBody:
         required: true
         content:

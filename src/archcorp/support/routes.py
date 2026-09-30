@@ -46,6 +46,7 @@ class TicketDetailResponse(BaseModel):
 
 
 def ticket_data(session: Session, item: Ticket) -> dict:
+    """Serializa o chamado com descrição e responsável atual."""
     assignment = session.get(TicketAssignment, item.ticket_id)
     return {**TicketService.as_dict(item), "description": item.description,
             "owner": assignment.owner if assignment else None}
@@ -53,11 +54,13 @@ def ticket_data(session: Session, item: Ticket) -> dict:
 
 @router.get("/tickets", response_model=list[TicketDetailResponse], dependencies=[Depends(require_roles("support", "operations", "admin"))])
 def list_tickets(session: Session = Depends(get_session)) -> list[dict]:
+    """Lista até 200 chamados."""
     return [ticket_data(session, x) for x in session.scalars(select(Ticket).order_by(Ticket.ticket_id).limit(200))]
 
 
 @router.get("/tickets/{ticket_id}", response_model=TicketDetailResponse, responses=NOT_FOUND, dependencies=[Depends(require_roles("support", "operations", "admin"))])
 def get_ticket(ticket_id: UUID, session: Session = Depends(get_session)) -> dict:
+    """Consulta um chamado."""
     item = session.get(Ticket, str(ticket_id))
     if not item:
         raise HTTPException(404, "Chamado não encontrado")
@@ -66,6 +69,7 @@ def get_ticket(ticket_id: UUID, session: Session = Depends(get_session)) -> dict
 
 @router.post("/tickets/{ticket_id}/assign", response_model=TicketDetailResponse, responses={**NOT_FOUND, 409: {"description": "Chamado resolvido ou rejeitado não pode ser atribuído."}}, dependencies=[Depends(require_roles("support", "admin"))])
 def assign_ticket(ticket_id: UUID, body: AssignmentInput, session: Session = Depends(get_session)) -> dict:
+    """Define o responsável de um chamado aberto ou pendente."""
     item = session.get(Ticket, str(ticket_id))
     if not item:
         raise HTTPException(404, "Chamado não encontrado")
@@ -84,6 +88,7 @@ def assign_ticket(ticket_id: UUID, body: AssignmentInput, session: Session = Dep
 
 @router.post("/tickets/{ticket_id}/resolve", response_model=TicketDetailResponse, responses={**NOT_FOUND, 409: {"description": "Somente chamado aberto pode ser resolvido."}}, dependencies=[Depends(require_roles("support", "admin"))])
 def resolve_ticket(ticket_id: UUID, session: Session = Depends(get_session)) -> dict:
+    """Resolve o chamado aberto e publica TicketResolved.v1."""
     item = session.get(Ticket, str(ticket_id))
     if not item:
         raise HTTPException(404, "Chamado não encontrado")

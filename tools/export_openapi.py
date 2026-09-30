@@ -14,10 +14,12 @@ TARGET = Path(__file__).resolve().parents[1] / "docs" / "api" / "openapi.yaml"
 
 
 def render() -> str:
+    """Gera o YAML do OpenAPI a partir da aplicação."""
     return yaml.safe_dump(app.openapi(), allow_unicode=True, sort_keys=False)
 
 
 def main() -> int:
+    """Grava docs/api/openapi.yaml ou, com --check, falha se o arquivo divergir."""
     content = render()
     if "--check" in sys.argv:
         if yaml.safe_load(TARGET.read_text(encoding="utf-8")) != yaml.safe_load(content):

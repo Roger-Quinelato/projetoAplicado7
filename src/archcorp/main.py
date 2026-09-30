@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from archcorp.contracts.routes import configure as configure_contracts, router as contracts_router
+from archcorp.contracts.routes import configure as configure_contracts, router as contracts_router, set_replay
 from archcorp.contracts.service import ContractService
 from archcorp.crm.service import CustomerService
 from archcorp.crm.routes import router as crm_router
@@ -33,6 +33,7 @@ from archcorp.schemas import (
     EXAMPLE_CONTRACT_ID,
     EXAMPLE_CORRELATION_ID,
     EXAMPLE_PENDING_TICKET_RESPONSE,
+    EXAMPLE_TICKET_ID,
     EXAMPLE_TICKET_RESPONSE,
     IDEMPOTENCY_KEY_MAX_LENGTH,
     ContractActivationResponse,
@@ -57,14 +58,6 @@ from archcorp.workflow.routes import router as workflow_router
 from archcorp.workflow.service import count_processes, handle_contract_activated as workflow_contract_activated, handle_contract_closed as workflow_contract_closed, handle_ticket_opened, handle_ticket_entitlement_reconciled, handle_ticket_resolved
 
 
-CORRELATION_REQUEST_PARAMETER = {
-    "name": "X-Correlation-ID",
-    "in": "header",
-    "required": False,
-    "description": "UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.",
-    "schema": {"type": "string", "format": "uuid"},
-    "example": EXAMPLE_CORRELATION_ID,
-}
 CORRELATION_RESPONSE_HEADER = {
     "description": "UUID usado para correlacionar a requisição, os logs e os eventos.",
     "schema": {"type": "string", "format": "uuid"},
@@ -80,6 +73,7 @@ IDEMPOTENCY_RESPONSE_HEADERS = {
 }
 
 def validation_problem_response(description: str, instance: str, field: str, rule_summary: str, rule_detail: str) -> dict:
+    """Documenta um 422 com exemplos de regra de negócio e de validação do corpo."""
     invalid = [{"type": "uuid_parsing", "loc": ["body", field], "msg": "Input should be a valid UUID", "input": "not-a-uuid"}]
     return {
         "description": description,
@@ -156,11 +150,11 @@ CONTRACT_ACTIVATION_RESPONSES = {
     },
     404: {
         "description": "Contrato não encontrado.",
-        "content": problem_content(problem_example(404, "Contrato não encontrado", "/api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/activate")),
+        "content": problem_content(problem_example(404, "Contrato não encontrado", f"/api/v1/contracts/{EXAMPLE_CONTRACT_ID}/activate")),
     },
     409: {
         "description": "Contrato já encerrado ou estado incompatível para ativação.",
-        "content": problem_content(problem_example(409, "Somente contrato em rascunho pode ser ativado", "/api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/activate", "INVALID_STATE")),
+        "content": problem_content(problem_example(409, "Somente contrato em rascunho pode ser ativado", f"/api/v1/contracts/{EXAMPLE_CONTRACT_ID}/activate", "INVALID_STATE")),
     },
 }
 ENTITLEMENT_RESPONSES = {
@@ -243,11 +237,11 @@ RECONCILIATION_RESPONSES = {
     },
     404: {
         "description": "Chamado não encontrado.",
-        "content": problem_content(problem_example(404, "Chamado não encontrado", "/api/v1/support/tickets/dddddddd-dddd-4ddd-8ddd-dddddddddddd/reconcile")),
+        "content": problem_content(problem_example(404, "Chamado não encontrado", f"/api/v1/support/tickets/{EXAMPLE_TICKET_ID}/reconcile")),
     },
     409: {
         "description": "Chamado não está pendente de elegibilidade.",
-        "content": problem_content(problem_example(409, "Somente chamado pendente pode ser reconciliado", "/api/v1/support/tickets/dddddddd-dddd-4ddd-8ddd-dddddddddddd/reconcile", "INVALID_STATE")),
+        "content": problem_content(problem_example(409, "Somente chamado pendente pode ser reconciliado", f"/api/v1/support/tickets/{EXAMPLE_TICKET_ID}/reconcile", "INVALID_STATE")),
     },
 }
 DISPATCH_RESPONSES = {
@@ -296,7 +290,7 @@ REPROCESS_RESPONSES = {
     },
     404: {
         "description": "Evento com falha não encontrado.",
-        "content": problem_content(problem_example(404, "Falha não encontrada", "/api/v1/integration/failures/cccccccc-cccc-4ccc-8ccc-cccccccccccc/reprocess")),
+        "content": problem_content(problem_example(404, "Falha não encontrada", f"/api/v1/integration/failures/{EXAMPLE_CONTRACT_EVENT_ID}/reprocess")),
     },
 }
 OPERATION_TRACE_RESPONSES = {
@@ -349,6 +343,7 @@ dispatcher = EventDispatcher({
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    """Valida o segredo da demo pública, aplica as migrações e protege as tabelas antes de atender."""
     if settings.public_demo and (not settings.demo_access_token or len(settings.demo_access_token) < 24 or settings.demo_access_token.startswith("demo-")):
         raise RuntimeError("PUBLIC_DEMO exige DEMO_ACCESS_TOKEN aleatório com pelo menos 24 caracteres")
     with engine.begin() as connection:
@@ -365,6 +360,7 @@ install_problem_openapi(app)
 
 @app.middleware("http")
 async def correlation_middleware(request: Request, call_next):
+    """Propaga X-Correlation-ID na requisição, nos logs e na resposta; 400 se não for UUID."""
     supplied = request.headers.get("X-Correlation-ID")
     try:
         correlation_id = str(UUID(supplied)) if supplied else str(uuid4())
@@ -391,6 +387,7 @@ async def correlation_middleware(request: Request, call_next):
 
 @app.get("/health/live", response_model=HealthResponse, response_model_exclude_none=True, tags=["Operação"])
 def live() -> dict:
+    """Informa que o processo está no ar."""
     return {"status": "UP"}
 
 
@@ -401,6 +398,7 @@ def live() -> dict:
     responses={503: {"description": "Banco indisponível."}},
 )
 def ready(session: Session = Depends(get_session)) -> dict:
+    """Informa se o banco responde; 503 quando indisponível."""
     try:
         session.execute(text("SELECT 1"))
         return {"status": "UP", "database": "UP"}
@@ -416,6 +414,7 @@ def ready(session: Session = Depends(get_session)) -> dict:
                      "content": {"text/plain": {"example": "archcorp_requests_total{operation=\"GET_/health/live\",status=\"200\"} 1\n"}}}},
 )
 def metrics() -> str:
+    """Expõe contadores e latência no formato de texto do Prometheus."""
     return render_metrics()
 
 
@@ -426,7 +425,6 @@ def metrics() -> str:
     tags=["Reservas e contratos"],
     dependencies=[Depends(require_roles("commercial", "contracts", "admin"))],
     responses=CONTRACT_DRAFT_RESPONSES,
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def create_contract_draft(
     body: ContractDraftCreate,
@@ -436,10 +434,11 @@ def create_contract_draft(
     ),
     session: Session = Depends(get_session),
 ) -> dict:
+    """Cria rascunho de contrato para cliente elegível; repetir a Idempotency-Key devolve a mesma resposta."""
     draft_data = body.model_dump()
     draft_data["customerId"] = str(draft_data["customerId"])
     result, replay = contracts.create_draft(session, draft_data, idempotency_key, correlation_id_var.get())
-    response.headers["Idempotency-Replayed"] = str(replay).lower()
+    set_replay(response, replay)
     return result
 
 
@@ -449,7 +448,6 @@ def create_contract_draft(
     tags=["Reservas e contratos"],
     dependencies=[Depends(require_roles("contracts", "admin"))],
     responses=CONTRACT_ACTIVATION_RESPONSES,
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def activate_contract(
     contract_id: UUID,
@@ -459,8 +457,9 @@ def activate_contract(
     ),
     session: Session = Depends(get_session),
 ) -> dict:
+    """Ativa o contrato e grava ContractActivated.v1, que gera cobrança e preparação de retirada."""
     result, replay = contracts.activate(session, str(contract_id), idempotency_key, correlation_id_var.get())
-    response.headers["Idempotency-Replayed"] = str(replay).lower()
+    set_replay(response, replay)
     return result
 
 
@@ -470,9 +469,9 @@ def activate_contract(
     tags=["Reservas e contratos"],
     dependencies=[Depends(require_roles("support", "admin"))],
     responses=ENTITLEMENT_RESPONSES,
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def entitlement(contract_id: UUID, customerId: UUID, serviceCode: str, session: Session = Depends(get_session)) -> dict:
+    """Consulta se o contrato ativo cobre cliente e serviço e qual o SLA."""
     return contracts.entitlement(session, str(contract_id), str(customerId), serviceCode)
 
 
@@ -483,7 +482,6 @@ def entitlement(contract_id: UUID, customerId: UUID, serviceCode: str, session: 
     tags=["Atendimento e assistência 24h"],
     dependencies=[Depends(require_roles("support", "admin"))],
     responses=TICKET_RESPONSES,
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def open_ticket(
     body: TicketCreate,
@@ -493,9 +491,10 @@ def open_ticket(
     ),
     session: Session = Depends(get_session),
 ) -> dict:
+    """Abre chamado com SLA do contrato; sem Contracts disponível, fica pendente de elegibilidade."""
     ticket_data = body.model_dump(mode="json")
     result, replay = tickets.open(session, ticket_data, idempotency_key, correlation_id_var.get())
-    response.headers["Idempotency-Replayed"] = str(replay).lower()
+    set_replay(response, replay)
     return result
 
 
@@ -505,9 +504,9 @@ def open_ticket(
     tags=["Atendimento e assistência 24h"],
     dependencies=[Depends(require_roles("support", "operations", "admin"))],
     responses=RECONCILIATION_RESPONSES,
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def reconcile_ticket(ticket_id: UUID, session: Session = Depends(get_session)) -> dict:
+    """Revalida a elegibilidade de um chamado pendente e publica o resultado."""
     return tickets.reconcile(session, str(ticket_id), correlation_id_var.get())
 
 
@@ -517,9 +516,9 @@ def reconcile_ticket(ticket_id: UUID, session: Session = Depends(get_session)) -
     tags=["Integração"],
     dependencies=[Depends(require_roles("operations", "admin"))],
     responses=DISPATCH_RESPONSES,
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def dispatch_outbox(session: Session = Depends(get_session)) -> dict:
+    """Despacha os eventos pendentes da outbox aos consumidores internos."""
     return dispatcher.dispatch_pending(session)
 
 
@@ -529,9 +528,9 @@ def dispatch_outbox(session: Session = Depends(get_session)) -> dict:
     tags=["Integração"],
     dependencies=[Depends(require_roles("operations", "admin"))],
     responses=FAILURE_LIST_RESPONSES,
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def list_failures(session: Session = Depends(get_session)) -> list[dict]:
+    """Lista eventos que atingiram o limite de tentativas."""
     failures = session.scalars(select(OutboxEvent).where(OutboxEvent.status == "FAILED")).all()
     return [{"eventId": e.event_id, "eventType": e.event_type, "attempts": e.attempts, "reason": e.last_error, "correlationId": e.correlation_id} for e in failures]
 
@@ -542,9 +541,9 @@ def list_failures(session: Session = Depends(get_session)) -> list[dict]:
     tags=["Integração"],
     dependencies=[Depends(require_roles("operations", "admin"))],
     responses=REPROCESS_RESPONSES,
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def reprocess(event_id: UUID, session: Session = Depends(get_session)) -> dict:
+    """Recoloca um evento com falha em PENDING para novo despacho, com auditoria."""
     event = session.get(OutboxEvent, str(event_id))
     if not event or event.status != "FAILED":
         raise HTTPException(status_code=404, detail="Falha não encontrada")
@@ -568,9 +567,9 @@ def reprocess(event_id: UUID, session: Session = Depends(get_session)) -> dict:
             "content": problem_content(problem_example(404, "Identificador legado não encontrado", "/api/v1/integration/legacy-ids/CRM/WEB-LOCALIZA-9999")),
         },
     },
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def resolve_legacy_id(source_system: str, legacy_id: str, session: Session = Depends(get_session)) -> dict:
+    """Resolve um identificador legado para o UUID global."""
     mapping = LegacyIdService.resolve(session, source_system, legacy_id)
     if not mapping:
         raise HTTPException(status_code=404, detail="Identificador legado não encontrado")
@@ -583,9 +582,9 @@ def resolve_legacy_id(source_system: str, legacy_id: str, session: Session = Dep
     tags=["Integração"],
     dependencies=[Depends(require_roles("operations", "admin"))],
     responses=OPERATION_TRACE_RESPONSES,
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def operation_trace(correlation_id: UUID, session: Session = Depends(get_session)) -> dict:
+    """Mostra a auditoria e os eventos de uma operação pelo correlationId."""
     correlation_value = str(correlation_id)
     entries = session.scalars(select(AuditLog).where(AuditLog.correlation_id == correlation_value).order_by(AuditLog.occurred_at)).all()
     events = session.scalars(select(OutboxEvent).where(OutboxEvent.correlation_id == correlation_value).order_by(OutboxEvent.occurred_at)).all()
@@ -594,6 +593,7 @@ def operation_trace(correlation_id: UUID, session: Session = Depends(get_session
 
 @app.get("/api/v1/demo/state", response_model=DemoStateResponse, tags=["Demonstração"], dependencies=[Depends(require_roles("admin"))])
 def demo_state(session: Session = Depends(get_session)) -> dict:
+    """Resume a quantidade de registros de cada módulo."""
     return {"customers": CustomerService.count(session), "contracts": ContractService.count(session), "invoices": count_invoices(session),
             "tickets": TicketService.count(session), "processes": count_processes(session), "legacyMappings": LegacyIdService.count(session)}
 
@@ -610,10 +610,12 @@ if web_dist.is_dir():
 
     @app.get("/", include_in_schema=False)
     def web_home() -> FileResponse:
+        """Entrega a interface web compilada."""
         return FileResponse(web_dist / "index.html")
 
     @app.get("/{path:path}", include_in_schema=False)
     def web_fallback(path: str) -> FileResponse:
+        """Entrega a interface para rotas do frontend; rotas de API inexistentes devolvem 404."""
         if path.startswith(("api/", "health/", "assets/")):
             raise HTTPException(404, "Rota não encontrada")
         return FileResponse(web_dist / "index.html")

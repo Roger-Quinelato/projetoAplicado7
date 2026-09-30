@@ -1,13 +1,13 @@
 from alembic import context
-from sqlalchemy import create_engine
-
 from archcorp.config import settings
+from archcorp.infrastructure.db import engine
 from archcorp.infrastructure.migrate import load_models
 
 target_metadata = load_models().metadata
 
 
 def run(connection) -> None:
+    """Executa as migrações na conexão informada, em modo batch no SQLite."""
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
@@ -31,6 +31,6 @@ if context.is_offline_mode():
 elif connection is not None:
     run(connection)
 else:
-    with create_engine(settings.database_url).connect() as standalone:
+    with engine.connect() as standalone:
         run(standalone)
         standalone.commit()
