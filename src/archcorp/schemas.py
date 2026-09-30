@@ -1,10 +1,13 @@
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints, model_validator
 
+
+IDEMPOTENCY_KEY_MAX_LENGTH = 100
+Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=150)]
 
 EXAMPLE_CORRELATION_ID = "11111111-1111-4111-8111-111111111111"
 EXAMPLE_CUSTOMER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
@@ -15,8 +18,11 @@ EXAMPLE_TICKET_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd"
 EXAMPLE_CUSTOMER_RESPONSE = {
     "customerId": EXAMPLE_CUSTOMER_ID,
     "name": "Cliente Frota Localiza Ltda.",
-    "email": "gestor.frota@cliente-localiza.test",
+    "email": "gestor.frota@cliente-sintetico.example.com",
     "eligible": True,
+    "consentService": True,
+    "active": True,
+    "legacyId": "WEB-LOCALIZA-1001",
 }
 
 EXAMPLE_CONTRACT_DRAFT_RESPONSE = {
@@ -67,7 +73,7 @@ class CustomerCreate(BaseModel):
             "examples": [
                 {
                     "name": "Cliente Frota Localiza Ltda.",
-                    "email": "gestor.frota@cliente-localiza.test",
+                    "email": "gestor.frota@cliente-sintetico.example.com",
                     "eligible": True,
                     "consentService": True,
                     "legacyId": "WEB-LOCALIZA-1001",
@@ -76,18 +82,29 @@ class CustomerCreate(BaseModel):
         }
     )
 
-    name: str = Field(min_length=2, max_length=150)
+    name: Name
     email: EmailStr
     eligible: bool = True
     consentService: bool = True
-    legacyId: str | None = Field(default=None, max_length=100)
+    legacyId: str | None = Field(default=None, min_length=1, max_length=100)
 
 
 class CustomerUpdate(BaseModel):
-    name: str | None = Field(default=None, min_length=2, max_length=150)
+    model_config = ConfigDict(json_schema_extra={"examples": [{"name": "Cliente Frota Sintética Atualizada", "consentService": True}]})
+
+    name: Name | None = None
     email: EmailStr | None = None
     eligible: bool | None = None
     consentService: bool | None = None
+
+    @model_validator(mode="after")
+    def at_least_one_value(self):
+        provided = self.model_dump(exclude_unset=True)
+        if not provided:
+            raise ValueError("Informe ao menos um campo para atualizar")
+        if any(value is None for value in provided.values()):
+            raise ValueError("Campos do cliente não aceitam null")
+        return self
 
 
 class Billing(BaseModel):
@@ -149,10 +166,55 @@ class ApiModel(BaseModel):
 
 
 class CustomerResponse(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [EXAMPLE_CUSTOMER_RESPONSE]})
+
     customerId: UUID
     name: str
     email: EmailStr
     eligible: bool
+    consentService: bool
+    active: bool = True
+    legacyId: str | None = None
+
+
+class LegacyIdResponse(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "entityType": "customer",
+                    "globalId": EXAMPLE_CUSTOMER_ID,
+                    "sourceSystem": "CRM",
+                    "legacyId": "WEB-LOCALIZA-1001",
+                }
+            ]
+        }
+    )
+
+    entityType: str
+    globalId: UUID
+    sourceSystem: str
+    legacyId: str
+
+
+class HealthResponse(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [{"status": "UP", "database": "UP"}]})
+
+    status: Literal["UP"]
+    database: Literal["UP"] | None = None
+
+
+class DemoStateResponse(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [{
+        "customers": 3, "contracts": 2, "invoices": 1, "tickets": 1, "processes": 2, "legacyMappings": 3,
+    }]})
+
+    customers: int
+    contracts: int
+    invoices: int
+    tickets: int
+    processes: int
+    legacyMappings: int
 
 
 class ContractDraftResponse(BaseModel):
@@ -160,6 +222,7 @@ class ContractDraftResponse(BaseModel):
     customerId: UUID
     serviceCode: str
     startsOn: date
+    endsOn: date | None = None
     billing: Billing
     slaHours: int
     status: Literal["DRAFT"]
@@ -170,6 +233,7 @@ class ContractActivationResponse(BaseModel):
     customerId: UUID
     serviceCode: str
     startsOn: date
+    endsOn: date | None = None
     billing: Billing
     slaHours: int
     status: Literal["ACTIVE"]

@@ -8,18 +8,23 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from archcorp.contracts.models import Contract, Reservation
-from archcorp.contracts.routes import ReservationInput, reservation_data, router as contracts_router
+from archcorp.contracts.routes import configure as configure_contracts, router as contracts_router
 from archcorp.contracts.service import ContractService
-from archcorp.crm.models import Customer
 from archcorp.crm.service import CustomerService
 from archcorp.crm.routes import router as crm_router
-from archcorp.finance.models import Invoice
-from archcorp.finance.service import handle_contract_activated as finance_contract_activated
+from archcorp.errors import (
+    install_problem_openapi,
+    problem_content,
+    problem_example,
+    problem_response,
+    register_error_handlers,
+)
+from archcorp.finance.service import count_invoices, handle_contract_activated as finance_contract_activated
 from archcorp.finance.routes import router as finance_router
-from archcorp.infrastructure.db import Base, engine, get_session, protect_public_demo_tables
-from archcorp.integration.models import AuditLog, LegacyIdMapping, OutboxEvent
-from archcorp.integration.service import EventDispatcher, audit
+from archcorp.infrastructure.db import engine, get_session, protect_public_demo_tables
+from archcorp.infrastructure.migrate import upgrade_to_head
+from archcorp.integration.models import AuditLog, OutboxEvent
+from archcorp.integration.service import EventDispatcher, LegacyIdService, audit
 from archcorp.observability import correlation_id_var, logger, metrics_middleware, render_metrics
 from archcorp.schemas import (
     EXAMPLE_CONTRACT_ACTIVATED_RESPONSE,
@@ -27,16 +32,16 @@ from archcorp.schemas import (
     EXAMPLE_CONTRACT_EVENT_ID,
     EXAMPLE_CONTRACT_ID,
     EXAMPLE_CORRELATION_ID,
-    EXAMPLE_CUSTOMER_RESPONSE,
     EXAMPLE_PENDING_TICKET_RESPONSE,
     EXAMPLE_TICKET_RESPONSE,
+    IDEMPOTENCY_KEY_MAX_LENGTH,
     ContractActivationResponse,
     ContractDraftCreate,
     ContractDraftResponse,
-    CustomerCreate,
-    CustomerResponse,
-    CustomerUpdate,
+    DemoStateResponse,
     DispatchResponse,
+    HealthResponse,
+    LegacyIdResponse,
     EntitlementResponse,
     FailureResponse,
     OperationTraceResponse,
@@ -46,12 +51,10 @@ from archcorp.schemas import (
 )
 from archcorp.security import require_roles
 from archcorp.config import settings
-from archcorp.support.models import Ticket
 from archcorp.support.service import TicketService
 from archcorp.support.routes import router as support_router
-from archcorp.workflow.models import ProcessInstance
 from archcorp.workflow.routes import router as workflow_router
-from archcorp.workflow.service import handle_contract_activated as workflow_contract_activated, handle_ticket_opened, handle_ticket_entitlement_reconciled, handle_ticket_resolved
+from archcorp.workflow.service import count_processes, handle_contract_activated as workflow_contract_activated, handle_contract_closed as workflow_contract_closed, handle_ticket_opened, handle_ticket_entitlement_reconciled, handle_ticket_resolved
 
 
 CORRELATION_REQUEST_PARAMETER = {
@@ -75,36 +78,30 @@ IDEMPOTENCY_RESPONSE_HEADERS = {
         "example": "false",
     },
 }
+
+def validation_problem_response(description: str, instance: str, field: str, rule_summary: str, rule_detail: str) -> dict:
+    invalid = [{"type": "uuid_parsing", "loc": ["body", field], "msg": "Input should be a valid UUID", "input": "not-a-uuid"}]
+    return {
+        "description": description,
+        "content": problem_content(examples={
+            "businessRule": {"summary": rule_summary, "value": problem_example(422, rule_detail, instance, "BUSINESS_RULE_VIOLATION")},
+            "validation": {"summary": "Corpo da requisição inválido", "value": {**problem_example(422, invalid, instance), "errors": invalid}},
+        }),
+    }
+
+
 COMMON_API_ERRORS = {
     400: {
         "description": "Cabeçalho de correlação inválido.",
-        "content": {
-            "application/json": {
-                "example": {"detail": "X-Correlation-ID deve ser UUID"}
-            }
-        },
+        "content": problem_content(problem_example(400, "X-Correlation-ID deve ser UUID", "/api/v1/contracts/drafts")),
     },
     401: {
         "description": "Token ausente ou inválido.",
-        "content": {
-            "application/json": {"example": {"detail": "Token ausente ou inválido"}}
-        },
+        "content": problem_content(problem_example(401, "Token ausente ou inválido", "/api/v1/contracts/drafts")),
     },
     403: {
         "description": "Papel sem permissão para a operação.",
-        "content": {
-            "application/json": {
-                "example": {"detail": "Papel sem permissão para esta operação"}
-            }
-        },
-    },
-}
-CUSTOMER_CREATE_RESPONSES = {
-    **COMMON_API_ERRORS,
-    201: {
-        "description": "Cliente criado no CRM com identificador global.",
-        "headers": {"X-Correlation-ID": CORRELATION_RESPONSE_HEADER},
-        "content": {"application/json": {"example": EXAMPLE_CUSTOMER_RESPONSE}},
+        "content": problem_content(problem_example(403, "Papel sem permissão para esta operação", "/api/v1/contracts/drafts")),
     },
 }
 CONTRACT_DRAFT_RESPONSES = {
@@ -127,32 +124,15 @@ CONTRACT_DRAFT_RESPONSES = {
             }
         },
     },
-    422: {
-        "description": "Entrada inválida ou cliente inexistente, inelegível ou sem consentimento.",
-        "content": {
-            "application/json": {
-                "examples": {
-                    "businessRule": {
-                        "summary": "Cliente não pode originar contrato",
-                        "value": {"detail": "Cliente inexistente ou inelegível"},
-                    },
-                    "validation": {
-                        "summary": "Corpo da requisição inválido",
-                        "value": {
-                            "detail": [
-                                {
-                                    "type": "uuid_parsing",
-                                    "loc": ["body", "customerId"],
-                                    "msg": "Input should be a valid UUID",
-                                    "input": "not-a-uuid",
-                                }
-                            ]
-                        },
-                    },
-                }
-            }
-        },
+    409: {
+        "description": "Idempotency-Key reutilizada com outro conteúdo ou contrato já existente.",
+        "content": problem_content(problem_example(409, "Idempotency-Key já utilizada com outro contrato", "/api/v1/contracts/drafts", "IDEMPOTENCY_CONFLICT")),
     },
+    422: validation_problem_response(
+        "Entrada inválida ou cliente inexistente, inelegível ou sem consentimento.",
+        "/api/v1/contracts/drafts", "customerId",
+        "Cliente não pode originar contrato", "Cliente inexistente ou inelegível",
+    ),
 }
 CONTRACT_ACTIVATION_RESPONSES = {
     **COMMON_API_ERRORS,
@@ -176,11 +156,12 @@ CONTRACT_ACTIVATION_RESPONSES = {
     },
     404: {
         "description": "Contrato não encontrado.",
-        "content": {
-            "application/json": {"example": {"detail": "Contrato não encontrado"}}
-        },
+        "content": problem_content(problem_example(404, "Contrato não encontrado", "/api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/activate")),
     },
-    409: {"description": "Contrato já encerrado ou estado incompatível para ativação."},
+    409: {
+        "description": "Contrato já encerrado ou estado incompatível para ativação.",
+        "content": problem_content(problem_example(409, "Somente contrato em rascunho pode ser ativado", "/api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/activate", "INVALID_STATE")),
+    },
 }
 ENTITLEMENT_RESPONSES = {
     **COMMON_API_ERRORS,
@@ -227,34 +208,15 @@ TICKET_RESPONSES = {
             }
         },
     },
-    422: {
-        "description": "Entrada inválida ou contrato, serviço ou cliente sem elegibilidade.",
-        "content": {
-            "application/json": {
-                "examples": {
-                    "businessRule": {
-                        "summary": "Contrato sem elegibilidade",
-                        "value": {
-                            "detail": "Contrato, serviço ou cliente sem elegibilidade"
-                        },
-                    },
-                    "validation": {
-                        "summary": "Corpo da requisição inválido",
-                        "value": {
-                            "detail": [
-                                {
-                                    "type": "uuid_parsing",
-                                    "loc": ["body", "contractId"],
-                                    "msg": "Input should be a valid UUID",
-                                    "input": "not-a-uuid",
-                                }
-                            ]
-                        },
-                    },
-                }
-            }
-        },
+    409: {
+        "description": "Idempotency-Key reutilizada com outro chamado.",
+        "content": problem_content(problem_example(409, "Idempotency-Key já utilizada com outro chamado", "/api/v1/support/tickets", "IDEMPOTENCY_CONFLICT")),
     },
+    422: validation_problem_response(
+        "Entrada inválida ou contrato, serviço ou cliente sem elegibilidade.",
+        "/api/v1/support/tickets", "contractId",
+        "Contrato sem elegibilidade", "Contrato, serviço ou cliente sem elegibilidade",
+    ),
 }
 RECONCILIATION_RESPONSES = {
     **COMMON_API_ERRORS,
@@ -281,11 +243,12 @@ RECONCILIATION_RESPONSES = {
     },
     404: {
         "description": "Chamado não encontrado.",
-        "content": {
-            "application/json": {"example": {"detail": "Chamado não encontrado"}}
-        },
+        "content": problem_content(problem_example(404, "Chamado não encontrado", "/api/v1/support/tickets/dddddddd-dddd-4ddd-8ddd-dddddddddddd/reconcile")),
     },
-    409: {"description": "Chamado não está pendente de elegibilidade."},
+    409: {
+        "description": "Chamado não está pendente de elegibilidade.",
+        "content": problem_content(problem_example(409, "Somente chamado pendente pode ser reconciliado", "/api/v1/support/tickets/dddddddd-dddd-4ddd-8ddd-dddddddddddd/reconcile", "INVALID_STATE")),
+    },
 }
 DISPATCH_RESPONSES = {
     **COMMON_API_ERRORS,
@@ -333,9 +296,7 @@ REPROCESS_RESPONSES = {
     },
     404: {
         "description": "Evento com falha não encontrado.",
-        "content": {
-            "application/json": {"example": {"detail": "Falha não encontrada"}}
-        },
+        "content": problem_content(problem_example(404, "Falha não encontrada", "/api/v1/integration/failures/cccccccc-cccc-4ccc-8ccc-cccccccccccc/reprocess")),
     },
 }
 OPERATION_TRACE_RESPONSES = {
@@ -375,8 +336,10 @@ OPERATION_TRACE_RESPONSES = {
 customers = CustomerService()
 contracts = ContractService(customers)
 tickets = TicketService(contracts)
+configure_contracts(contracts)
 dispatcher = EventDispatcher({
     "ContractActivated.v1": [("finance", finance_contract_activated), ("workflow-preparacao-retirada", workflow_contract_activated)],
+    "ContractClosed.v1": [("workflow-encerramento-contrato", workflow_contract_closed)],
     "TicketOpened.v1": [("workflow-ticket-resolution", handle_ticket_opened)],
     "TicketEntitlementReconciled.v1": [("workflow-ticket-entitlement", handle_ticket_entitlement_reconciled)],
     "TicketResolved.v1": [("workflow-ticket-resolution-complete", handle_ticket_resolved)],
@@ -389,13 +352,15 @@ async def lifespan(_: FastAPI):
     if settings.public_demo and (not settings.demo_access_token or len(settings.demo_access_token) < 24 or settings.demo_access_token.startswith("demo-")):
         raise RuntimeError("PUBLIC_DEMO exige DEMO_ACCESS_TOKEN aleatório com pelo menos 24 caracteres")
     with engine.begin() as connection:
-        Base.metadata.create_all(connection)
+        upgrade_to_head(connection)
         protect_public_demo_tables(connection)
     yield
 
 
 app = FastAPI(title="Localiza Integração Cenário 4", version="1.0.0", description="API demonstrativa para CRM, reservas e contratos, financeiro e faturamento, atendimento e assistência 24h, workflow e integração.", lifespan=lifespan)
 app.middleware("http")(metrics_middleware)
+register_error_handlers(app)
+install_problem_openapi(app)
 
 
 @app.middleware("http")
@@ -404,10 +369,19 @@ async def correlation_middleware(request: Request, call_next):
     try:
         correlation_id = str(UUID(supplied)) if supplied else str(uuid4())
     except ValueError:
-        return Response(content='{"detail":"X-Correlation-ID deve ser UUID"}', status_code=400, media_type="application/json")
+        correlation_id = str(uuid4())
+        token = correlation_id_var.set(correlation_id)
+        try:
+            return problem_response(request, 400, "X-Correlation-ID deve ser UUID", headers={"X-Correlation-ID": correlation_id})
+        finally:
+            correlation_id_var.reset(token)
     token = correlation_id_var.set(correlation_id)
     try:
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception:
+            logger.exception("Erro não tratado", extra={"operation": request.url.path, "result": "failure"})
+            response = problem_response(request, 500, "Erro interno inesperado")
         response.headers["X-Correlation-ID"] = correlation_id
         logger.info("Requisição concluída", extra={"operation": request.url.path, "result": response.status_code})
         return response
@@ -415,12 +389,17 @@ async def correlation_middleware(request: Request, call_next):
         correlation_id_var.reset(token)
 
 
-@app.get("/health/live", tags=["Operação"])
+@app.get("/health/live", response_model=HealthResponse, response_model_exclude_none=True, tags=["Operação"])
 def live() -> dict:
     return {"status": "UP"}
 
 
-@app.get("/health/ready", tags=["Operação"])
+@app.get(
+    "/health/ready",
+    response_model=HealthResponse,
+    tags=["Operação"],
+    responses={503: {"description": "Banco indisponível."}},
+)
 def ready(session: Session = Depends(get_session)) -> dict:
     try:
         session.execute(text("SELECT 1"))
@@ -429,31 +408,15 @@ def ready(session: Session = Depends(get_session)) -> dict:
         raise HTTPException(status_code=503, detail="Banco indisponível") from exc
 
 
-@app.get("/metrics", response_class=PlainTextResponse, tags=["Operação"])
+@app.get(
+    "/metrics",
+    response_class=PlainTextResponse,
+    tags=["Operação"],
+    responses={200: {"description": "Contadores e latência no formato de texto do Prometheus.",
+                     "content": {"text/plain": {"example": "archcorp_requests_total{operation=\"GET_/health/live\",status=\"200\"} 1\n"}}}},
+)
 def metrics() -> str:
     return render_metrics()
-
-
-@app.post(
-    "/api/v1/crm/customers",
-    status_code=201,
-    response_model=CustomerResponse,
-    tags=["CRM"],
-    dependencies=[Depends(require_roles("commercial", "admin"))],
-    responses=CUSTOMER_CREATE_RESPONSES,
-    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
-)
-def create_customer(body: CustomerCreate, session: Session = Depends(get_session)) -> dict:
-    customer = customers.create(session, body.model_dump(mode="json"), correlation_id_var.get())
-    return {"customerId": customer.customer_id, "name": customer.name, "email": customer.email, "eligible": customer.eligible}
-
-
-@app.patch("/api/v1/crm/customers/{customer_id}", tags=["CRM"], dependencies=[Depends(require_roles("commercial", "admin"))])
-def update_customer(customer_id: UUID, body: CustomerUpdate, session: Session = Depends(get_session)) -> dict:
-    customer = customers.update(session, str(customer_id), body.model_dump(exclude_unset=True, mode="json"), correlation_id_var.get())
-    if not customer:
-        raise HTTPException(status_code=404, detail="Cliente não encontrado")
-    return {"customerId": customer.customer_id, "name": customer.name, "email": customer.email}
 
 
 @app.post(
@@ -469,16 +432,13 @@ def create_contract_draft(
     body: ContractDraftCreate,
     response: Response,
     idempotency_key: str = Header(
-        alias="Idempotency-Key", examples=["demo-contract-001"]
+        alias="Idempotency-Key", max_length=IDEMPOTENCY_KEY_MAX_LENGTH, examples=["demo-contract-001"]
     ),
     session: Session = Depends(get_session),
 ) -> dict:
     draft_data = body.model_dump()
     draft_data["customerId"] = str(draft_data["customerId"])
-    try:
-        result, replay = contracts.create_draft(session, draft_data, idempotency_key, correlation_id_var.get())
-    except ValueError as exc:
-        raise HTTPException(status_code=409 if "Idempotency-Key" in str(exc) else 422, detail=str(exc)) from exc
+    result, replay = contracts.create_draft(session, draft_data, idempotency_key, correlation_id_var.get())
     response.headers["Idempotency-Replayed"] = str(replay).lower()
     return result
 
@@ -495,16 +455,11 @@ def activate_contract(
     contract_id: UUID,
     response: Response,
     idempotency_key: str = Header(
-        alias="Idempotency-Key", examples=["demo-activate-001"]
+        alias="Idempotency-Key", max_length=IDEMPOTENCY_KEY_MAX_LENGTH, examples=["demo-activate-001"]
     ),
     session: Session = Depends(get_session),
 ) -> dict:
-    try:
-        result, replay = contracts.activate(session, str(contract_id), idempotency_key, correlation_id_var.get())
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    result, replay = contracts.activate(session, str(contract_id), idempotency_key, correlation_id_var.get())
     response.headers["Idempotency-Replayed"] = str(replay).lower()
     return result
 
@@ -534,15 +489,12 @@ def open_ticket(
     body: TicketCreate,
     response: Response,
     idempotency_key: str = Header(
-        alias="Idempotency-Key", examples=["demo-ticket-001"]
+        alias="Idempotency-Key", max_length=IDEMPOTENCY_KEY_MAX_LENGTH, examples=["demo-ticket-001"]
     ),
     session: Session = Depends(get_session),
 ) -> dict:
     ticket_data = body.model_dump(mode="json")
-    try:
-        result, replay = tickets.open(session, ticket_data, idempotency_key, correlation_id_var.get())
-    except ValueError as exc:
-        raise HTTPException(status_code=409 if "Idempotency-Key" in str(exc) else 422, detail=str(exc)) from exc
+    result, replay = tickets.open(session, ticket_data, idempotency_key, correlation_id_var.get())
     response.headers["Idempotency-Replayed"] = str(replay).lower()
     return result
 
@@ -556,12 +508,7 @@ def open_ticket(
     openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
 def reconcile_ticket(ticket_id: UUID, session: Session = Depends(get_session)) -> dict:
-    try:
-        return tickets.reconcile(session, str(ticket_id), correlation_id_var.get())
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return tickets.reconcile(session, str(ticket_id), correlation_id_var.get())
 
 
 @app.post(
@@ -610,6 +557,27 @@ def reprocess(event_id: UUID, session: Session = Depends(get_session)) -> dict:
 
 
 @app.get(
+    "/api/v1/integration/legacy-ids/{source_system}/{legacy_id}",
+    response_model=LegacyIdResponse,
+    tags=["Integração"],
+    dependencies=[Depends(require_roles("commercial", "operations", "admin"))],
+    responses={
+        **COMMON_API_ERRORS,
+        404: {
+            "description": "Identificador legado não mapeado.",
+            "content": problem_content(problem_example(404, "Identificador legado não encontrado", "/api/v1/integration/legacy-ids/CRM/WEB-LOCALIZA-9999")),
+        },
+    },
+    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
+)
+def resolve_legacy_id(source_system: str, legacy_id: str, session: Session = Depends(get_session)) -> dict:
+    mapping = LegacyIdService.resolve(session, source_system, legacy_id)
+    if not mapping:
+        raise HTTPException(status_code=404, detail="Identificador legado não encontrado")
+    return LegacyIdService.as_dict(mapping)
+
+
+@app.get(
     "/api/v1/operations/{correlation_id}",
     response_model=OperationTraceResponse,
     tags=["Integração"],
@@ -624,51 +592,10 @@ def operation_trace(correlation_id: UUID, session: Session = Depends(get_session
     return {"correlationId": correlation_value, "audit": [{"occurredAt": a.occurred_at, "module": a.module, "operation": a.operation, "result": a.result, "entityId": a.entity_id, "details": a.details} for a in entries], "events": [{"eventId": e.event_id, "eventType": e.event_type, "status": e.status, "attempts": e.attempts} for e in events]}
 
 
-@app.get("/api/v1/demo/state", tags=["Demonstração"], dependencies=[Depends(require_roles("admin"))])
+@app.get("/api/v1/demo/state", response_model=DemoStateResponse, tags=["Demonstração"], dependencies=[Depends(require_roles("admin"))])
 def demo_state(session: Session = Depends(get_session)) -> dict:
-    return {"customers": session.query(Customer).count(), "contracts": session.query(Contract).count(), "invoices": session.query(Invoice).count(), "tickets": session.query(Ticket).count(), "processes": session.query(ProcessInstance).count(), "legacyMappings": session.query(LegacyIdMapping).count()}
-
-
-@app.post("/api/v1/contracts/reservations/{reservation_id}/draft", tags=["Reservas e contratos"], dependencies=[Depends(require_roles("commercial", "contracts", "admin"))])
-def draft_from_reservation(reservation_id: UUID, response: Response,
-                           idempotency_key: str = Header(alias="Idempotency-Key"),
-                           session: Session = Depends(get_session)) -> dict:
-    reservation = session.get(Reservation, str(reservation_id))
-    if not reservation:
-        raise HTTPException(404, "Reserva não encontrada")
-    if reservation.contract_id:
-        contract = session.get(Contract, reservation.contract_id)
-        response.headers["Idempotency-Replayed"] = "true"
-        return {"reservationId": reservation.reservation_id, "contract": contracts.to_dict(contract)}
-    data = {"customerId": reservation.customer_id, "serviceCode": reservation.service_code,
-            "startsOn": reservation.starts_on, "slaHours": reservation.sla_hours,
-            "billing": {"amount": reservation.amount, "currency": reservation.currency,
-                        "cycle": reservation.billing_cycle}}
-    try:
-        result, replay = contracts.create_draft(session, data, idempotency_key, correlation_id_var.get())
-    except ValueError as exc:
-        raise HTTPException(409 if "Idempotency-Key" in str(exc) else 422, str(exc)) from exc
-    reservation.contract_id = result["contractId"]
-    reservation.status = "DRAFTED"
-    session.commit()
-    response.headers["Idempotency-Replayed"] = str(replay).lower()
-    return {"reservationId": reservation.reservation_id, "contract": result}
-
-
-@app.post("/api/v1/contracts/reservations", status_code=201, tags=["Reservas e contratos"], dependencies=[Depends(require_roles("commercial", "contracts", "admin"))])
-def create_reservation(body: ReservationInput, session: Session = Depends(get_session)) -> dict:
-    customer = session.get(Customer, str(body.customerId))
-    if not customer:
-        raise HTTPException(404, "Cliente não encontrado")
-    if not customer.eligible or not customer.consent_service:
-        raise HTTPException(422, "Cliente inelegível ou sem consentimento")
-    item = Reservation(customer_id=str(body.customerId), vehicle_group=body.vehicleGroup,
-                       protection_code=body.protectionCode, service_code=body.serviceCode,
-                       starts_on=body.startsOn, ends_on=body.endsOn, amount=body.amount,
-                       currency=body.currency, billing_cycle=body.billingCycle, sla_hours=body.slaHours)
-    session.add(item)
-    session.commit()
-    return reservation_data(item)
+    return {"customers": CustomerService.count(session), "contracts": ContractService.count(session), "invoices": count_invoices(session),
+            "tickets": TicketService.count(session), "processes": count_processes(session), "legacyMappings": LegacyIdService.count(session)}
 
 
 app.include_router(crm_router)

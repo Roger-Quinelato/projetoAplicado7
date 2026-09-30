@@ -11,6 +11,7 @@ class CustomerData:
     email: str
     eligible: bool
     consent_service: bool
+    active: bool = True
 
 
 class CustomerReader(Protocol):

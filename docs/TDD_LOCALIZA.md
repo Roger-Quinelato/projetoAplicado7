@@ -23,13 +23,72 @@ decisoes imediatas e eventos para efeitos assíncronos.
 ## Decisoes Tecnicas
 
 - API REST versionada em `/api/v1`.
-- Eventos versionados: `CustomerUpdated.v1`, `ContractActivated.v1` e
-  `TicketOpened.v1`.
+- Eventos versionados, listados em `docs/events/asyncapi.yaml`:
+  `CustomerUpdated.v1`, `ContractActivated.v1`, `ContractClosed.v1`,
+  `TicketOpened.v1`, `TicketEntitlementReconciled.v1` e `TicketResolved.v1`.
+- Erros em `application/problem+json` com `code` estável e `correlationId`.
 - `Idempotency-Key` em comandos repetiveis.
 - `X-Correlation-ID` em requisicoes, auditoria, logs e eventos.
 - Outbox transacional para publicar fatos de negocio.
 - Inbox por consumidor para evitar duplicidade em reentregas.
 - Adaptadores substituiveis para sistemas reais futuros.
+
+## Autorização
+
+Cada rota exige token e papel compatível (`src/archcorp/security.py`). O token
+`demo-admin` e, no modo público, a credencial compartilhada acumulam todos os
+papéis; não há OIDC nem contas individuais. Sem token a API responde `401`; com
+papel incompatível, `403`.
+
+### CRM
+
+| Operação | Papéis |
+|---|---|
+| Listar e consultar clientes | commercial, contracts, support, admin |
+| Criar, alterar e inativar cliente | commercial, admin |
+| Contatos: criar, listar, consultar, alterar e remover | commercial, admin |
+| Oportunidades: criar, listar, consultar e alterar | commercial, admin |
+
+Regras do CRM verificadas em `tests/test_crm.py`:
+
+- nomes são aparados e não podem ficar vazios; telefone segue E.164; notas têm no
+  máximo 2000 caracteres;
+- e-mail de cliente é único no CRM e e-mail de contato é único por cliente
+  (`409 CONFLICT`);
+- oportunidade `OPEN` pode ir para `WON` ou `LOST`; esses estados são finais
+  (`409 INVALID_STATE`);
+- cliente é inativado, não removido, para preservar o histórico; cliente inativo
+  não origina reserva nem contrato;
+- `CustomerUpdated.v1` é publicado somente quando nome ou e-mail mudam, que são os
+  dados projetados em Contracts;
+- criação, alteração e remoção são auditadas com `correlationId`.
+
+### Reservas e contratos
+
+| Operação | Papéis |
+|---|---|
+| Criar, listar, consultar e cancelar reserva; gerar rascunho a partir da reserva | commercial, contracts, admin |
+| Criar rascunho de contrato | commercial, contracts, admin |
+| Ativar e encerrar contrato | contracts, admin |
+| Listar e consultar contratos | commercial, contracts, finance, support, admin |
+| Consultar elegibilidade e SLA | support, admin |
+
+Regras verificadas em `tests/test_contracts.py`:
+
+- estados e transições centralizados em `src/archcorp/contracts/domain.py`;
+- Contracts lê o cliente somente por `CustomerReader` (`crm/public.py`); a
+  composição em `main.py` não importa modelos de outros contextos;
+- rascunho e ativação exigem cliente ativo, elegível e com consentimento; a
+  ativação revalida o cliente;
+- `Idempotency-Key` (até 100 caracteres) é obrigatória em rascunho e ativação e
+  opcional em criação de reserva e encerramento; a impressão digital do pedido
+  inclui todos os campos, inclusive `slaHours`;
+- um segundo rascunho para o mesmo cliente, serviço e início recebe `409` com o
+  `contractId` existente;
+- reserva exige início futuro, fim não anterior ao início, moeda com três letras
+  maiúsculas e valor com duas casas decimais;
+- o encerramento grava data e motivo, encerra a reserva vinculada, publica
+  `ContractClosed.v1` e é auditado.
 
 ## Fluxos Tecnicos
 

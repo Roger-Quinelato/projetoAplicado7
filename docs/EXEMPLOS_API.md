@@ -47,7 +47,7 @@ X-Correlation-ID: 11111111-1111-4111-8111-111111111111
 
 {
   "name": "Cliente Frota Localiza Ltda.",
-  "email": "gestor.frota@cliente-localiza.test",
+  "email": "gestor.frota@cliente-sintetico.example.com",
   "eligible": true,
   "consentService": true,
   "legacyId": "WEB-LOCALIZA-1001"
@@ -64,13 +64,18 @@ X-Correlation-ID: 11111111-1111-4111-8111-111111111111
 {
   "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   "name": "Cliente Frota Localiza Ltda.",
-  "email": "gestor.frota@cliente-localiza.test",
-  "eligible": true
+  "email": "gestor.frota@cliente-sintetico.example.com",
+  "eligible": true,
+  "consentService": true,
+  "legacyId": "WEB-LOCALIZA-1001"
 }
 ```
 
 O CRM mantém o cadastro oficial. O identificador legado `WEB-LOCALIZA-1001` fica associado
-ao `customerId` global no contexto de integração.
+ao `customerId` global no contexto de integração e pode ser resolvido por
+`GET /api/v1/integration/legacy-ids/CRM/WEB-LOCALIZA-1001`, que devolve
+`entityType`, `globalId`, `sourceSystem` e `legacyId`. Um e-mail ou identificador
+legado já cadastrado recebe `409` com código `CONFLICT`.
 
 ### Criar o rascunho do contrato
 
@@ -131,23 +136,54 @@ Idempotency-Replayed: true
 
 ### Erros de F1
 
+Todos os erros usam o contrato único `application/problem+json` (RFC 9457),
+descrito em [INTEGRACOES.md](INTEGRACOES.md#contrato-de-erro). `code` é estável
+para tratamento automático; `correlationId` repete o cabeçalho `X-Correlation-ID`.
+
 Cliente inexistente, inelegível ou sem consentimento, resposta `422`:
 
 ```json
 {
-  "detail": "Cliente inexistente ou inelegível"
+  "type": "urn:archcorp:problem:business-rule-violation",
+  "title": "Entrada inválida",
+  "status": 422,
+  "detail": "Cliente inexistente ou inelegível",
+  "instance": "/api/v1/contracts/drafts",
+  "code": "BUSINESS_RULE_VIOLATION",
+  "correlationId": "11111111-1111-4111-8111-111111111111"
 }
 ```
 
-Um corpo estruturalmente inválido também recebe `422`, mas usa a lista padrão de
-erros de validação do FastAPI. Exemplo com `customerId` inválido:
+Um corpo estruturalmente inválido também recebe `422` com código `VALIDATION_ERROR`.
+Para manter compatibilidade com a versão 1, `detail` continua sendo a lista de erros
+do FastAPI; a mesma lista aparece em `errors`. Exemplo com `customerId` inválido:
 
 ```json
 {
+  "type": "urn:archcorp:problem:validation-error",
+  "title": "Entrada inválida",
+  "status": 422,
   "detail": [
     {
       "type": "uuid_parsing",
-      "loc": ["body", "customerId"],
+      "loc": [
+        "body",
+        "customerId"
+      ],
+      "msg": "Input should be a valid UUID",
+      "input": "not-a-uuid"
+    }
+  ],
+  "instance": "/api/v1/contracts/drafts",
+  "code": "VALIDATION_ERROR",
+  "correlationId": "11111111-1111-4111-8111-111111111111",
+  "errors": [
+    {
+      "type": "uuid_parsing",
+      "loc": [
+        "body",
+        "customerId"
+      ],
       "msg": "Input should be a valid UUID",
       "input": "not-a-uuid"
     }
@@ -159,7 +195,13 @@ Token ausente ou desconhecido, resposta `401`:
 
 ```json
 {
-  "detail": "Token ausente ou inválido"
+  "type": "urn:archcorp:problem:unauthorized",
+  "title": "Não autenticado",
+  "status": 401,
+  "detail": "Token ausente ou inválido",
+  "instance": "/api/v1/contracts/drafts",
+  "code": "UNAUTHORIZED",
+  "correlationId": "11111111-1111-4111-8111-111111111111"
 }
 ```
 
@@ -167,15 +209,28 @@ Papel sem acesso à operação, resposta `403`:
 
 ```json
 {
-  "detail": "Papel sem permissão para esta operação"
+  "type": "urn:archcorp:problem:forbidden",
+  "title": "Acesso negado",
+  "status": 403,
+  "detail": "Papel sem permissão para esta operação",
+  "instance": "/api/v1/contracts/drafts",
+  "code": "FORBIDDEN",
+  "correlationId": "11111111-1111-4111-8111-111111111111"
 }
 ```
 
-Cabeçalho de correlação inválido, resposta `400`:
+Cabeçalho de correlação inválido, resposta `400`. Como o valor recebido não é UUID,
+a API gera outro `correlationId` e o devolve no corpo e em `X-Correlation-ID`:
 
 ```json
 {
-  "detail": "X-Correlation-ID deve ser UUID"
+  "type": "urn:archcorp:problem:bad-request",
+  "title": "Requisição inválida",
+  "status": 400,
+  "detail": "X-Correlation-ID deve ser UUID",
+  "instance": "/api/v1/contracts/drafts",
+  "code": "BAD_REQUEST",
+  "correlationId": "22222222-2222-4222-8222-222222222222"
 }
 ```
 
@@ -311,17 +366,23 @@ Resposta `200 OK`:
 }
 ```
 
-O reprocessamento preserva o número anterior de tentativas na auditoria. Ele altera
-o estado de entrega, mas não zera o contador acumulado nem desativa inbox,
-idempotência ou restrições de negócio. Portanto, uma nova falha após o
-reprocessamento devolve o evento imediatamente a `FAILED`; uma nova janela de três
-tentativas exigiria uma mudança explícita na política e na implementação.
+O reprocessamento registra o número anterior de tentativas na auditoria
+(`previousAttempts`), zera o contador `attempts` e devolve o evento a `PENDING`.
+O evento ganha uma nova janela de três tentativas. Inbox, idempotência e restrições
+de negócio continuam ativas, portanto consumidores que já processaram o `eventId`
+não repetem o efeito.
 
 Contrato desconhecido na ativação, resposta `404`:
 
 ```json
 {
-  "detail": "Contrato não encontrado"
+  "type": "urn:archcorp:problem:not-found",
+  "title": "Recurso não encontrado",
+  "status": 404,
+  "detail": "Contrato não encontrado",
+  "instance": "/api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/activate",
+  "code": "NOT_FOUND",
+  "correlationId": "11111111-1111-4111-8111-111111111111"
 }
 ```
 
@@ -423,7 +484,13 @@ Contrato, cliente ou serviço sem elegibilidade, resposta `422`:
 
 ```json
 {
-  "detail": "Contrato, serviço ou cliente sem elegibilidade"
+  "type": "urn:archcorp:problem:business-rule-violation",
+  "title": "Entrada inválida",
+  "status": 422,
+  "detail": "Contrato, serviço ou cliente sem elegibilidade",
+  "instance": "/api/v1/support/tickets",
+  "code": "BUSINESS_RULE_VIOLATION",
+  "correlationId": "11111111-1111-4111-8111-111111111111"
 }
 ```
 
@@ -431,10 +498,30 @@ Um UUID inválido no corpo também recebe `422` com a lista de validação estru
 
 ```json
 {
+  "type": "urn:archcorp:problem:validation-error",
+  "title": "Entrada inválida",
+  "status": 422,
   "detail": [
     {
       "type": "uuid_parsing",
-      "loc": ["body", "contractId"],
+      "loc": [
+        "body",
+        "contractId"
+      ],
+      "msg": "Input should be a valid UUID",
+      "input": "not-a-uuid"
+    }
+  ],
+  "instance": "/api/v1/support/tickets",
+  "code": "VALIDATION_ERROR",
+  "correlationId": "11111111-1111-4111-8111-111111111111",
+  "errors": [
+    {
+      "type": "uuid_parsing",
+      "loc": [
+        "body",
+        "contractId"
+      ],
       "msg": "Input should be a valid UUID",
       "input": "not-a-uuid"
     }
@@ -474,6 +561,143 @@ X-Correlation-ID: 11111111-1111-4111-8111-111111111111
 Se a elegibilidade for confirmada, a resposta `200 OK` muda o estado para `OPEN`,
 preenche `slaHours` e recalcula `dueAt`. Se a combinação continuar inelegível, o
 estado passa para `REJECTED_ENTITLEMENT` e os campos de SLA permanecem nulos.
+
+## Operações complementares
+
+Estas operações apoiam os fluxos e seguem os mesmos cabeçalhos comuns. O OpenAPI
+traz o schema e um exemplo de resposta para cada uma.
+
+### Reserva e rascunho a partir da reserva
+
+```http
+POST /api/v1/contracts/reservations HTTP/1.1
+Authorization: Bearer demo-admin
+Content-Type: application/json
+X-Correlation-ID: 11111111-1111-4111-8111-111111111111
+
+{
+  "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "vehicleGroup": "SUV-COMPACTO",
+  "protectionCode": "BASICA",
+  "serviceCode": "RENTAL-FLEX",
+  "startsOn": "2027-01-04",
+  "endsOn": "2027-01-08",
+  "amount": 750.00,
+  "currency": "BRL",
+  "billingCycle": "ONCE",
+  "slaHours": 8
+}
+```
+
+Resposta `201 Created` com `reservationId`, os mesmos campos e `status`
+`REQUESTED`. Um cliente sem consentimento recebe `422` com código
+`BUSINESS_RULE_VIOLATION`.
+
+A criação aceita `Idempotency-Key` opcional: a mesma chave com o mesmo corpo devolve
+a mesma reserva com `Idempotency-Replayed: true`; com outro corpo, `409`
+`IDEMPOTENCY_CONFLICT`. Início no passado, fim anterior ao início, moeda fora do
+padrão `^[A-Z]{3}$` ou valor com mais de duas casas recebem `422`.
+
+`POST /api/v1/contracts/reservations/{reservationId}/draft` com
+`Idempotency-Key` cria o rascunho do contrato usando os dados da reserva, inclusive
+`endsOn`, e devolve `{"reservationId": "...", "contract": {...}}` na mesma
+transação que vincula a reserva. A reserva passa a `DRAFTED` e acompanha a
+ativação (`ACTIVE`) e o encerramento (`CLOSED`) do contrato.
+`POST /api/v1/contracts/reservations/{reservationId}/cancel` cancela uma reserva
+`REQUESTED` ou `DRAFTED`; o rascunho vinculado passa a `CANCELLED`.
+
+### Encerrar o contrato
+
+```http
+POST /api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/close HTTP/1.1
+Authorization: Bearer demo-admin
+Content-Type: application/json
+Idempotency-Key: demo-close-001
+X-Correlation-ID: 11111111-1111-4111-8111-111111111111
+
+{
+  "endsOn": "2027-01-08",
+  "reason": "Devolução do veículo"
+}
+```
+
+Resposta `200 OK`:
+
+```json
+{
+  "contractId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "serviceCode": "RENTAL-FLEX",
+  "startsOn": "2026-10-01",
+  "endsOn": "2027-01-08",
+  "billing": {
+    "amount": 2500.0,
+    "currency": "BRL",
+    "cycle": "MONTHLY"
+  },
+  "slaHours": 8,
+  "status": "CLOSED",
+  "eventId": "18181818-1818-4181-8181-181818181818"
+}
+```
+
+O corpo é opcional; sem `endsOn`, a data é a atual ou o início do contrato, o que
+for posterior. O encerramento publica `ContractClosed.v1`. Repetir com a mesma
+chave devolve a mesma resposta; contrato que não está `ACTIVE` recebe `409`
+`INVALID_STATE`.
+
+### Contatos e oportunidades do CRM
+
+```http
+POST /api/v1/crm/contacts HTTP/1.1
+Authorization: Bearer demo-admin
+Content-Type: application/json
+
+{
+  "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "name": "Pessoa Gestora Sintética",
+  "email": "gestora@cliente-sintetico.example.com",
+  "phone": "+5531999990000"
+}
+```
+
+```http
+POST /api/v1/crm/opportunities HTTP/1.1
+Authorization: Bearer demo-admin
+Content-Type: application/json
+
+{
+  "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "title": "Renovação de frota 2027",
+  "notes": "Proposta de 20 veículos compactos"
+}
+```
+
+As duas respostas `201 Created` devolvem o identificador gerado (`contactId` ou
+`opportunityId`). Um `customerId` inexistente recebe `404`.
+
+`PATCH /api/v1/crm/opportunities/{opportunityId}` com `{"status": "WON"}` fecha a
+oportunidade. `WON` e `LOST` são finais: uma nova mudança recebe `409` com código
+`INVALID_STATE`. `POST /api/v1/crm/customers/{customerId}/deactivate` inativa o
+cliente sem apagar o histórico; a partir daí ele não origina reserva nem contrato.
+
+### Identificador legado
+
+```http
+GET /api/v1/integration/legacy-ids/CRM/WEB-LOCALIZA-1001 HTTP/1.1
+Authorization: Bearer demo-admin
+```
+
+Resposta `200 OK`:
+
+```json
+{
+  "entityType": "customer",
+  "globalId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "sourceSystem": "CRM",
+  "legacyId": "WEB-LOCALIZA-1001"
+}
+```
 
 ## Consultar a correlação
 

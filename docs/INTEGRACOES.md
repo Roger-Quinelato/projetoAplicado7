@@ -79,9 +79,9 @@ exponencial ou jitter.
 O operador consulta `GET /api/v1/integration/failures` e, depois de corrigir a
 causa, usa `POST /api/v1/integration/failures/{eventId}/reprocess`. O comando muda
 o evento para `PENDING` e registra a ação na auditoria. Inbox e restrições únicas
-continuam ativas durante o novo despacho. O contador acumulado de tentativas não é
-zerado; se o consumidor falhar novamente, o evento retorna imediatamente a
-`FAILED`.
+continuam ativas durante o novo despacho. A auditoria guarda o número anterior de
+tentativas e o contador `attempts` volta a zero, o que abre uma nova janela de três
+tentativas.
 
 ## F3: chamado com contrato de locação e SLA
 
@@ -131,8 +131,10 @@ ou F3 entre as três integrações avaliadas.
 ## Formato e interoperabilidade
 
 - As APIs usam JSON em UTF-8 sob `/api/v1`.
-- Identificadores compartilhados usam UUID global; IDs legados ficam mapeados por
-  sistema de origem.
+- Identificadores compartilhados usam UUID global gerado pelo contexto
+  proprietário; IDs legados ficam mapeados por sistema de origem na tabela
+  `integration_legacy_ids` e são resolvidos por
+  `GET /api/v1/integration/legacy-ids/{sourceSystem}/{legacyId}`.
 - Datas usam ISO 8601. Horários de eventos e prazos usam UTC.
 - Valores monetários usam decimal positivo e moeda com três letras.
 - Eventos incluem `eventId`, `eventType`, `eventVersion`, `occurredAt`,
@@ -143,9 +145,49 @@ ou F3 entre as três integrações avaliadas.
 - A fonte oficial de cada contexto prevalece. Divergências devem ser registradas
   para análise, sem sobrescrita silenciosa.
 
-O OpenAPI contém as operações e os exemplos REST. O AsyncAPI contém os três
-eventos e exemplos de envelope. Os exemplos narrativos reutilizam os mesmos UUIDs
+O OpenAPI contém as operações, os exemplos REST e as respostas de erro em
+`application/problem+json`; ele é gerado por `tools/export_openapi.py` a partir
+da aplicação. O AsyncAPI contém todos os eventos publicados pela outbox, os
+exemplos de envelope, os consumidores internos e o binding AMQP da exchange
+`archcorp.events`. Os testes validam os dois documentos contra seus schemas e
+validam os envelopes realmente gravados na outbox contra o AsyncAPI. Os exemplos narrativos reutilizam os mesmos UUIDs
 fictícios para demonstrar a continuidade entre os fluxos.
+
+## Contrato de erro
+
+Todas as respostas de erro da API usam `application/problem+json` (RFC 9457),
+implementado em `src/archcorp/errors.py` e publicado no OpenAPI como
+`ProblemDetails`:
+
+| Campo | Conteúdo |
+|---|---|
+| `type` | URN estável do problema, por exemplo `urn:archcorp:problem:not-found` |
+| `title` | Resumo do status HTTP |
+| `status` | Código HTTP |
+| `detail` | Mensagem legível; em `422` de validação mantém a lista de erros da versão 1 |
+| `instance` | Caminho da requisição |
+| `code` | Código estável para o cliente tratar o erro |
+| `correlationId` | Mesmo valor do cabeçalho `X-Correlation-ID` |
+| `errors` | Lista de erros de validação, presente somente em `VALIDATION_ERROR` |
+
+| Status | `code` | Situação |
+|---|---|---|
+| 400 | `BAD_REQUEST` | `X-Correlation-ID` que não é UUID; a API gera outro `correlationId` |
+| 401 | `UNAUTHORIZED` | Token ausente ou inválido |
+| 403 | `FORBIDDEN` | Papel sem permissão |
+| 404 | `NOT_FOUND` | Recurso inexistente |
+| 409 | `CONFLICT` | Violação de unicidade, como e-mail ou identificador legado repetido |
+| 409 | `IDEMPOTENCY_CONFLICT` | `Idempotency-Key` reutilizada com outro conteúdo |
+| 409 | `INVALID_STATE` | Transição de estado não permitida |
+| 422 | `VALIDATION_ERROR` | Corpo, cabeçalho ou parâmetro inválido |
+| 422 | `BUSINESS_RULE_VIOLATION` | Regra de negócio, como cliente sem consentimento |
+| 500 | `INTERNAL_ERROR` | Falha inesperada, registrada em log com `correlationId` e sem payload |
+| 503 | `SERVICE_UNAVAILABLE` | Banco indisponível em `/health/ready` |
+
+Os casos de uso levantam exceções de `src/archcorp/exceptions.py`, sem depender
+de HTTP. A camada de API converte essas exceções, `HTTPException`, erros de
+validação e `IntegrityError` do banco no mesmo formato. A mudança é aditiva:
+clientes da versão 1 que leem `detail` continuam funcionando.
 
 ## Limites do protótipo
 

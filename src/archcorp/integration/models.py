@@ -26,11 +26,12 @@ class OutboxEvent(Base):
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     def envelope(self) -> dict:
+        occurred_at = self.occurred_at if self.occurred_at.tzinfo else self.occurred_at.replace(tzinfo=timezone.utc)
         return {
             "eventId": self.event_id,
             "eventType": self.event_type,
             "eventVersion": self.event_version,
-            "occurredAt": self.occurred_at.isoformat().replace("+00:00", "Z"),
+            "occurredAt": occurred_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
             "correlationId": self.correlation_id,
             "causationId": self.causation_id,
             "producer": self.producer,
@@ -74,4 +75,5 @@ class IdempotencyRecord(Base):
     key: Mapped[str] = mapped_column(String(100), primary_key=True)
     operation: Mapped[str] = mapped_column(String(100), primary_key=True)
     response: Mapped[dict] = mapped_column(JSON)
+    request_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
