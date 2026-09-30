@@ -102,3 +102,19 @@ T15, T10, T11, T16, T12, T13, T17, T19 e T21.
   tests/test_extended_modules.py tests/test_contracts_and_architecture.py
   -p no:cacheprovider`: **30 aprovados** em uma execução sequencial.
 - OpenAPI, TDD, diagrama e estado documentado atualizados. Sem motor BPM externo.
+
+## T12 — Financeiro
+
+- Estado: concluída no escopo canônico do protótipo: fatura, pagamento simulado
+  e inadimplência por vencimento (ARCH7-12).
+- Correção: frações de centavo são rejeitadas antes de arredondamento no banco;
+  pagamentos efetivos são auditados, com regra no serviço do Finance.
+- Prova de regressão: dois valores inválidos eram aceitos e auditoria estava
+  ausente; os três cenários falharam antes e passaram após a correção.
+- Verificação em 30/09: `pytest -q tests/test_finance.py
+  tests/test_extended_modules.py tests/test_contracts_and_architecture.py
+  -p no:cacheprovider`: **19 aprovados**. Inclui parcial/total, repetição,
+  conflito, excesso, moeda, vencimento, quitação e papéis.
+- OpenAPI, TDD e estado atualizados. A atribuição anterior de faturamento final
+  à T12 não constava no aceite do Jira; recorrência/acerto final permanecem futuros.
+  Bloqueio por linha foi incluído para PostgreSQL, sem alegar teste em banco real.

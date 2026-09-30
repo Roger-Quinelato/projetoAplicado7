@@ -90,6 +90,20 @@ Regras verificadas em `tests/test_contracts.py`:
 - o encerramento grava data e motivo, encerra a reserva vinculada, publica
   `ContractClosed.v1` e é auditado.
 
+### Financeiro
+
+`ContractActivated.v1` cria uma única fatura por contrato, com vencimento em
+dez dias no simulador. Pagamentos parciais ou totais exigem valor positivo com
+até duas casas decimais e a moeda da fatura. A referência é a chave de repetição:
+mesmo pedido retorna o pagamento existente; conteúdo conflitante ou valor acima
+do saldo retorna 409. A auditoria identifica pagamento e fatura, sem referência
+livre ou informação bancária nos detalhes.
+
+Na consulta, fatura não quitada com vencimento anterior ao dia atual aparece
+`OVERDUE`; vencimento hoje permanece `OPEN`; quitação produz `PAID`. Não existe
+cobrança real, juros, multa, recorrência ou acerto final por encerramento. Esses
+fluxos não constam no aceite canônico de T12. Testes: `tests/test_finance.py`.
+
 ### Workflow
 
 Criação e edição de tarefas são restritas a `operations` e `admin`; consulta

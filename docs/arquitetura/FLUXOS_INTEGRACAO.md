@@ -281,7 +281,9 @@ sequenceDiagram
 Repetir o encerramento com a mesma chave, ou com outra chave depois de concluído,
 devolve a resposta original com `Idempotency-Replayed: true` e não cria outro
 evento. Sem `Idempotency-Key`, uma repetição recebe `409`. Finance ainda não
-consome `ContractClosed.v1`; o faturamento final pertence à tarefa T12.
+consome `ContractClosed.v1`. Acerto final, multas e cobrança recorrente não
+constam no aceite de T12 (fatura, pagamento simulado e inadimplência por
+vencimento); permanecem evolução futura, sem cálculo financeiro inventado.
 
 ### Ciclo manual das tarefas operacionais
 

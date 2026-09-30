@@ -9,7 +9,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from archcorp.finance.models import Invoice, Payment
+from archcorp.finance.service import invoice_data, paid_total, record_payment as save_payment
 from archcorp.infrastructure.db import get_session
+from archcorp.observability import correlation_id_var
 from archcorp.security import require_roles
 
 
@@ -39,8 +41,8 @@ NOT_FOUND = {404: {"description": "Fatura não encontrada."}}
 class PaymentInput(BaseModel):
     model_config = ConfigDict(json_schema_extra={"examples": [{"amount": 2500.00, "currency": "BRL", "reference": "SIMULATED-001"}]})
 
-    amount: Decimal = Field(gt=0)
-    currency: str = Field(min_length=3, max_length=3)
+    amount: Decimal = Field(gt=0, max_digits=14, decimal_places=2)
+    currency: str = Field(pattern=r"^[A-Z]{3}$")
     reference: str = Field(min_length=3, max_length=100)
 
 
@@ -77,20 +79,6 @@ class PaymentResultResponse(BaseModel):
     invoice: InvoiceResponse
 
 
-def invoice_data(item: Invoice, paid: Decimal) -> dict:
-    status = item.status
-    if status != "PAID" and item.due_date < date.today():
-        status = "OVERDUE"
-    return {"invoiceId": item.invoice_id, "contractId": item.contract_id,
-            "customerId": item.customer_id, "amount": float(item.amount),
-            "currency": item.currency, "dueDate": item.due_date.isoformat(),
-            "paidAmount": float(paid), "status": status}
-
-
-def paid_total(session: Session, invoice_id: str) -> Decimal:
-    return sum((payment.amount for payment in session.scalars(select(Payment).where(Payment.invoice_id == invoice_id))), Decimal("0"))
-
-
 @router.get("/invoices", response_model=list[InvoiceResponse], dependencies=[Depends(require_roles("finance", "operations", "admin"))])
 def list_invoices(session: Session = Depends(get_session)) -> list[dict]:
     return [invoice_data(x, paid_total(session, x.invoice_id)) for x in session.scalars(select(Invoice).order_by(Invoice.due_date.desc()).limit(200))]
@@ -115,27 +103,7 @@ def get_invoice(invoice_id: UUID, session: Session = Depends(get_session)) -> di
     },
     dependencies=[Depends(require_roles("finance", "admin"))])
 def record_payment(invoice_id: UUID, body: PaymentInput, session: Session = Depends(get_session)) -> dict:
-    item = session.get(Invoice, str(invoice_id))
-    if not item:
-        raise HTTPException(404, "Fatura não encontrada")
-    if body.currency != item.currency:
-        raise HTTPException(422, "Moeda diferente da fatura")
-    prior = session.scalar(select(Payment).where(Payment.reference == body.reference))
-    if prior:
-        if prior.invoice_id != item.invoice_id or prior.amount != body.amount:
-            raise HTTPException(409, "Referência de pagamento já usada")
-        return {"paymentId": prior.payment_id, "invoice": invoice_data(item, paid_total(session, item.invoice_id))}
-    total = paid_total(session, item.invoice_id)
-    if item.status == "PAID" or total + body.amount > item.amount:
-        raise HTTPException(409, "Pagamento excede saldo da fatura")
-    payment = Payment(invoice_id=item.invoice_id, amount=body.amount,
-                      currency=body.currency, reference=body.reference)
-    session.add(payment)
-    session.flush()
-    if total + body.amount == item.amount:
-        item.status = "PAID"
-    session.commit()
-    return {"paymentId": payment.payment_id, "invoice": invoice_data(item, total + body.amount)}
+    return save_payment(session, str(invoice_id), body.amount, body.currency, body.reference, correlation_id_var.get())
 
 
 @router.get("/payments", response_model=list[PaymentResponse], dependencies=[Depends(require_roles("finance", "admin"))])

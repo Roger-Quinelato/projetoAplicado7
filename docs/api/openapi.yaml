@@ -5435,12 +5435,11 @@ components:
           - type: number
             exclusiveMinimum: 0.0
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,12}|(?=[\d.]{1,15}0*$)\d{0,12}\.\d{0,2}0*$)
           title: Amount
         currency:
           type: string
-          maxLength: 3
-          minLength: 3
+          pattern: ^[A-Z]{3}$
           title: Currency
         reference:
           type: string
