@@ -2,7 +2,29 @@
 
 > Estado de execução em 27/09/2026: consulte [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
 
-## Verificação atual em 27/09/2026
+## Verificação local em 30/09/2026 (T18)
+
+- Windows, Python 3.12, SQLite local: `PYTHONPATH=src python -m pytest -q tests
+  -p no:cacheprovider`: **84 aprovados** em 198,55 s; um aviso de depreciação
+  Starlette/AnyIO. Inclui contratos REST/eventos, migrações, papéis, três fluxos,
+  reentrega, recuperação SQL, privacidade, centavos e estados finais de workflow.
+- `cd web; npm run test:browser`: **11 aprovados** em 30 s; `npm run build`:
+  aprovado. Chromium headless; API com respostas sintéticas nos testes da interface.
+- Acessibilidade: seis telas de contexto/painel e tela de acesso sem violações
+  detectadas pelo axe nos grupos WCAG 2/2.1 A/AA; navegação por Tab/Enter alcança
+  o CRM. Antes da correção, seis varreduras falharam por contraste. Ajustados
+  rótulos, textos auxiliares, lista vazia, cabeçalho de tabela e rodapé.
+- Limite: varredura automática com coleções vazias e um caminho de teclado não
+  comprova conformidade WCAG completa, leitores de tela ou todos os estados.
+- `scripts/performance_smoke.py`: **200 amostras**, p95 **3,68 ms**, meta local
+  500 ms, aprovado. Medição de `/health/ready` em SQLite, sem carga concorrente;
+  não extrapolar para APIs de negócio ou serviço publicado.
+- Não executado: Docker neste host, PostgreSQL/Supabase real, RabbitMQ,
+  HTTPS público, persistência após reinício publicado ou OIDC. T20 continua pendente.
+- Cada tarefa e seu aceite estão em `EXECUCAO_TAREFAS.md`. Relatório e slides
+  serão atualizados na T19 a partir dessas evidências.
+
+## Verificação histórica em 27/09/2026
 
 - `PYTHONPATH=src .venv/Scripts/python -m pytest -q tests -p no:cacheprovider`: **18 testes aprovados**, um aviso de depreciação de Starlette/AnyIO. Inclui reserva → contrato → fatura → pagamento simulado; chamado → resolução → workflow; segredo do modo público; idempotência, reconciliação e proteção RLS no modo PostgreSQL.
 - `cd web && npm run build`: TypeScript e Vite concluídos sem erro, com `web/dist` gerado. Falta testar a interface no serviço HTTPS público.

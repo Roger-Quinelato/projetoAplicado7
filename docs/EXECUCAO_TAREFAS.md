@@ -144,3 +144,14 @@ T15, T10, T11, T16, T12, T13, T17, T18 (dependência de T19), T19 e T21.
   PostgreSQL foi testada com conexão simulada; não comprova RLS no Supabase.
   Credencial pública continua compartilhada; sem OIDC, TLS publicado ou
   transação distribuída com RabbitMQ comprovados.
+
+## T18 — Qualidade e evidências (dependência de T19)
+
+- Estado: concluída para verificação local proporcional ao protótipo.
+- Entrega: suíte completa, contratos, acessibilidade automática/teclado e
+  desempenho. Contraste corrigido após seis testes de acessibilidade falharem.
+- Verificação em 30/09: **84 testes Python**, **11 de navegador**, build aprovado;
+  **200 amostras**, p95 de prontidão **3,68 ms** (meta 500 ms).
+- Evidências e limites em `EVIDENCIAS_VALIDACAO.md`; execução no README e CI.
+  Sem certificação WCAG completa, carga concorrente, infraestrutura externa ou
+  publicação comprovadas. T18 foi executada antes da T19 por sua dependência.
