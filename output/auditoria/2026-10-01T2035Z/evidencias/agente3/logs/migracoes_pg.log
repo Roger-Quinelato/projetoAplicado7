@@ -1,0 +1,24 @@
+== [postgresql] dialeto=postgresql
+1. banco vazio -> upgrade head
+  alembic upgrade head -> rc=0 []
+  revisão=0003_contract_closing divergências_modelo=0 []
+2. downgrade base -> upgrade head (reversibilidade)
+  alembic downgrade base -> rc=0 []
+  tabelas após downgrade base: []
+  alembic upgrade head -> rc=0 []
+  revisão=0003_contract_closing divergências=0
+3. banco legado em 0001 com dados -> upgrade head
+  alembic upgrade 0001_baseline -> rc=0 []
+  alembic upgrade head -> rc=0 []
+  revisão=0003_contract_closing divergências=0
+  clientes=[('Legado Sintetico', 'legado@example.com', True)] contratos=[(Decimal('123.45'), 'ACTIVE', None, None)] idempotência=[('k-legado', None)]
+  unicidades preservadas={'crm_customers': [['email']], 'contracts_contracts': [['customer_id', 'service_code', 'starts_on']]}
+  RESTRIÇÃO email único aplicada: IntegrityError
+4. legado 0001 sem alembic_version -> upgrade_to_head (inicialização)
+  alembic upgrade 0001_baseline -> rc=0 []
+  revisão=0003_contract_closing divergências=0 clientes=[('sc@example.com', True)]
+5. borda: esquema em 0002 sem alembic_version -> upgrade_to_head
+  alembic upgrade 0002_customer_active -> rc=0 []
+  FALHA na inicialização: ProgrammingError: (psycopg.errors.DuplicateColumn) column "active" of relation "crm_customers" already exists
+6. alembic upgrade head --sql (offline)
+  rc=0 linhas_sql=238

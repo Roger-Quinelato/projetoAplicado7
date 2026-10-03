@@ -1,0 +1,4 @@
+fatura=100.10 pagamento_enviado=100.095 -> HTTP 201 resp={"paymentId":"428e9977-faea-491d-863e-30b17f5548a5","invoice":{"invoiceId":"efa2b72f-2ed6-4cd8-814f-87e42c9e7555","contractId":"4e679c3c-7a36-4b89-a717-c18cb96c
+   gravado_no_banco=[(Decimal('100.10'),)] fatura_após={'amount': 100.1, 'paidAmount': 100.1, 'balance': None, 'status': 'OPEN'}
+fatura=100.10 pagamento_enviado=0.004 -> HTTP 201 resp={"paymentId":"ab6ab088-a6bc-47cf-bdd1-e1fc8a20f072","invoice":{"invoiceId":"580893b8-39af-4e16-9b73-6e6bf70b5650","contractId":"bdfc0140-69ef-4349-8a8a-357f5cd2
+   gravado_no_banco=[(Decimal('0.00'),)] fatura_após={'amount': 100.1, 'paidAmount': 0.0, 'balance': None, 'status': 'OPEN'}

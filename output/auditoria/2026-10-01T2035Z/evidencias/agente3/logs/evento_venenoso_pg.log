@@ -1,0 +1,8 @@
+despacho 1 500 {"type":"urn:archcorp:problem:internal-error","title":"Erro interno","status":500,"detail"
+despacho 2 500 {"type":"urn:archcorp:problem:internal-error","title":"Erro interno","status":500,"detail"
+despacho 3 500 {"type":"urn:archcorp:problem:internal-error","title":"Erro interno","status":500,"detail"
+despacho 4 500 {"type":"urn:archcorp:problem:internal-error","title":"Erro interno","status":500,"detail"
+despacho 5 500 {"type":"urn:archcorp:problem:internal-error","title":"Erro interno","status":500,"detail"
+[('ContractActivated.v1', 'PENDING', 0, ''), ('ContractActivated.v1', 'PENDING', 0, '')]
+fatura do contrato legítimo: 0
+falhas listadas: []
