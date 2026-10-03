@@ -1,0 +1,92 @@
+INFO:     Started server process [7978]
+INFO:     Waiting for application startup.
+{"timestamp": "2026-10-01T20:53:41Z", "level": "INFO", "module": "alembic.runtime.migration", "operation": "__init__", "correlationId": "unknown", "result": "recorded", "message": "Context impl SQLiteImpl."}
+{"timestamp": "2026-10-01T20:53:41Z", "level": "INFO", "module": "alembic.runtime.migration", "operation": "__init__", "correlationId": "unknown", "result": "recorded", "message": "Will assume non-transactional DDL."}
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18093 (Press CTRL+C to quit)
+{"timestamp": "2026-10-01T20:53:41Z", "level": "INFO", "module": "archcorp", "operation": "/health/live", "correlationId": "5d269702-9cbd-4b9c-b76c-3f37450b8ea9", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:43722 - "GET /health/live HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:53:42Z", "level": "INFO", "module": "archcorp", "operation": "/assets/index-CgpmyOVc.js", "correlationId": "2c44432c-31e3-4c23-ae63-21f451916a07", "result": 206, "message": "Requisição concluída"}
+INFO:     127.0.0.1:43738 - "GET /assets/index-CgpmyOVc.js HTTP/1.1" 206 Partial Content
+{"timestamp": "2026-10-01T20:53:42Z", "level": "INFO", "module": "archcorp", "operation": "/health/live", "correlationId": "4fc584f4-d333-42d2-b83b-2d3579e23f8a", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:43750 - "GET /health/live HTTP/1.1" 200 OK
+ERROR:    Exception in ASGI application
+  + Exception Group Traceback (most recent call last):
+  |   File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/starlette/_utils.py", line 79, in collapse_excgroups
+  |     yield
+  |   File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/starlette/middleware/base.py", line 183, in __call__
+  |     async with anyio.create_task_group() as task_group:
+  |   File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/anyio/_backends/_asyncio.py", line 847, in __aexit__
+  |     raise BaseExceptionGroup(
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 409, in run_asgi
+    |     result = await app(  # type: ignore[func-returns-value]
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+    |     return await self.app(scope, receive, send)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/fastapi/applications.py", line 1054, in __call__
+    |     await super().__call__(scope, receive, send)
+    |   File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/starlette/applications.py", line 113, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    |     raise exc
+    |   File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/starlette/middleware/base.py", line 182, in __call__
+    |     with recv_stream, send_stream, collapse_excgroups():
+    |   File "/usr/lib/python3.11/contextlib.py", line 158, in __exit__
+    |     self.gen.throw(typ, value, traceback)
+    |   File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/starlette/_utils.py", line 85, in collapse_excgroups
+    |     raise exc
+    |   File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/starlette/middleware/base.py", line 185, in __call__
+    |     await response(scope, wrapped_receive, send)
+    |   File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/starlette/middleware/base.py", line 229, in __call__
+    |     await send({"type": "http.response.body", "body": chunk, "more_body": True})
+    |   File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 161, in _send
+    |     await send(message)
+    |   File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 536, in send
+    |     raise RuntimeError("Response content longer than Content-Length")
+    | RuntimeError: Response content longer than Content-Length
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/starlette/applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/starlette/middleware/base.py", line 182, in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+  File "/usr/lib/python3.11/contextlib.py", line 158, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/starlette/_utils.py", line 85, in collapse_excgroups
+    raise exc
+  File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/starlette/middleware/base.py", line 185, in __call__
+    await response(scope, wrapped_receive, send)
+  File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/starlette/middleware/base.py", line 229, in __call__
+    await send({"type": "http.response.body", "body": chunk, "more_body": True})
+  File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 161, in _send
+    await send(message)
+  File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/venv/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 536, in send
+    raise RuntimeError("Response content longer than Content-Length")
+RuntimeError: Response content longer than Content-Length
+{"timestamp": "2026-10-01T20:53:50Z", "level": "INFO", "module": "archcorp", "operation": "/health/live", "correlationId": "32bbc4f6-d890-4a49-8c2d-11cf07d1d8bb", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52764 - "GET /health/live HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [7978]

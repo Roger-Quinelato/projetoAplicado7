@@ -1,0 +1,31 @@
+INFO:     Started server process [4398]
+INFO:     Waiting for application startup.
+{"timestamp": "2026-10-01T20:42:54Z", "level": "INFO", "module": "alembic.runtime.migration", "operation": "__init__", "correlationId": "unknown", "result": "recorded", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-10-01T20:42:54Z", "level": "INFO", "module": "alembic.runtime.migration", "operation": "__init__", "correlationId": "unknown", "result": "recorded", "message": "Will assume transactional DDL."}
+{"timestamp": "2026-10-01T20:42:54Z", "level": "INFO", "module": "alembic.runtime.migration", "operation": "run_migrations", "correlationId": "unknown", "result": "recorded", "message": "Running upgrade  -> 0001_baseline, baseline das tabelas do protótipo"}
+{"timestamp": "2026-10-01T20:42:54Z", "level": "INFO", "module": "alembic.runtime.migration", "operation": "run_migrations", "correlationId": "unknown", "result": "recorded", "message": "Running upgrade 0001_baseline -> 0002_customer_active, adicionar situação ativa ao cliente"}
+{"timestamp": "2026-10-01T20:42:54Z", "level": "INFO", "module": "alembic.runtime.migration", "operation": "run_migrations", "correlationId": "unknown", "result": "recorded", "message": "Running upgrade 0002_customer_active -> 0003_contract_closing, encerramento de contrato e impressão digital de idempotência"}
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18081 (Press CTRL+C to quit)
+{"timestamp": "2026-10-01T20:42:58Z", "level": "INFO", "module": "archcorp", "operation": "/health/ready", "correlationId": "23cdfef5-fcea-4601-bcf5-c74bdf493b9c", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:41024 - "GET /health/ready HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:42:58Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/customers", "correlationId": "4b32cd05-ad2e-4e2f-bc54-907cc21f51ff", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:41040 - "GET /api/v1/crm/customers HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:42:58Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/customers", "correlationId": "7e25ccf7-66ae-49e1-b772-efb4df9fe537", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:41042 - "GET /api/v1/crm/customers HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:42:58Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/customers", "correlationId": "6c9d81d5-075b-4ce0-99a1-18e156bc2b1d", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:41054 - "GET /api/v1/crm/customers HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:42:58Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/demo/state", "correlationId": "bc5527da-a564-4ee4-aeee-4810b8258413", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:41060 - "GET /api/v1/demo/state HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:42:58Z", "level": "INFO", "module": "archcorp", "operation": "/metrics", "correlationId": "1f916697-c6db-4b2c-a23e-560460e1a3d0", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:41064 - "GET /metrics HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:42:58Z", "level": "INFO", "module": "archcorp", "operation": "/docs", "correlationId": "31ce8aa1-29c7-4c1c-8c3e-fe0e9527a21f", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:41076 - "GET /docs HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:42:58Z", "level": "INFO", "module": "archcorp", "operation": "/openapi.json", "correlationId": "7ccd4e49-56fa-4c4a-ba82-763f9e6e1685", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:41084 - "GET /openapi.json HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:43:21Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/customers", "correlationId": "a0c23cfc-5c96-40cb-bd49-83d7efb534f5", "result": 201, "message": "Requisição concluída"}
+INFO:     127.0.0.1:44196 - "POST /api/v1/crm/customers HTTP/1.1" 201 Created
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [4398]

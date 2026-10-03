@@ -1,0 +1,625 @@
+INFO:     Started server process [6801]
+INFO:     Waiting for application startup.
+{"timestamp": "2026-10-01T20:51:20Z", "level": "INFO", "module": "alembic.runtime.migration", "operation": "__init__", "correlationId": "unknown", "result": "recorded", "message": "Context impl SQLiteImpl."}
+{"timestamp": "2026-10-01T20:51:20Z", "level": "INFO", "module": "alembic.runtime.migration", "operation": "__init__", "correlationId": "unknown", "result": "recorded", "message": "Will assume non-transactional DDL."}
+{"timestamp": "2026-10-01T20:51:20Z", "level": "INFO", "module": "alembic.runtime.migration", "operation": "run_migrations", "correlationId": "unknown", "result": "recorded", "message": "Running upgrade  -> 0001_baseline, baseline das tabelas do protótipo"}
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "alembic.runtime.migration", "operation": "run_migrations", "correlationId": "unknown", "result": "recorded", "message": "Running upgrade 0001_baseline -> 0002_customer_active, adicionar situação ativa ao cliente"}
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "alembic.runtime.migration", "operation": "run_migrations", "correlationId": "unknown", "result": "recorded", "message": "Running upgrade 0002_customer_active -> 0003_contract_closing, encerramento de contrato e impressão digital de idempotência"}
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18091 (Press CTRL+C to quit)
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "archcorp", "operation": "/health/live", "correlationId": "bbe903dc-95c3-4c3f-9e7b-6db9db44cab4", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53028 - "GET /health/live HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "archcorp", "operation": "/", "correlationId": "247b3b73-a1f4-4cfb-86cf-617449e8e163", "result": 405, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53038 - "HEAD / HTTP/1.1" 405 Method Not Allowed
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/customers", "correlationId": "81d730e0-9271-4e0e-b0b0-b9e9205f8159", "result": 405, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53054 - "OPTIONS /api/v1/crm/customers HTTP/1.1" 405 Method Not Allowed
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/customers", "correlationId": "5cde5cec-4128-41c2-b356-d55927a504a7", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53068 - "GET /api/v1/crm/customers HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/660e71d9-7d21-4362-9979-bd943d06006d", "correlationId": "201ef6d8-c987-4f42-b7f0-e6536ad4be2d", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53072 - "GET /api/v1/operations/660e71d9-7d21-4362-9979-bd943d06006d HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/893c2579-bb96-472c-a34f-3b6fffac9f3b", "correlationId": "99283528-0e6a-4590-9616-d4169b298578", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53076 - "GET /api/v1/operations/893c2579-bb96-472c-a34f-3b6fffac9f3b HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/5e3b5e6f-5394-4ff8-a5d1-cd7500227dd8", "correlationId": "ac08698d-8691-4bc5-a856-eefa26e4861d", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53080 - "GET /api/v1/operations/5e3b5e6f-5394-4ff8-a5d1-cd7500227dd8 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/074fc8b3-edaf-4d8b-a446-9a164098ff5b", "correlationId": "95142e4b-12bf-4e79-8ac6-758fd78d785c", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53082 - "GET /api/v1/operations/074fc8b3-edaf-4d8b-a446-9a164098ff5b HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/7f245052-45a5-49b7-99d3-b0958f8292ab", "correlationId": "63da8109-6155-4b39-85f8-bb3193555344", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53094 - "GET /api/v1/operations/7f245052-45a5-49b7-99d3-b0958f8292ab HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/0e1bb646-d223-4ae0-a95c-36b3c4a914ac", "correlationId": "48a6cee7-440c-4eca-9df0-c64ea9a88c6e", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53104 - "GET /api/v1/operations/0e1bb646-d223-4ae0-a95c-36b3c4a914ac HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/c783bedc-d1a3-4020-9059-882c800e878f", "correlationId": "b5c2614f-85c4-4a9b-99c6-b16cc30cf35b", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53106 - "GET /api/v1/operations/c783bedc-d1a3-4020-9059-882c800e878f HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/2c87d459-ca6a-4454-aea4-eb03b7c610f7", "correlationId": "4e44f91c-07b0-4f5a-8210-6acf46f3eeb8", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53120 - "GET /api/v1/operations/2c87d459-ca6a-4454-aea4-eb03b7c610f7 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/89b9b260-fb5b-4f8d-9d57-ce35c8c52477", "correlationId": "fb6be60a-4f9c-45bd-974e-519e3a9afe1c", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53128 - "GET /api/v1/operations/89b9b260-fb5b-4f8d-9d57-ce35c8c52477 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/c01049d1-83ed-4236-ad1a-27896f33e345", "correlationId": "dfa4d977-47d7-43a3-8ed8-18030351aa3f", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53138 - "GET /api/v1/operations/c01049d1-83ed-4236-ad1a-27896f33e345 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/a0be6d69-8b23-4159-83b5-93d0c4221247", "correlationId": "06841f4e-f3d8-41ca-b635-2daf575eb186", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53152 - "GET /api/v1/operations/a0be6d69-8b23-4159-83b5-93d0c4221247 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/ab715aa5-fee1-4ccc-a9ab-bc244468b9f5", "correlationId": "d3f89684-f3a6-4eda-9d20-0d5f4c95dba7", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53160 - "GET /api/v1/operations/ab715aa5-fee1-4ccc-a9ab-bc244468b9f5 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/ae7787ee-4ad9-4d9b-be2d-db8bf91eacf2", "correlationId": "de5b12f6-2de7-4c7d-9f28-0042f90be33a", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53166 - "GET /api/v1/operations/ae7787ee-4ad9-4d9b-be2d-db8bf91eacf2 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/60f17aa6-7e70-4169-8c42-19284e918908", "correlationId": "36aa059c-c1a5-4f3e-b71a-07eb6b2f7aef", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53180 - "GET /api/v1/operations/60f17aa6-7e70-4169-8c42-19284e918908 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/e75f6a75-f6e4-4c77-ada7-c0a1a4ac5791", "correlationId": "4707e99a-f863-4169-8674-0fa3c6367946", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53192 - "GET /api/v1/operations/e75f6a75-f6e4-4c77-ada7-c0a1a4ac5791 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/a314a468-24d0-45aa-a0cb-85015e54ae1e", "correlationId": "1884d6f1-a27e-4752-a490-980f9caba070", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53198 - "GET /api/v1/operations/a314a468-24d0-45aa-a0cb-85015e54ae1e HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:21Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/8b2ca087-fbfd-4e43-b105-5067cc9c637d", "correlationId": "972285cd-100e-47f8-9e61-2be4477e321d", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53206 - "GET /api/v1/operations/8b2ca087-fbfd-4e43-b105-5067cc9c637d HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/9a02f6e4-c224-44c0-9ff7-1fbc8e5e4a92", "correlationId": "ab911470-0bc0-4aa8-82ae-4f3ffee70a55", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53210 - "GET /api/v1/operations/9a02f6e4-c224-44c0-9ff7-1fbc8e5e4a92 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/03db8dcd-63a7-43c8-929a-057b58af0ae4", "correlationId": "147613a2-5962-4636-a713-8f297582c756", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53226 - "GET /api/v1/operations/03db8dcd-63a7-43c8-929a-057b58af0ae4 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/dd506dd8-e2d7-4db9-b612-397e2ba8af5b", "correlationId": "46949d59-8247-4554-888f-70a1d9347352", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53242 - "GET /api/v1/operations/dd506dd8-e2d7-4db9-b612-397e2ba8af5b HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/f13aa182-50b4-4086-81c1-3d578b842930", "correlationId": "58e980ad-696e-44c7-b18b-11063a402126", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53244 - "GET /api/v1/operations/f13aa182-50b4-4086-81c1-3d578b842930 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/e5173992-3c98-4665-bbaf-e1e970f1f44a", "correlationId": "9846b294-2667-42f1-8133-096a33214091", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53248 - "GET /api/v1/operations/e5173992-3c98-4665-bbaf-e1e970f1f44a HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/c34fd5c0-7e57-47f0-89b3-b93de91fa732", "correlationId": "d5909705-2c28-44ad-b8b2-db6d62aef536", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53264 - "GET /api/v1/operations/c34fd5c0-7e57-47f0-89b3-b93de91fa732 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/ed557a72-4a85-443c-9737-c6bb87747f5e", "correlationId": "d0d3358e-fc5d-4700-ae27-f7c1633b2f9b", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53266 - "GET /api/v1/operations/ed557a72-4a85-443c-9737-c6bb87747f5e HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/9ac9c585-d2c7-42ae-a5fc-b6cfcd09cdef", "correlationId": "59303ee9-853b-4525-88e9-20502ab04f75", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53274 - "GET /api/v1/operations/9ac9c585-d2c7-42ae-a5fc-b6cfcd09cdef HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/44650d76-3aae-4083-a752-9053f421b4d2", "correlationId": "5ad9b4f3-d83d-43ea-821e-1642911c3663", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53284 - "GET /api/v1/operations/44650d76-3aae-4083-a752-9053f421b4d2 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/de25b188-da22-4239-8216-96d8845880c3", "correlationId": "0a60e83e-261b-4d59-94d0-c9ae8a7b1f31", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53292 - "GET /api/v1/operations/de25b188-da22-4239-8216-96d8845880c3 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/1f2852a5-d3ab-40e5-9420-bed9387d2c58", "correlationId": "fa2e819a-bbbc-4287-845b-48f2bbaf26a2", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53302 - "GET /api/v1/operations/1f2852a5-d3ab-40e5-9420-bed9387d2c58 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/33743b70-8dc0-45c1-9aff-38ee8ae072ef", "correlationId": "0321927e-6396-42a2-86d5-4e0df754d3c4", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53306 - "GET /api/v1/operations/33743b70-8dc0-45c1-9aff-38ee8ae072ef HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/5a586a93-44d1-4a2e-82c6-d296113945dd", "correlationId": "8d9fb299-1815-401a-b6a1-b435aaf78f34", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53312 - "GET /api/v1/operations/5a586a93-44d1-4a2e-82c6-d296113945dd HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/7b1c8567-d9ef-4050-88f8-a94cc540333a", "correlationId": "0ae4d4cd-346c-4380-a297-2d75564e2db0", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53326 - "GET /api/v1/operations/7b1c8567-d9ef-4050-88f8-a94cc540333a HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/cd339b26-92b7-45f8-b347-4ab286fd4db7", "correlationId": "f920659d-c073-4aa2-9489-7ed9fd7a2fee", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53340 - "GET /api/v1/operations/cd339b26-92b7-45f8-b347-4ab286fd4db7 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/fbeb3347-bc54-4a66-b036-3ffb7c5e144e", "correlationId": "5587dc41-3eb6-45a4-b90e-1de58ad4447b", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53356 - "GET /api/v1/operations/fbeb3347-bc54-4a66-b036-3ffb7c5e144e HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/00643bf7-7a96-4fe7-9d76-8df018cf6083", "correlationId": "e2a9621d-bcf3-4672-9fd1-6045874cab72", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53358 - "GET /api/v1/operations/00643bf7-7a96-4fe7-9d76-8df018cf6083 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/c638bbab-af66-4fbb-95fe-40e00511a993", "correlationId": "2f6722ac-48a0-4bff-aa86-e85b955c5d8c", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53362 - "GET /api/v1/operations/c638bbab-af66-4fbb-95fe-40e00511a993 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/bb68e712-1a27-4432-a95a-5fe491eecf0d", "correlationId": "87dda0e9-e270-45d8-959a-6b22b6c742b1", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53366 - "GET /api/v1/operations/bb68e712-1a27-4432-a95a-5fe491eecf0d HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/105927cb-69db-4db0-9a17-22d163740bff", "correlationId": "9dca2f4b-6b80-4c32-9c5c-a00732bb06d4", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53380 - "GET /api/v1/operations/105927cb-69db-4db0-9a17-22d163740bff HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/716d18fa-7cd2-4b83-93f4-f2409d2a95d0", "correlationId": "ecc55e8d-bbc6-4149-aed9-6a99734f4022", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53396 - "GET /api/v1/operations/716d18fa-7cd2-4b83-93f4-f2409d2a95d0 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/102e4574-9317-4ed9-b915-364b637da84f", "correlationId": "3499355f-ff50-4b3d-8a81-e962656f0b66", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53408 - "GET /api/v1/operations/102e4574-9317-4ed9-b915-364b637da84f HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/bb00d714-016a-403e-be91-2c0b7ef1c81e", "correlationId": "51219b66-4031-49fc-8dcd-63e863b0e702", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53416 - "GET /api/v1/operations/bb00d714-016a-403e-be91-2c0b7ef1c81e HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/724e02c5-44de-491b-8990-d5e9625af2ad", "correlationId": "3e45963f-8267-41b0-8a15-d65563b25d14", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53424 - "GET /api/v1/operations/724e02c5-44de-491b-8990-d5e9625af2ad HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/1c17f953-c997-469e-86a3-0776f4684bd2", "correlationId": "6a6f5142-493b-4d12-ad05-19d1b37ac843", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53436 - "GET /api/v1/operations/1c17f953-c997-469e-86a3-0776f4684bd2 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:22Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/3e03f248-3959-4556-a14e-bf60bffdc080", "correlationId": "760bddcb-5698-44a3-a2e9-6964a0b8c843", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53442 - "GET /api/v1/operations/3e03f248-3959-4556-a14e-bf60bffdc080 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/84c0ce39-8135-4c81-b84d-d30629d82da5", "correlationId": "73ce9d36-7f56-4d43-a042-2753ecaeacfb", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53458 - "GET /api/v1/operations/84c0ce39-8135-4c81-b84d-d30629d82da5 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/535d4502-44c5-464f-a118-a17da9e34edc", "correlationId": "8f445dc3-248a-4176-8a82-4b8283b3befd", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53468 - "GET /api/v1/operations/535d4502-44c5-464f-a118-a17da9e34edc HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/b10bb1a8-0117-4b34-9cba-49b8f2c02cfc", "correlationId": "b908ce3e-0996-4600-82a5-6898972ac1ec", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53472 - "GET /api/v1/operations/b10bb1a8-0117-4b34-9cba-49b8f2c02cfc HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/f35daedd-8bc7-44a1-8ca5-2f5c6195c9bd", "correlationId": "736b1015-193e-43ad-8680-5c24fe56dea5", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53474 - "GET /api/v1/operations/f35daedd-8bc7-44a1-8ca5-2f5c6195c9bd HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/cd45d649-caae-4abd-95a6-d061f8dd72d2", "correlationId": "7d5f8a1f-7737-4eba-839a-05cc238950df", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53476 - "GET /api/v1/operations/cd45d649-caae-4abd-95a6-d061f8dd72d2 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/f71cc7d9-bd7c-4c39-9693-4247bcb15a9d", "correlationId": "0f742c34-ab48-4fc6-b174-e773e31da3bd", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53492 - "GET /api/v1/operations/f71cc7d9-bd7c-4c39-9693-4247bcb15a9d HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/94a3b7d8-5f14-4c67-a42c-08587af7a9eb", "correlationId": "10a7656a-f67d-46ff-a4de-86631db243a5", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53500 - "GET /api/v1/operations/94a3b7d8-5f14-4c67-a42c-08587af7a9eb HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/300b168a-350e-4c0b-8f9a-f67bed36558e", "correlationId": "e563f9bb-9dc3-42b8-9856-d43e15ac2edc", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53514 - "GET /api/v1/operations/300b168a-350e-4c0b-8f9a-f67bed36558e HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/2802e924-c17a-41ef-a16c-a2da5949082b", "correlationId": "6cef0c5f-c632-4a07-a2d8-a954647cf98a", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53530 - "GET /api/v1/operations/2802e924-c17a-41ef-a16c-a2da5949082b HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/ec48ae65-4be7-485b-aeb4-5519294589ad", "correlationId": "e9c02893-cfa1-4e1b-a959-b31affba217d", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53540 - "GET /api/v1/operations/ec48ae65-4be7-485b-aeb4-5519294589ad HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/96fd557b-aa9a-420d-9ef5-aa84b0f550dd", "correlationId": "49c35251-6b52-40ab-b42d-7ce778145f1c", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53556 - "GET /api/v1/operations/96fd557b-aa9a-420d-9ef5-aa84b0f550dd HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/9818c0aa-a26d-40a9-8123-cf6971a38f04", "correlationId": "80758681-e465-4b64-aa9a-8190be8f9d88", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53558 - "GET /api/v1/operations/9818c0aa-a26d-40a9-8123-cf6971a38f04 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/0b45ab22-87b8-415a-a0fe-325bbd0b9165", "correlationId": "f9e667bd-f9de-4067-bd1b-c73c127dbe95", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53560 - "GET /api/v1/operations/0b45ab22-87b8-415a-a0fe-325bbd0b9165 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/bbee1d2d-1a81-43b1-b476-5af120a044cd", "correlationId": "e10bf853-dd8a-48de-8554-3cb5ce69df66", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53574 - "GET /api/v1/operations/bbee1d2d-1a81-43b1-b476-5af120a044cd HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/add0599d-8b54-4002-a1fd-88680b22c1d4", "correlationId": "52a30cbf-aac0-47e6-9bf1-03c10c8713a9", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53578 - "GET /api/v1/operations/add0599d-8b54-4002-a1fd-88680b22c1d4 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/34e86939-632e-4216-9574-f81098952cff", "correlationId": "4616694c-f748-4ea1-8368-680d1f56b2ac", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53582 - "GET /api/v1/operations/34e86939-632e-4216-9574-f81098952cff HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/c7484085-7395-45f8-ae43-8f97117c8c0b", "correlationId": "f2a8d659-da70-492d-9cd6-5fda971086fc", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53596 - "GET /api/v1/operations/c7484085-7395-45f8-ae43-8f97117c8c0b HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/e1df3c68-8141-4e69-9a28-35d055f1a04c", "correlationId": "c1685560-a530-438d-b88a-a2ef6c0d520f", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53598 - "GET /api/v1/operations/e1df3c68-8141-4e69-9a28-35d055f1a04c HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/92f21670-fafd-4d47-be46-33e24463cf60", "correlationId": "c6f8e100-bc7b-43fb-947b-10e5e8fe3d43", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53610 - "GET /api/v1/operations/92f21670-fafd-4d47-be46-33e24463cf60 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/50ac4f47-bb8c-40d7-9754-61d99fd76a5c", "correlationId": "a7b3c4ee-0713-4671-a9d1-76d74bd175c4", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53614 - "GET /api/v1/operations/50ac4f47-bb8c-40d7-9754-61d99fd76a5c HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/15444f22-0079-4712-9d85-e43483da248c", "correlationId": "46c73712-aa11-4393-a1fb-965406f8537d", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53626 - "GET /api/v1/operations/15444f22-0079-4712-9d85-e43483da248c HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/ea84e832-471a-47a7-b838-0e4ac84d7f7b", "correlationId": "4d200479-c231-42bd-95b4-686ebdc5bc1c", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53634 - "GET /api/v1/operations/ea84e832-471a-47a7-b838-0e4ac84d7f7b HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/9805b72e-fcfe-433a-8e26-d8183932e56e", "correlationId": "b755bcdc-88c0-4a45-8062-e1f622475283", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53638 - "GET /api/v1/operations/9805b72e-fcfe-433a-8e26-d8183932e56e HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/7360e94c-2226-4994-be5b-782e2f379bf6", "correlationId": "bb666e2d-d3e3-46f5-84b0-c2ab5eadafa6", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53650 - "GET /api/v1/operations/7360e94c-2226-4994-be5b-782e2f379bf6 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:23Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/8044139a-1760-4703-a590-fe475ef6aaec", "correlationId": "824ee3bb-afdc-41af-b223-28ee4a10c53c", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53660 - "GET /api/v1/operations/8044139a-1760-4703-a590-fe475ef6aaec HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/cc4f803c-fd79-4ec5-9898-dbb7706465fa", "correlationId": "d06a9965-ecd5-4475-b7bd-e6c1827883f0", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53664 - "GET /api/v1/operations/cc4f803c-fd79-4ec5-9898-dbb7706465fa HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/8ce0a556-2893-422e-81ce-3cf8688f94a2", "correlationId": "b2811535-7bec-4f7f-b0b7-26e20ec878cb", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53674 - "GET /api/v1/operations/8ce0a556-2893-422e-81ce-3cf8688f94a2 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/64e28913-4e37-4afe-96ed-93effd02a571", "correlationId": "5c3fdcd5-5964-4243-a9b1-5bc2eb42d54c", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53684 - "GET /api/v1/operations/64e28913-4e37-4afe-96ed-93effd02a571 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/83a4310f-6d67-4932-9bcf-ee2f00a095c4", "correlationId": "43bc3a3a-bc5a-492e-9131-67e85a855a82", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53698 - "GET /api/v1/operations/83a4310f-6d67-4932-9bcf-ee2f00a095c4 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/b32d4e57-a860-41df-9267-9d3e11f8d711", "correlationId": "e4487db0-db8e-472a-a11e-a61625164a9b", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53714 - "GET /api/v1/operations/b32d4e57-a860-41df-9267-9d3e11f8d711 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/63d47669-a4c1-4b4c-91a9-f88de9e57f69", "correlationId": "80b32f82-afc9-4920-916f-5d9192fad4f9", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53730 - "GET /api/v1/operations/63d47669-a4c1-4b4c-91a9-f88de9e57f69 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/026a87eb-d157-4b78-88ca-b09e23cdf5dc", "correlationId": "db6136d4-cb8a-4ec2-a743-18ce26018c07", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53736 - "GET /api/v1/operations/026a87eb-d157-4b78-88ca-b09e23cdf5dc HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/41cd6a89-0290-45b6-89f0-e97e00c889e5", "correlationId": "1a360a54-afad-46a0-ba79-7f2a2f2bf128", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53748 - "GET /api/v1/operations/41cd6a89-0290-45b6-89f0-e97e00c889e5 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/fec5e7a9-f9d3-4c5f-b15f-0a1e90261461", "correlationId": "7ba0f7bc-cab2-4b7d-90bd-50ac62af011e", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53754 - "GET /api/v1/operations/fec5e7a9-f9d3-4c5f-b15f-0a1e90261461 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/a4bd63dd-b404-4d02-a216-c4168153595f", "correlationId": "8e7ef54d-b1f0-4d70-84a0-76b1f96b8f81", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53756 - "GET /api/v1/operations/a4bd63dd-b404-4d02-a216-c4168153595f HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/dc325af9-fb77-4455-9ad2-71413c9b4644", "correlationId": "760cc90e-9fdd-4f57-89ff-eae2641ff305", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53758 - "GET /api/v1/operations/dc325af9-fb77-4455-9ad2-71413c9b4644 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/7c1e208a-cded-4c84-b681-a6845f1dc2e9", "correlationId": "0ce2c5d8-401d-4897-aa1c-14a582122306", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53760 - "GET /api/v1/operations/7c1e208a-cded-4c84-b681-a6845f1dc2e9 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/1f3880c0-2ad2-4d83-862b-b62c389d6cf2", "correlationId": "d63c5c54-fc99-4570-b5de-15a00e1d234a", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53768 - "GET /api/v1/operations/1f3880c0-2ad2-4d83-862b-b62c389d6cf2 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/4d22f994-fb67-4d7a-8af3-0199d28ffaec", "correlationId": "0c2e56fb-7377-4b53-9bb9-fc07d8c7020f", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53780 - "GET /api/v1/operations/4d22f994-fb67-4d7a-8af3-0199d28ffaec HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/c63d0845-d4ef-4c56-8e02-fcda8b9bac99", "correlationId": "4f3e4412-5a77-483d-a2bc-c74b04b1f347", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53796 - "GET /api/v1/operations/c63d0845-d4ef-4c56-8e02-fcda8b9bac99 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/6da248d0-7a3d-455d-9de3-0406923abb00", "correlationId": "f84acda1-bd51-4e6d-8ed9-6168d74c9483", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53806 - "GET /api/v1/operations/6da248d0-7a3d-455d-9de3-0406923abb00 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/bc003774-516f-46ee-8943-c85ce85dd99f", "correlationId": "1735232e-b07c-4146-9373-80108f6571ca", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53810 - "GET /api/v1/operations/bc003774-516f-46ee-8943-c85ce85dd99f HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/550c06cf-fe33-475a-b135-77f7c585ddee", "correlationId": "83b2503c-2a89-4330-bccd-97db12d0e603", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53824 - "GET /api/v1/operations/550c06cf-fe33-475a-b135-77f7c585ddee HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/9f920276-8147-4960-9777-de2457830119", "correlationId": "d13794da-f060-4a67-84d5-2f90834df93b", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53828 - "GET /api/v1/operations/9f920276-8147-4960-9777-de2457830119 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/151ae692-32d2-48e8-bfa6-35f174865e01", "correlationId": "4fc8075f-1cec-46db-a1be-7228995ad88b", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53838 - "GET /api/v1/operations/151ae692-32d2-48e8-bfa6-35f174865e01 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/112be408-b830-434a-ac7a-02c112fce4e5", "correlationId": "6c2f72ad-c27a-406f-924e-bce5170d56ef", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53840 - "GET /api/v1/operations/112be408-b830-434a-ac7a-02c112fce4e5 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/287005fb-9115-4452-800b-c8d48287dd0f", "correlationId": "78c813da-86c5-4449-870d-33a5f6c61a7c", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53854 - "GET /api/v1/operations/287005fb-9115-4452-800b-c8d48287dd0f HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/fa5a18b3-c5d8-45ef-bbd1-780678b99ba7", "correlationId": "f8a6a994-305c-4a23-a0b5-f64085f5e2e2", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53868 - "GET /api/v1/operations/fa5a18b3-c5d8-45ef-bbd1-780678b99ba7 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/aadde895-9d01-490c-9858-64121eadbd3a", "correlationId": "0ec0269d-27fa-4aa1-aca4-843009ca6f0f", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53882 - "GET /api/v1/operations/aadde895-9d01-490c-9858-64121eadbd3a HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/0f84046b-7745-434a-b5d3-bcc881d7308d", "correlationId": "a643342e-d667-4eb8-8adf-7ad548bc7abb", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53898 - "GET /api/v1/operations/0f84046b-7745-434a-b5d3-bcc881d7308d HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/f200cd40-fc3e-4f43-a79c-1c804a3f0797", "correlationId": "020422ba-e10f-4bbf-a28e-c7f4da9a89d7", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53904 - "GET /api/v1/operations/f200cd40-fc3e-4f43-a79c-1c804a3f0797 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:24Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/dc47fd37-204c-4d72-b914-60f227214526", "correlationId": "fafdba0a-4875-40c8-a33a-96285d8e3a12", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53912 - "GET /api/v1/operations/dc47fd37-204c-4d72-b914-60f227214526 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/f54f377a-4bb4-4531-bf5d-f68750726603", "correlationId": "a64ae6c6-387b-44a0-90ff-1d48a47319eb", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53926 - "GET /api/v1/operations/f54f377a-4bb4-4531-bf5d-f68750726603 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/9ad1653d-62fa-46e0-8f14-509547291660", "correlationId": "323b07db-013d-40b4-8472-8a16627f88b6", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53928 - "GET /api/v1/operations/9ad1653d-62fa-46e0-8f14-509547291660 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/7d62cad6-ab20-45ce-ab52-b21515a4ef70", "correlationId": "b02c5042-8506-4a71-9bd8-145411e42a92", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53942 - "GET /api/v1/operations/7d62cad6-ab20-45ce-ab52-b21515a4ef70 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/322533db-7935-420d-a6cf-0f27c5a57e83", "correlationId": "254a85fb-b8c7-4f6f-82a9-8c51a3851164", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53946 - "GET /api/v1/operations/322533db-7935-420d-a6cf-0f27c5a57e83 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/6c0667c6-fb9c-40e9-ae79-5f5aa6c691c0", "correlationId": "903ce159-6e5f-4502-bafc-08827f9b8fce", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53958 - "GET /api/v1/operations/6c0667c6-fb9c-40e9-ae79-5f5aa6c691c0 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/bc7b1cb4-6a96-48a7-96af-d6a280c036fa", "correlationId": "60639f56-3520-435e-b994-e64fc47dbbd5", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53964 - "GET /api/v1/operations/bc7b1cb4-6a96-48a7-96af-d6a280c036fa HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/d1c34a47-ee4b-4274-bcf8-f37fc75bc6b1", "correlationId": "74a1530e-7228-46a0-85c8-dbfd8a2fbcb2", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53968 - "GET /api/v1/operations/d1c34a47-ee4b-4274-bcf8-f37fc75bc6b1 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/f5a4f78f-3cdc-414b-9e6c-15349d613129", "correlationId": "8c480f80-81cd-443e-98b8-cdad605930ac", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53980 - "GET /api/v1/operations/f5a4f78f-3cdc-414b-9e6c-15349d613129 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/bdea4d36-d1ed-4fb7-8f1b-b7c544fc894a", "correlationId": "b373a9b2-fd9c-4670-98cc-6b57dd2ae577", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:53994 - "GET /api/v1/operations/bdea4d36-d1ed-4fb7-8f1b-b7c544fc894a HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/cf6f643a-d678-44b5-ba25-45b8e0e98155", "correlationId": "d95d819b-bca6-4572-bfda-a1313db1b058", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54004 - "GET /api/v1/operations/cf6f643a-d678-44b5-ba25-45b8e0e98155 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/81d0d875-dc5d-402f-a12b-7b26c67cee75", "correlationId": "71fb0599-c684-4924-baf3-5f97ec5e4007", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54010 - "GET /api/v1/operations/81d0d875-dc5d-402f-a12b-7b26c67cee75 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/8fb32468-b97c-4178-8cb2-cf2993f15915", "correlationId": "df749277-9da1-49b1-b1bc-89d2126b8077", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54012 - "GET /api/v1/operations/8fb32468-b97c-4178-8cb2-cf2993f15915 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/2b4405fc-e650-4358-87b5-5b17498c7957", "correlationId": "fd368c13-d45a-4cdb-8e48-ea34f00a100a", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54026 - "GET /api/v1/operations/2b4405fc-e650-4358-87b5-5b17498c7957 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/5d687b52-ea99-419f-b5bb-b14925beed1a", "correlationId": "62dce236-3e04-4db4-9769-66926f50ddf6", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54038 - "GET /api/v1/operations/5d687b52-ea99-419f-b5bb-b14925beed1a HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/696f05a6-94c6-41de-8d7c-76b532f2f69d", "correlationId": "66e273e0-8f01-43e0-acdd-d79fe732858d", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54040 - "GET /api/v1/operations/696f05a6-94c6-41de-8d7c-76b532f2f69d HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/cfb1a3cf-7f8f-4bd6-b727-27315bdad0b1", "correlationId": "4b152bfe-4231-4366-9797-1ad631e10041", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54050 - "GET /api/v1/operations/cfb1a3cf-7f8f-4bd6-b727-27315bdad0b1 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/15abc1a0-cd12-4ca1-8df8-638c5f431721", "correlationId": "75fc1285-3822-48ba-b0d1-d296d0568742", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54066 - "GET /api/v1/operations/15abc1a0-cd12-4ca1-8df8-638c5f431721 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/0363379c-726f-4428-8614-f1551d6326b0", "correlationId": "b8983fba-fe90-4df1-b265-f61b822b6495", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54070 - "GET /api/v1/operations/0363379c-726f-4428-8614-f1551d6326b0 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/1362f92f-f060-4dcf-a2b6-175d1fbac738", "correlationId": "6deaa89d-40c4-4e58-9c69-0209299450b1", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54078 - "GET /api/v1/operations/1362f92f-f060-4dcf-a2b6-175d1fbac738 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/5ebbe94c-1fd3-4ba2-bf43-daefe05407ee", "correlationId": "5703bda9-0ee1-478f-96d4-47abc82960f0", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54094 - "GET /api/v1/operations/5ebbe94c-1fd3-4ba2-bf43-daefe05407ee HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/bccda89b-458f-47fd-b210-fbee49adc70e", "correlationId": "7d822805-4a14-4644-8a95-4042cd8671be", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54106 - "GET /api/v1/operations/bccda89b-458f-47fd-b210-fbee49adc70e HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/18fc412b-9ad7-4295-bf3e-dc3315cf8c24", "correlationId": "daa84b9c-8df3-49a0-9133-64fddd3e4b37", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54120 - "GET /api/v1/operations/18fc412b-9ad7-4295-bf3e-dc3315cf8c24 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/7c93d23f-acd2-46c5-9073-1e94e07f9f83", "correlationId": "a9a2c124-6abd-4668-8cdb-eca55cdddecb", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54128 - "GET /api/v1/operations/7c93d23f-acd2-46c5-9073-1e94e07f9f83 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:25Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/09586084-3097-472a-ba2a-d4cb51dc4a8d", "correlationId": "e9f183bf-de63-48e7-9807-584482414edd", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54134 - "GET /api/v1/operations/09586084-3097-472a-ba2a-d4cb51dc4a8d HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:26Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/85eb88bf-0d90-40e9-9d52-6626245799a8", "correlationId": "54f19d45-00bf-4963-90dd-6286289a2f67", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54136 - "GET /api/v1/operations/85eb88bf-0d90-40e9-9d52-6626245799a8 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:26Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/f7ca7338-286d-4e2d-ba0c-fadac2fb943f", "correlationId": "789dc5fe-4d38-403e-80e7-55329180b552", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54142 - "GET /api/v1/operations/f7ca7338-286d-4e2d-ba0c-fadac2fb943f HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:26Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/6bc977c0-b3cb-49f1-b76f-397bef3a84a2", "correlationId": "cb709fd4-76cb-4801-8705-c941f12a39c0", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54158 - "GET /api/v1/operations/6bc977c0-b3cb-49f1-b76f-397bef3a84a2 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:26Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/66bb4bc6-3cda-4b70-be01-31c834474832", "correlationId": "22779323-ccf7-4dfd-be03-a6822099c31f", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54170 - "GET /api/v1/operations/66bb4bc6-3cda-4b70-be01-31c834474832 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:26Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/e42bf371-2cee-4efa-937c-f9becc3f8f47", "correlationId": "6d2f712c-884f-4fe2-89a0-4b12c26bb694", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54176 - "GET /api/v1/operations/e42bf371-2cee-4efa-937c-f9becc3f8f47 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:26Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/3a401d24-9d7f-49b7-b9a4-875ae362f216", "correlationId": "4d4c9747-797f-426e-9217-aab748230ccb", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54182 - "GET /api/v1/operations/3a401d24-9d7f-49b7-b9a4-875ae362f216 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:26Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/f06be683-8678-418c-9193-88834fbce793", "correlationId": "f9db9918-a6b9-4bb2-b294-5b89bfcdb8d6", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54194 - "GET /api/v1/operations/f06be683-8678-418c-9193-88834fbce793 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:26Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/a5eb0506-fb40-4d96-ad61-6b7e30dbdfd8", "correlationId": "c6e63b14-affa-4be7-807d-743e35fad5fa", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54206 - "GET /api/v1/operations/a5eb0506-fb40-4d96-ad61-6b7e30dbdfd8 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:26Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/0122fb75-0a95-4977-8cef-e148fcd859b8", "correlationId": "df4640fd-6bdc-446e-9076-e8f901f93150", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54210 - "GET /api/v1/operations/0122fb75-0a95-4977-8cef-e148fcd859b8 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:26Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/34065684-d15c-4221-97a6-918c86750828", "correlationId": "ecb2f2e2-1525-499d-935b-9b3b1c739628", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54216 - "GET /api/v1/operations/34065684-d15c-4221-97a6-918c86750828 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:26Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/a72a6023-b4a2-4fba-b448-f015fc2932cd", "correlationId": "541b620e-8f14-46b8-9c44-cc73312e408a", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54218 - "GET /api/v1/operations/a72a6023-b4a2-4fba-b448-f015fc2932cd HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:26Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/8116b11c-d108-4bc6-b40b-abdac3261270", "correlationId": "e3b12368-38a2-4c1a-a996-8e1ac6a8d254", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54220 - "GET /api/v1/operations/8116b11c-d108-4bc6-b40b-abdac3261270 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:26Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/9e4c1d50-0f95-4083-8453-12b61e55e32a", "correlationId": "aa0e9568-b0b5-4bdd-a13c-e74c7b0b087a", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54234 - "GET /api/v1/operations/9e4c1d50-0f95-4083-8453-12b61e55e32a HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:26Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/df3273af-48c3-47c6-9f32-abb8f3ebce7c", "correlationId": "0fd2f10f-a54a-414e-b0f3-d67d243e5c64", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54242 - "GET /api/v1/operations/df3273af-48c3-47c6-9f32-abb8f3ebce7c HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:26Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/83b1f130-7df3-44c4-8975-3a39e26931c8", "correlationId": "091dcd28-c48c-4990-923e-f46e810b4483", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54246 - "GET /api/v1/operations/83b1f130-7df3-44c4-8975-3a39e26931c8 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:26Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/ed19ea9e-0686-47f2-844e-7ced69c29f74", "correlationId": "e947700e-85db-48b9-a33e-2a343f0edccc", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54248 - "GET /api/v1/operations/ed19ea9e-0686-47f2-844e-7ced69c29f74 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:26Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/94226a3b-94f2-45a9-868a-c4d04f097277", "correlationId": "edc03bcd-a32f-4d8e-a825-f18db1c31140", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54260 - "GET /api/v1/operations/94226a3b-94f2-45a9-868a-c4d04f097277 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:26Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/fdae05f0-a8b1-4ac7-8143-096eda9e3c15", "correlationId": "b362ac97-0611-4dac-a58c-9a4888ec64e7", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54264 - "GET /api/v1/operations/fdae05f0-a8b1-4ac7-8143-096eda9e3c15 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:26Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/3c804c2e-8475-4ee4-8094-4a70c883642b", "correlationId": "48df0409-4e2a-420a-a9c1-1721f0aa1e8e", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54274 - "GET /api/v1/operations/3c804c2e-8475-4ee4-8094-4a70c883642b HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:26Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/a99d45a5-6415-4821-bcbf-6ad0fc7defb2", "correlationId": "2fed8aaa-910c-45dd-a61d-2b9b16d869e5", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54276 - "GET /api/v1/operations/a99d45a5-6415-4821-bcbf-6ad0fc7defb2 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:26Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/2448545e-7c33-4078-a652-0f41bf28ab38", "correlationId": "6863f0b8-2c45-45e0-b6cf-4962aaa95ffe", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54288 - "GET /api/v1/operations/2448545e-7c33-4078-a652-0f41bf28ab38 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/436e3722-6484-4008-80f6-dff175ff538e", "correlationId": "2d4ba545-80d5-409c-8cec-0db789b3fcce", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54298 - "GET /api/v1/operations/436e3722-6484-4008-80f6-dff175ff538e HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/db549574-5178-4ebe-915f-322723939929", "correlationId": "c0cf9a2a-bfde-4d8f-8d28-9d32afd444c2", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54302 - "GET /api/v1/operations/db549574-5178-4ebe-915f-322723939929 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/ef1059c8-5763-46df-9b5e-02bdd59d7572", "correlationId": "b876f322-aa60-4f7c-bad7-adbd36693a19", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54316 - "GET /api/v1/operations/ef1059c8-5763-46df-9b5e-02bdd59d7572 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/29938729-b731-4f4e-91fd-94851917efe5", "correlationId": "35b6de35-c3e4-410f-bff4-423cfd982683", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54320 - "GET /api/v1/operations/29938729-b731-4f4e-91fd-94851917efe5 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/46064eac-f664-4d77-b9b2-fd066aa90d38", "correlationId": "703fc11d-c208-43f7-b9f1-01c5040a0002", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54332 - "GET /api/v1/operations/46064eac-f664-4d77-b9b2-fd066aa90d38 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/97affa81-dde0-467d-b52c-97835fad3b5f", "correlationId": "99637a09-71d9-4997-98bb-fa41092e0ba1", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54346 - "GET /api/v1/operations/97affa81-dde0-467d-b52c-97835fad3b5f HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/3ff6cf69-8d29-42e7-9ffa-3a4876278120", "correlationId": "1be82a52-962c-4f38-a989-bcbaec2e7a55", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54348 - "GET /api/v1/operations/3ff6cf69-8d29-42e7-9ffa-3a4876278120 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/06bb3973-c2af-4e63-a0e4-f2de570317e8", "correlationId": "dfc86d27-aa7f-4619-9c11-b145e0bbff51", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54360 - "GET /api/v1/operations/06bb3973-c2af-4e63-a0e4-f2de570317e8 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/86ac99d3-9674-412d-b49d-00f2425b79d8", "correlationId": "6c24f2bc-9c2b-45aa-a676-ddd49e614e6a", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54366 - "GET /api/v1/operations/86ac99d3-9674-412d-b49d-00f2425b79d8 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/c6281f79-cc10-48ad-bfbd-2a4be99ad8f5", "correlationId": "51663982-0d46-44a5-b39a-1165affe81c9", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54378 - "GET /api/v1/operations/c6281f79-cc10-48ad-bfbd-2a4be99ad8f5 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/2c9712b2-c24d-4dc3-aa2d-a1a7f888b71b", "correlationId": "b0e4d33f-0cb6-482d-b2e8-2ec371da8ae8", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54388 - "GET /api/v1/operations/2c9712b2-c24d-4dc3-aa2d-a1a7f888b71b HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/5f2b6b97-a39b-494f-9ed5-fb088b8a7bbe", "correlationId": "cc61c8fe-6dd0-48c8-be5d-6a7bfd6d8193", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54394 - "GET /api/v1/operations/5f2b6b97-a39b-494f-9ed5-fb088b8a7bbe HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/ea91fd71-8f57-41aa-a1f3-aba56b739f46", "correlationId": "f3bdb26d-421d-4a73-aab9-56416823a9bf", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54402 - "GET /api/v1/operations/ea91fd71-8f57-41aa-a1f3-aba56b739f46 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/7f3f8089-b6de-44c1-b480-33d7c74cd2dc", "correlationId": "9db9bb7c-7d86-4fda-9311-2624cae4b832", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54410 - "GET /api/v1/operations/7f3f8089-b6de-44c1-b480-33d7c74cd2dc HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/8ca2636c-f16d-428a-8fbb-cb626082d152", "correlationId": "9c7c7f70-4e18-4fdc-a5c9-8502175e062b", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54422 - "GET /api/v1/operations/8ca2636c-f16d-428a-8fbb-cb626082d152 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/5b914af5-7d96-456c-b6fc-a7c09c50789b", "correlationId": "4a6c930b-28fd-4443-8cbd-04d90e79699c", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54426 - "GET /api/v1/operations/5b914af5-7d96-456c-b6fc-a7c09c50789b HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/72857e10-cdc3-4a0a-883c-49a9daa5daaf", "correlationId": "a20ec060-01f1-4b6f-9595-0b8b57c60db9", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54440 - "GET /api/v1/operations/72857e10-cdc3-4a0a-883c-49a9daa5daaf HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/5cb2d64e-aa5a-4706-b176-8cb645580176", "correlationId": "3f461f29-03ed-479f-acae-ee4d18189205", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54448 - "GET /api/v1/operations/5cb2d64e-aa5a-4706-b176-8cb645580176 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/0aa9b83c-6328-40f7-bb9b-0f6d59c5aaa1", "correlationId": "d95dd1d0-ef2a-4750-891d-a21dd48c238a", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54452 - "GET /api/v1/operations/0aa9b83c-6328-40f7-bb9b-0f6d59c5aaa1 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/6ac2c5ad-6833-487f-a389-2d3bc96da7ef", "correlationId": "caf8ba8f-350e-451f-82bf-bb69cd74e8fd", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54460 - "GET /api/v1/operations/6ac2c5ad-6833-487f-a389-2d3bc96da7ef HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/8bf0d825-2b5f-4d50-8091-7a430f9189dc", "correlationId": "e3d33651-b55c-40c8-bbb3-405e87133534", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54462 - "GET /api/v1/operations/8bf0d825-2b5f-4d50-8091-7a430f9189dc HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/c9f2bdff-9021-4f5d-b5dc-1f74c35ad1b0", "correlationId": "2e6ef5b1-993f-4cda-97af-ad4302f87aba", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54478 - "GET /api/v1/operations/c9f2bdff-9021-4f5d-b5dc-1f74c35ad1b0 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/b74cb53d-9540-4a98-ba02-64d175cfaad2", "correlationId": "94901958-61fa-4b1e-9e0b-34496e683b84", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54494 - "GET /api/v1/operations/b74cb53d-9540-4a98-ba02-64d175cfaad2 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:27Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/c11cf707-bdd4-4fc0-b661-39af9ead5b0b", "correlationId": "99abc57a-6ecf-4160-9532-4f90a3a1a31b", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54510 - "GET /api/v1/operations/c11cf707-bdd4-4fc0-b661-39af9ead5b0b HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/3a86afbe-bbcf-4403-a926-106e3f2f474c", "correlationId": "3e20fc56-5391-4157-a830-dde1c0906f44", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54512 - "GET /api/v1/operations/3a86afbe-bbcf-4403-a926-106e3f2f474c HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/713b16cd-0702-4c93-9eac-61711505a27f", "correlationId": "77b12f61-a2e4-45cf-9cda-2bda80bf5bd5", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54526 - "GET /api/v1/operations/713b16cd-0702-4c93-9eac-61711505a27f HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/2edd5362-3b4e-4859-9ad7-452ae559de69", "correlationId": "f7db7424-7841-4c99-b513-eaa2a05b88ac", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54538 - "GET /api/v1/operations/2edd5362-3b4e-4859-9ad7-452ae559de69 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/bdc693fd-7eff-48a5-8aec-32bba467d9e7", "correlationId": "5f00cc5c-ad8a-489c-a0aa-df0c71c5ee2d", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54550 - "GET /api/v1/operations/bdc693fd-7eff-48a5-8aec-32bba467d9e7 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/9628f81e-5010-4a5d-ab3c-cc034b32a606", "correlationId": "5d437a79-00a7-4257-81c2-d13992a90a0b", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54564 - "GET /api/v1/operations/9628f81e-5010-4a5d-ab3c-cc034b32a606 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/6781ac98-0fe4-4ac8-9bde-8e6d076e036f", "correlationId": "76158e9e-3cf1-45aa-856b-0bafbef1624a", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54570 - "GET /api/v1/operations/6781ac98-0fe4-4ac8-9bde-8e6d076e036f HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/85c9db42-fb58-4667-87bf-3fc79a817675", "correlationId": "85b8d447-96e5-4fc6-a4d2-8c814977e474", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54580 - "GET /api/v1/operations/85c9db42-fb58-4667-87bf-3fc79a817675 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/3c45e38a-acfe-44d3-b724-2f12d975a85b", "correlationId": "5cffe7db-e436-44ea-afcf-64e94e62e9d6", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54594 - "GET /api/v1/operations/3c45e38a-acfe-44d3-b724-2f12d975a85b HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/7330ffaa-54db-4aed-b4a7-bd3546c8dbea", "correlationId": "8138bc67-9e04-4448-9379-74ff40c7a4c9", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54600 - "GET /api/v1/operations/7330ffaa-54db-4aed-b4a7-bd3546c8dbea HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/882b3b66-964b-4527-bdf6-ad1ee8434ec7", "correlationId": "68e271a3-c505-4234-8b42-e8b39a558bd4", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54608 - "GET /api/v1/operations/882b3b66-964b-4527-bdf6-ad1ee8434ec7 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/e76d2714-14ba-4ad6-b156-26060342796e", "correlationId": "ead778e9-d909-4f63-804a-4c49185ebfeb", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54620 - "GET /api/v1/operations/e76d2714-14ba-4ad6-b156-26060342796e HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/3ab6ee26-052e-4eb7-b176-f63371c630c8", "correlationId": "4bfd5f4b-bcee-4124-b1b1-bf5304917c7c", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54626 - "GET /api/v1/operations/3ab6ee26-052e-4eb7-b176-f63371c630c8 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/562e5239-f5da-4aa1-926b-9132d57fee6f", "correlationId": "60046510-9822-49f6-8367-a79541b1ddfe", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54638 - "GET /api/v1/operations/562e5239-f5da-4aa1-926b-9132d57fee6f HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/263f8f4f-55a5-4a15-887c-10b1c59eeee0", "correlationId": "56df571d-7144-4c02-b0ad-9b1f7b43ae59", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54650 - "GET /api/v1/operations/263f8f4f-55a5-4a15-887c-10b1c59eeee0 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/2814316c-0342-41a5-b258-f1ceabd66ef1", "correlationId": "02100662-c730-40f6-97b1-2f55e0770891", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54664 - "GET /api/v1/operations/2814316c-0342-41a5-b258-f1ceabd66ef1 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/2dc231a0-662e-49e2-9f0a-e2a462d53a7d", "correlationId": "d3953923-c72f-44e7-b895-9ba685724ada", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54668 - "GET /api/v1/operations/2dc231a0-662e-49e2-9f0a-e2a462d53a7d HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/f824a963-564e-4e62-b6a7-89a6bb3f3e52", "correlationId": "0b22935f-c30a-4088-b20e-f27c0766471a", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54674 - "GET /api/v1/operations/f824a963-564e-4e62-b6a7-89a6bb3f3e52 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/3d5216c2-27b0-42da-a8a9-8a4c0e99333b", "correlationId": "4a595bdf-a8d1-4176-8c1f-ebc335da2613", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54680 - "GET /api/v1/operations/3d5216c2-27b0-42da-a8a9-8a4c0e99333b HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/d0558645-058f-48a4-b759-f688ac28ab30", "correlationId": "e56655f3-5704-4ef1-a396-7aa3d55defa4", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54694 - "GET /api/v1/operations/d0558645-058f-48a4-b759-f688ac28ab30 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/12db8f96-4b0c-4196-adb0-2342f69e8291", "correlationId": "bff68335-c493-4903-b1f4-cefb4cdb099c", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54696 - "GET /api/v1/operations/12db8f96-4b0c-4196-adb0-2342f69e8291 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/8111f852-5af3-4ca9-bc31-5f9e7c49336c", "correlationId": "dc0955fc-7c8f-46ae-b032-f4da0108fae5", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54700 - "GET /api/v1/operations/8111f852-5af3-4ca9-bc31-5f9e7c49336c HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/1be83828-f505-4f92-ae0b-bc234a739dd9", "correlationId": "2dd9d958-74aa-4cdd-92a9-a391569a5dde", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54712 - "GET /api/v1/operations/1be83828-f505-4f92-ae0b-bc234a739dd9 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/fb676491-3ca8-4235-995a-d98af3b1228e", "correlationId": "79088dca-cd45-4ce0-a189-5dfeec07b4fd", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54718 - "GET /api/v1/operations/fb676491-3ca8-4235-995a-d98af3b1228e HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/f06f6cc1-d820-4ca7-8ee9-60b14420c7b8", "correlationId": "11be1650-7cec-410a-a803-fb4acc950056", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54730 - "GET /api/v1/operations/f06f6cc1-d820-4ca7-8ee9-60b14420c7b8 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/10cecabc-0b33-4012-a16f-b0ca28b90cf2", "correlationId": "9ff6a284-06cd-4f78-8dc7-ea9050fa1d03", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54742 - "GET /api/v1/operations/10cecabc-0b33-4012-a16f-b0ca28b90cf2 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/354d501b-93b3-4835-9a8a-9dfc8229d756", "correlationId": "92c7a870-2b9d-472a-ae2c-8871bb36a27e", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54756 - "GET /api/v1/operations/354d501b-93b3-4835-9a8a-9dfc8229d756 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:28Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/cfc4e5c7-8147-4327-b09d-199cad8182b8", "correlationId": "5534d143-3f3c-40dd-bfae-ae5707f360af", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54764 - "GET /api/v1/operations/cfc4e5c7-8147-4327-b09d-199cad8182b8 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/d4cf535a-7efe-4bec-9dd5-20a726beb113", "correlationId": "88e951ce-54a5-44b4-85cd-a4fdcb98acf8", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54768 - "GET /api/v1/operations/d4cf535a-7efe-4bec-9dd5-20a726beb113 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/3f22a32e-24c3-4b59-8e16-e5b1fc5b3979", "correlationId": "78569a19-ea30-40fd-a8ea-9f5fea8bed91", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54770 - "GET /api/v1/operations/3f22a32e-24c3-4b59-8e16-e5b1fc5b3979 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/bfd076c5-8ae1-4bb6-957e-9f841916b407", "correlationId": "476d48db-6383-4c0f-a99e-af294d5edec0", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54784 - "GET /api/v1/operations/bfd076c5-8ae1-4bb6-957e-9f841916b407 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/af4b8042-dd5b-449f-8a6d-f03ef0f97d14", "correlationId": "c73ddf2b-6b0e-4181-aa88-7fb176f35d28", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54794 - "GET /api/v1/operations/af4b8042-dd5b-449f-8a6d-f03ef0f97d14 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/c64915e7-d197-41c1-9374-96e27f160df7", "correlationId": "ee3903c0-3704-42ae-b66b-97ea7e41d779", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54804 - "GET /api/v1/operations/c64915e7-d197-41c1-9374-96e27f160df7 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/91589636-0290-4f53-86a6-16ea84a21545", "correlationId": "08dca827-e0a2-454e-8475-fe40fa2a53b3", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54814 - "GET /api/v1/operations/91589636-0290-4f53-86a6-16ea84a21545 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/79ac4c8e-89b7-42a1-8c44-1d94133dfaae", "correlationId": "c5605187-fe2b-4ecf-9836-f508a93d5cbd", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54820 - "GET /api/v1/operations/79ac4c8e-89b7-42a1-8c44-1d94133dfaae HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/e0b21aca-5650-45b9-a503-7889e27bd3de", "correlationId": "0d587287-a15a-4f0a-b42c-2f8f99acef2a", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:54824 - "GET /api/v1/operations/e0b21aca-5650-45b9-a503-7889e27bd3de HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/c3d99ac1-69ea-4f43-963c-debb6a30c9dc", "correlationId": "feb3c7af-f77e-4d27-9763-b029e3eaf24c", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52048 - "GET /api/v1/operations/c3d99ac1-69ea-4f43-963c-debb6a30c9dc HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/22a2abb0-26b0-475a-9896-55467b9e74c7", "correlationId": "d0ccc514-c0f0-4fd7-a849-4a7ddbb59d11", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52064 - "GET /api/v1/operations/22a2abb0-26b0-475a-9896-55467b9e74c7 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/f2dff089-2187-4eea-8313-086c51f1b7d4", "correlationId": "397d3560-eb1f-4bab-8d8c-914290fc11fc", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52080 - "GET /api/v1/operations/f2dff089-2187-4eea-8313-086c51f1b7d4 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/459510c6-49a6-4566-8025-0b3dd99d5c99", "correlationId": "de664404-01de-422b-827c-85361bb7af4b", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52086 - "GET /api/v1/operations/459510c6-49a6-4566-8025-0b3dd99d5c99 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/6c5a8b14-1e92-4192-abef-189814755a09", "correlationId": "34a56465-09cb-422a-b7c1-50bcfdae7162", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52098 - "GET /api/v1/operations/6c5a8b14-1e92-4192-abef-189814755a09 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/5ac97975-0b7d-4d5a-bb61-4e3480fb7b34", "correlationId": "b0623046-9d87-47a8-8911-dad4f3bac1b2", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52114 - "GET /api/v1/operations/5ac97975-0b7d-4d5a-bb61-4e3480fb7b34 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/2d4f1fae-e8c1-46ad-91a9-f5a2e8a85a18", "correlationId": "a0e2e38d-cd05-4523-b2c5-9284dcc16024", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52128 - "GET /api/v1/operations/2d4f1fae-e8c1-46ad-91a9-f5a2e8a85a18 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/d8ee4a55-744f-447c-a66a-10cdf27be105", "correlationId": "2a67b330-72df-4e1c-9e54-df009037b309", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52140 - "GET /api/v1/operations/d8ee4a55-744f-447c-a66a-10cdf27be105 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/f210f494-1df8-4100-94e8-56f61dc05f40", "correlationId": "e7d5221c-78e0-41c7-84e2-1ce987fc0296", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52154 - "GET /api/v1/operations/f210f494-1df8-4100-94e8-56f61dc05f40 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/a9e7bd60-a723-4737-a97e-1337bc295c9d", "correlationId": "ee8823b7-3a96-4a6d-af94-03def865c02c", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52168 - "GET /api/v1/operations/a9e7bd60-a723-4737-a97e-1337bc295c9d HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/1bfc2b3f-b973-40b5-9a56-8722060f49a3", "correlationId": "f0ac9e2c-4c58-49d2-b28c-8509d547f87c", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52182 - "GET /api/v1/operations/1bfc2b3f-b973-40b5-9a56-8722060f49a3 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/94b6ddde-4051-4f77-9a5a-040b148cf1a1", "correlationId": "312615bc-7c69-4ee5-8db4-fa0edf53a141", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52186 - "GET /api/v1/operations/94b6ddde-4051-4f77-9a5a-040b148cf1a1 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/fe282614-c31c-4f68-baae-ef741fd5aec8", "correlationId": "34321ae2-2bd1-49dd-8ab9-03c2c6ded26a", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52194 - "GET /api/v1/operations/fe282614-c31c-4f68-baae-ef741fd5aec8 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/425b6656-3e5e-490a-a302-be9a6ac6aec6", "correlationId": "9a32933d-6a43-404e-ae38-19d73031f988", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52210 - "GET /api/v1/operations/425b6656-3e5e-490a-a302-be9a6ac6aec6 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/dcd99b9f-8438-44ba-8324-b4aaaae8cb22", "correlationId": "1e25dbcd-2283-43ea-a981-a5183fd36130", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52218 - "GET /api/v1/operations/dcd99b9f-8438-44ba-8324-b4aaaae8cb22 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/1ad284e2-a580-491a-acd0-59a339938e24", "correlationId": "bf07aec9-93a7-4b4e-80af-1ed24d2ddb84", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52220 - "GET /api/v1/operations/1ad284e2-a580-491a-acd0-59a339938e24 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/80309591-f6ba-4f9d-9076-b9abe24a5b65", "correlationId": "1d0b9b10-7afb-49d1-900c-54818345fd21", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52236 - "GET /api/v1/operations/80309591-f6ba-4f9d-9076-b9abe24a5b65 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/844e2a39-cd83-43d4-b1f6-915aa9a44a40", "correlationId": "9bdb2feb-6ca8-4b36-bd07-4c7cb5b959a1", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52244 - "GET /api/v1/operations/844e2a39-cd83-43d4-b1f6-915aa9a44a40 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:29Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/77ea64d7-ee64-499b-8945-1c2836db87a9", "correlationId": "115fc1c0-a4d9-4d60-a276-ae414fb58364", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52250 - "GET /api/v1/operations/77ea64d7-ee64-499b-8945-1c2836db87a9 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/75474965-ab39-40da-bbcb-20d126c747e9", "correlationId": "2a3f86bb-ecd5-4a02-94be-e5aae13ac65b", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52260 - "GET /api/v1/operations/75474965-ab39-40da-bbcb-20d126c747e9 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/8177b3a3-ea6c-4e48-a1ee-fb1a316cb84a", "correlationId": "90927b2d-f322-44bb-b04a-fd4102799e18", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52264 - "GET /api/v1/operations/8177b3a3-ea6c-4e48-a1ee-fb1a316cb84a HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/25986d52-ce88-45cc-9804-719c2a2327b6", "correlationId": "48e81dcf-f769-4c45-9caf-608aa4c31c27", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52276 - "GET /api/v1/operations/25986d52-ce88-45cc-9804-719c2a2327b6 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/93a5d973-bbc8-46ea-8fad-3af81e92bf47", "correlationId": "6099125c-920c-4ef4-ba05-8f0dc5c762b8", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52280 - "GET /api/v1/operations/93a5d973-bbc8-46ea-8fad-3af81e92bf47 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/1edafb04-bb81-4dfb-9a70-baab05209077", "correlationId": "c6a353a6-65bc-4e26-9f0d-df6182ce412f", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52294 - "GET /api/v1/operations/1edafb04-bb81-4dfb-9a70-baab05209077 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/f21bcf0a-d506-45c4-84bd-19771b0b78d1", "correlationId": "cc98bc33-c2be-403f-aa5d-a706783cbe7e", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52310 - "GET /api/v1/operations/f21bcf0a-d506-45c4-84bd-19771b0b78d1 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/825c90f1-3bd5-4db1-8c51-fec26dc86ae5", "correlationId": "88155c5c-2963-4ed2-b250-ecdcd619a209", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52320 - "GET /api/v1/operations/825c90f1-3bd5-4db1-8c51-fec26dc86ae5 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/485f7404-1da2-4ffe-93b6-5d8b52c75f63", "correlationId": "f5a93516-f76e-4821-a3e5-158b978cee74", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52328 - "GET /api/v1/operations/485f7404-1da2-4ffe-93b6-5d8b52c75f63 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/39dec60a-4627-47aa-9044-925c913326fe", "correlationId": "ad4c8851-2ff2-46e6-8cb4-6d115009bc78", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52340 - "GET /api/v1/operations/39dec60a-4627-47aa-9044-925c913326fe HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/9387306c-dc48-46d7-8e4c-5a4e35732faf", "correlationId": "7bca5d4f-fd22-4c34-a08b-a7f6192c9f04", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52356 - "GET /api/v1/operations/9387306c-dc48-46d7-8e4c-5a4e35732faf HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/16c61b5a-e576-43df-8acb-661a4a4e06af", "correlationId": "3cd9f735-576e-42ab-968f-94aeb0d203b2", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52358 - "GET /api/v1/operations/16c61b5a-e576-43df-8acb-661a4a4e06af HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/1c75b7b1-fb6e-477a-8f02-af983a56011a", "correlationId": "a0569e34-6415-4f1f-b837-8e4a7347a6c2", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52370 - "GET /api/v1/operations/1c75b7b1-fb6e-477a-8f02-af983a56011a HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/7df7f966-f540-40f9-ac0c-0728f1b6c35f", "correlationId": "97614c16-b33f-43a4-bf65-79f0d490b9f3", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52386 - "GET /api/v1/operations/7df7f966-f540-40f9-ac0c-0728f1b6c35f HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/661da486-dfd4-4ca1-bfef-ddfaf0eb19c3", "correlationId": "ac164328-e98f-4f51-af07-f95e33f1e966", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52388 - "GET /api/v1/operations/661da486-dfd4-4ca1-bfef-ddfaf0eb19c3 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/0411424f-6dc3-44d5-a1da-06dcbed4a0bf", "correlationId": "3dabb20e-09d6-4f73-b7a1-d7c9d728bf51", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52394 - "GET /api/v1/operations/0411424f-6dc3-44d5-a1da-06dcbed4a0bf HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/1b6cb2dc-4da5-43dd-8d5c-bbcd3a574a33", "correlationId": "c2eb8616-3be5-42cb-a081-12ad33cdcf54", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52400 - "GET /api/v1/operations/1b6cb2dc-4da5-43dd-8d5c-bbcd3a574a33 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/553cd1f3-ea48-4cad-ad2f-7c4061d29d75", "correlationId": "918d311f-5e87-46f4-ba7e-f979b720ae03", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52412 - "GET /api/v1/operations/553cd1f3-ea48-4cad-ad2f-7c4061d29d75 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/3b2fd0dc-3197-4f6d-b576-b1717ebaa5b2", "correlationId": "886bbd4e-9b7a-4b82-a1bb-925f9a15fc76", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52422 - "GET /api/v1/operations/3b2fd0dc-3197-4f6d-b576-b1717ebaa5b2 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/045a76a3-a30c-4a39-8583-fe9220889f20", "correlationId": "24c91077-5d62-4106-a5e4-fc25861511b0", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52432 - "GET /api/v1/operations/045a76a3-a30c-4a39-8583-fe9220889f20 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/5d108242-3a18-4062-9b61-192d4d461272", "correlationId": "75e3ba8e-81b1-4fe2-b802-bf37722add3e", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52440 - "GET /api/v1/operations/5d108242-3a18-4062-9b61-192d4d461272 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/69037f21-ae88-435e-a04e-36600206e845", "correlationId": "08325e98-b9ec-4e85-b6ff-9b9507667dff", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52444 - "GET /api/v1/operations/69037f21-ae88-435e-a04e-36600206e845 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/c2c8a5c7-ea71-4749-8e02-888322449a32", "correlationId": "f9511c42-595d-46e3-8efc-ce132cc01b47", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52456 - "GET /api/v1/operations/c2c8a5c7-ea71-4749-8e02-888322449a32 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/61a9e861-ccda-4941-a35a-f0e06655dfbb", "correlationId": "23dfdd85-192e-44bf-9573-6c86249d086c", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52462 - "GET /api/v1/operations/61a9e861-ccda-4941-a35a-f0e06655dfbb HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/5dc9c8d9-b0ca-4312-8990-bf3e9c643a9d", "correlationId": "8bf08c6d-4d1f-404e-b9bf-ea9badc1fcb2", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52470 - "GET /api/v1/operations/5dc9c8d9-b0ca-4312-8990-bf3e9c643a9d HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/e45e5d2e-68e5-4de1-b265-aba00c05f4c6", "correlationId": "0f0ecb2c-4b74-4adf-896a-0a72e2e4e79c", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52476 - "GET /api/v1/operations/e45e5d2e-68e5-4de1-b265-aba00c05f4c6 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:30Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/13491c22-7ca4-4c27-9cb1-32ab40cbd2b3", "correlationId": "57af68c9-dc90-45ab-995e-080c37833e85", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52482 - "GET /api/v1/operations/13491c22-7ca4-4c27-9cb1-32ab40cbd2b3 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/2790e1de-215a-46a0-a018-0182b758b22e", "correlationId": "9a19cae7-9929-460a-92f4-aeada3159b81", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52494 - "GET /api/v1/operations/2790e1de-215a-46a0-a018-0182b758b22e HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/31eac931-c399-4663-9342-fca297c562df", "correlationId": "6166eba1-b655-49f5-91ec-728dfc882437", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52498 - "GET /api/v1/operations/31eac931-c399-4663-9342-fca297c562df HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/e864d4ec-8db2-4940-8e9f-956baf709846", "correlationId": "b282c746-0c63-4e71-a76b-3bd2c20f7aa2", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52508 - "GET /api/v1/operations/e864d4ec-8db2-4940-8e9f-956baf709846 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/699fd8a0-b564-4fbf-8424-b84c009f3956", "correlationId": "b52511fe-cf3e-4525-a0c9-df1303a86dc2", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52514 - "GET /api/v1/operations/699fd8a0-b564-4fbf-8424-b84c009f3956 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/7fc0681d-d265-4c70-92b0-0f856e5c0599", "correlationId": "0291e7fe-9661-4436-878d-5983fca77da2", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52526 - "GET /api/v1/operations/7fc0681d-d265-4c70-92b0-0f856e5c0599 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/22086593-888c-4b6e-99e9-6322aac2c84c", "correlationId": "6896ba11-0117-47b2-9def-169738316443", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52536 - "GET /api/v1/operations/22086593-888c-4b6e-99e9-6322aac2c84c HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/7d752afc-74f2-4370-8e00-ce219b937213", "correlationId": "a00de4e9-cc80-47a9-8d31-fc93c5e989bc", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52552 - "GET /api/v1/operations/7d752afc-74f2-4370-8e00-ce219b937213 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/7a6f2425-3e41-49f7-9938-81a77506210a", "correlationId": "ac9f9576-59ca-400a-a927-f86715fe4770", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52560 - "GET /api/v1/operations/7a6f2425-3e41-49f7-9938-81a77506210a HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/a3490dae-f229-4d53-bf04-2b0f255f3a89", "correlationId": "6291d369-c06d-460f-b156-f6a7c4c5ca07", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52570 - "GET /api/v1/operations/a3490dae-f229-4d53-bf04-2b0f255f3a89 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/3c86d4f0-0554-4764-8fdd-b3e4dcf706a4", "correlationId": "d389293e-d79f-4910-be4c-0d90472f65ad", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52580 - "GET /api/v1/operations/3c86d4f0-0554-4764-8fdd-b3e4dcf706a4 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/ca83f9b1-0b7d-465d-9889-ac4c7811ae61", "correlationId": "d626067d-b915-4370-9d06-6d4328759f3e", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52584 - "GET /api/v1/operations/ca83f9b1-0b7d-465d-9889-ac4c7811ae61 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/ec957b81-3352-4a26-89f1-9df97f6bf802", "correlationId": "31efe1c1-e93b-4b98-95d7-563f0c0e8a53", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52596 - "GET /api/v1/operations/ec957b81-3352-4a26-89f1-9df97f6bf802 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/f492a48d-524c-4873-9749-9e9ba21f94b8", "correlationId": "c718d055-594d-4821-bd8c-419f4c35e92c", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52602 - "GET /api/v1/operations/f492a48d-524c-4873-9749-9e9ba21f94b8 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/27fcee9e-4983-4e22-9405-5f1bcf36d162", "correlationId": "d7a7c90c-57e0-4ed6-a220-ffea2554e90f", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52608 - "GET /api/v1/operations/27fcee9e-4983-4e22-9405-5f1bcf36d162 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/6169f3ae-721e-41c4-b2cf-5d7bfec45c3c", "correlationId": "3a4af86c-17bd-4ba6-b3fe-43ca93dfeb35", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52624 - "GET /api/v1/operations/6169f3ae-721e-41c4-b2cf-5d7bfec45c3c HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/aea015cc-b665-4028-90f7-614cc6c5cd89", "correlationId": "df99b35b-0589-48b2-8aab-3e02a27e48d7", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52632 - "GET /api/v1/operations/aea015cc-b665-4028-90f7-614cc6c5cd89 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/2e017463-f5fe-478d-9216-9328edde50c1", "correlationId": "ed157bf8-e540-4e74-a61b-f67e2f821958", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52634 - "GET /api/v1/operations/2e017463-f5fe-478d-9216-9328edde50c1 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/ae8c8174-4855-41e2-8ab0-b5368c9d6d18", "correlationId": "57d00a59-f8d8-4e73-b579-8d18b2429299", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52644 - "GET /api/v1/operations/ae8c8174-4855-41e2-8ab0-b5368c9d6d18 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/c1cbd07f-9a06-4683-8b7f-d2144bfa5601", "correlationId": "c066761a-1f51-4052-97b8-d056d666e208", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52660 - "GET /api/v1/operations/c1cbd07f-9a06-4683-8b7f-d2144bfa5601 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/b28ec597-d130-44fe-b1d9-b68623bd5017", "correlationId": "cf3568b7-372e-4b29-9e7d-b01a285ce466", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52668 - "GET /api/v1/operations/b28ec597-d130-44fe-b1d9-b68623bd5017 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/bf37be69-cc4b-4e41-9063-a77bc7840d4b", "correlationId": "dfe3f473-0cf6-43d2-8931-6f9619111454", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52670 - "GET /api/v1/operations/bf37be69-cc4b-4e41-9063-a77bc7840d4b HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/974b79cf-d024-48ab-879e-fe58f6b23644", "correlationId": "4aa7acc9-84f9-41e0-a256-2862d7f2142e", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52676 - "GET /api/v1/operations/974b79cf-d024-48ab-879e-fe58f6b23644 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/9654cb24-b895-4cdf-9f95-7d4e0f9ced26", "correlationId": "14940f0c-5e50-4ef4-bd58-3851b96d7b8e", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52678 - "GET /api/v1/operations/9654cb24-b895-4cdf-9f95-7d4e0f9ced26 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/5978a38d-a657-429b-8eb2-98db7acb9a70", "correlationId": "7dc5460b-c986-42fe-9eba-57bcacad5648", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52686 - "GET /api/v1/operations/5978a38d-a657-429b-8eb2-98db7acb9a70 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/81de256f-6bb0-4947-b848-983fd012ac76", "correlationId": "03e57f98-5829-4bd8-9446-32aa725ffecc", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52702 - "GET /api/v1/operations/81de256f-6bb0-4947-b848-983fd012ac76 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/098810d1-5ba5-47a6-a463-345610faadf5", "correlationId": "e529fb1c-2597-4bef-b99e-a98173edb123", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52706 - "GET /api/v1/operations/098810d1-5ba5-47a6-a463-345610faadf5 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:31Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/9dff2553-93ac-4168-8afa-f246b4abd64d", "correlationId": "1a81eaf1-9f16-4709-a060-27cb470062ef", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52712 - "GET /api/v1/operations/9dff2553-93ac-4168-8afa-f246b4abd64d HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/66d8481e-c13f-421d-b7a9-718e20c76d58", "correlationId": "93547a0b-e2a4-4d64-87a4-2a558ec70df8", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52718 - "GET /api/v1/operations/66d8481e-c13f-421d-b7a9-718e20c76d58 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/1aa6aaa6-094b-47a7-a658-21168695af99", "correlationId": "531911b0-38d7-4b5f-8870-9392a00767e2", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52734 - "GET /api/v1/operations/1aa6aaa6-094b-47a7-a658-21168695af99 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/2d77cbe3-8f11-4db6-805e-a9cbddce49cf", "correlationId": "b7230d29-49ba-4b4e-bca4-e969460ec763", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52746 - "GET /api/v1/operations/2d77cbe3-8f11-4db6-805e-a9cbddce49cf HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/491a0830-fc54-4874-a801-a5c6d8b11267", "correlationId": "c1607ad4-488c-4559-81af-14b81f159e11", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52752 - "GET /api/v1/operations/491a0830-fc54-4874-a801-a5c6d8b11267 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/ab2828cd-e608-4d2d-8334-130371951da7", "correlationId": "d2c9057a-72ea-476a-a40c-72976cbdd510", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52762 - "GET /api/v1/operations/ab2828cd-e608-4d2d-8334-130371951da7 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/bf6dc435-d9a5-4ddf-82b0-a9dfea513d0e", "correlationId": "4a299448-97cf-4aaa-b384-84df379aa896", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52774 - "GET /api/v1/operations/bf6dc435-d9a5-4ddf-82b0-a9dfea513d0e HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/bf4c1d32-7227-4985-840d-e580d02a0761", "correlationId": "e53e63cb-d625-46cd-ba0c-5db3be441a77", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52782 - "GET /api/v1/operations/bf4c1d32-7227-4985-840d-e580d02a0761 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/9075d87d-7a83-466b-9c69-3b242e032898", "correlationId": "ad1097de-f2a5-4908-89f6-989fb7f65318", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52796 - "GET /api/v1/operations/9075d87d-7a83-466b-9c69-3b242e032898 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/75e8a417-d0a3-46cd-aed2-087d07571809", "correlationId": "705102e4-0fce-41dc-b8fa-d1ffd89f75ca", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52800 - "GET /api/v1/operations/75e8a417-d0a3-46cd-aed2-087d07571809 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/5b934cf4-75c4-464f-b53e-70d23a45c49b", "correlationId": "575a9e4c-6296-439b-bc26-109a933c8788", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52806 - "GET /api/v1/operations/5b934cf4-75c4-464f-b53e-70d23a45c49b HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/4510c635-d5db-4c9c-af06-6f3fa2a6637e", "correlationId": "60f9b1df-48f1-4492-81a5-c07ba3578dea", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52810 - "GET /api/v1/operations/4510c635-d5db-4c9c-af06-6f3fa2a6637e HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/9ff4732b-4497-4f11-9f3c-314bdcb0345d", "correlationId": "7a3c320d-4539-4c89-8765-7be75c8268a5", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52824 - "GET /api/v1/operations/9ff4732b-4497-4f11-9f3c-314bdcb0345d HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/d4f0901f-4b15-430f-b54b-ef593bfaa717", "correlationId": "2d8e2d8e-30d3-4df9-84ea-37333d0935ec", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52830 - "GET /api/v1/operations/d4f0901f-4b15-430f-b54b-ef593bfaa717 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/6c14d48a-641b-4e0a-8a11-6b774873e375", "correlationId": "d0aea484-7865-4b6b-92f7-3b01e9f6541c", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52838 - "GET /api/v1/operations/6c14d48a-641b-4e0a-8a11-6b774873e375 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/16c0fd73-9fba-4c88-9ba0-08ea054b5cef", "correlationId": "a8e54f56-2d4c-4ccd-94aa-36b3040b69b8", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52850 - "GET /api/v1/operations/16c0fd73-9fba-4c88-9ba0-08ea054b5cef HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/786e14b0-004d-43b4-b93e-8ecbbe85dc11", "correlationId": "1e6d1272-e4de-4c2d-83b9-be9c6ff114a6", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52860 - "GET /api/v1/operations/786e14b0-004d-43b4-b93e-8ecbbe85dc11 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/f2b6ce7f-a17f-4101-915f-4f16a3f6ced1", "correlationId": "59f1df41-a085-41ae-ba15-7dc5c73dd5a9", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52868 - "GET /api/v1/operations/f2b6ce7f-a17f-4101-915f-4f16a3f6ced1 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/cf39c0c1-06d0-4d5d-b2c6-52cfba6cdec7", "correlationId": "7426c725-3da5-470c-9e6c-ed40f21d2273", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52872 - "GET /api/v1/operations/cf39c0c1-06d0-4d5d-b2c6-52cfba6cdec7 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/b53730df-b54f-4e63-9119-f681be9788e6", "correlationId": "3b99daaf-1cd6-4394-b481-0274490d8061", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52884 - "GET /api/v1/operations/b53730df-b54f-4e63-9119-f681be9788e6 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/e355697c-2620-418b-aa7a-3f57bd87b8e4", "correlationId": "7cc58af6-4004-496d-92cc-d66025c81452", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52892 - "GET /api/v1/operations/e355697c-2620-418b-aa7a-3f57bd87b8e4 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/83d86b8d-9fdd-40b8-af13-3035b4add106", "correlationId": "fcce542d-25e7-47e4-9431-6c7316130d60", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52898 - "GET /api/v1/operations/83d86b8d-9fdd-40b8-af13-3035b4add106 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/42e24434-e46f-4be6-a685-16c9d1c87d30", "correlationId": "659bafe3-c2e3-4150-8bc3-05db6a2f6287", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52902 - "GET /api/v1/operations/42e24434-e46f-4be6-a685-16c9d1c87d30 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/27fb8f2a-4cb4-46df-963e-a51c898cd836", "correlationId": "19102fac-ddfb-49bb-827a-918077acacc5", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52916 - "GET /api/v1/operations/27fb8f2a-4cb4-46df-963e-a51c898cd836 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/7a824392-058d-46e8-95b8-1b15a26950b8", "correlationId": "af34083b-43a7-42e4-8815-3138436456a9", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52928 - "GET /api/v1/operations/7a824392-058d-46e8-95b8-1b15a26950b8 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/5c61521f-4598-4327-8a24-00d94a112669", "correlationId": "c3b2d038-2fe4-41aa-b02e-e37920adfaf2", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52936 - "GET /api/v1/operations/5c61521f-4598-4327-8a24-00d94a112669 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:32Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/2b399008-4050-48ad-b2e8-e41dbf73539c", "correlationId": "ccd5b165-2a52-4b6a-a423-e4b566f098a2", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52946 - "GET /api/v1/operations/2b399008-4050-48ad-b2e8-e41dbf73539c HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:33Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/f979f1ea-4d8e-4ca1-a02c-0766234f6bbf", "correlationId": "d5bdf1b0-8933-450d-ad51-3b4c096d4b37", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52948 - "GET /api/v1/operations/f979f1ea-4d8e-4ca1-a02c-0766234f6bbf HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:33Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/aa6d4594-2451-4e13-a493-03a2e9e8e7fa", "correlationId": "a91b6578-531e-4b0f-a92d-21d5d27d19d8", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52962 - "GET /api/v1/operations/aa6d4594-2451-4e13-a493-03a2e9e8e7fa HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:33Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/operations/c625f5c6-ca11-4e40-95da-47f0c88370c5", "correlationId": "11c7c163-5dd7-448c-a344-d6398df3eb61", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52976 - "GET /api/v1/operations/c625f5c6-ca11-4e40-95da-47f0c88370c5 HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:33Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/integration/failures/5dd81812-55df-4abe-a643-e07e0cb804a6/reprocess", "correlationId": "39c73e30-17ea-403a-9d8f-ce4459fe998a", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52978 - "POST /api/v1/integration/failures/5dd81812-55df-4abe-a643-e07e0cb804a6/reprocess HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:51:33Z", "level": "INFO", "module": "archcorp", "operation": "/metrics", "correlationId": "002a7a59-b4c7-4768-9185-5566ca0d90fe", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:52990 - "GET /metrics HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [6801]

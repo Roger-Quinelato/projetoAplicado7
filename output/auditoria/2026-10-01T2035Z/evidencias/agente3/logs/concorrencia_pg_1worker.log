@@ -1,0 +1,9 @@
+== base=http://127.0.0.1:18082 rodadas=15
+   15x A_ativacao_chaves_diferentes codes=[200, 200] eventos=2
+   15x B_ativacao_mesma_chave codes=[200, 409] eventos=1
+   15x C_reserva_mesma_chave codes=[201, 409] reservas=1
+   15x D_reserva_sem_chave codes=[201, 201] reservas=2
+   15x E_corpo_nao200={"type":"urn:archcorp:problem:internal-error","title":"Erro interno","status":50
+   15x E_despacho_paralelo codes=[200, 500]
+  contratos_ativos=30 faturas=30 faturas_duplicadas=0 processos_duplicados=0 inbox_duplicado=0
+  contratos_com_>1_ContractActivated=15 status_outbox=[('PUBLISHED', 45, 0)]
