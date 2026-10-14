@@ -65,3 +65,14 @@ Ambiente: contêiner Linux, Python 3.11.15, SQLite local e Node para o build da 
 - Desempenho local: `scripts/performance_smoke.py` mediu p95 de 5,74 ms em 200 consultas de prontidão.
 - Interface: `npm run build` concluído.
 - Não executado neste ambiente: `docker build` (sem daemon Docker no contêiner; o GitHub Actions executa o build) e qualquer verificação no Render/Supabase.
+
+## Interface navegável em 14 de outubro de 2026 (T10)
+
+Ambiente: contêiner Linux, Python 3.13, Node 22, SQLite local novo, API servida por `uvicorn archcorp.main:app --port 8000` com `web/dist` na mesma origem e Chromium (Playwright) sem interface gráfica.
+
+- `cd web && npm run build`: `tsc -b` estrito e Vite concluídos sem erro.
+- Suíte Python: 57 testes aprovados com `PYTHONPATH=src python3 -m pytest -q tests -p no:cacheprovider` (backend não alterado).
+- Roteiro Playwright contra a API real, com tokens locais `demo-admin` e `demo-support`: navegação pelos cinco contextos com estados vazios; F1 cliente → reserva → rascunho com o mesmo `customerId`; F2 ativação → despacho → fatura → pagamento simulado; F3 elegibilidade → chamado de prioridade alta → despacho → atribuição → resolução; criação, início e conclusão de tarefa em Workflow; consulta de trilha por correlação.
+- Erros exibidos de forma legível, com código HTTP, `code` e `correlationId`: `401` na tela de acesso (credencial inexistente), `403` ao criar cliente com `demo-support`, `422` de telefone fora do E.164 (campo traduzido) e de reserva com fim anterior ao início (regra do servidor), e falha de rede simulada pelo navegador. Os formulários preservam os dados após erro.
+- Acessibilidade básica: rótulos associados aos campos, avisos em regiões `aria-live`, foco visível, link "Pular para o conteúdo", navegação por teclado entre contextos com foco movido ao título. Viewport de 390 px sem rolagem horizontal da página. Nenhum erro de JavaScript no console (apenas os registros de recurso do navegador para as respostas 4xx provocadas).
+- Não verificado: interface na URL HTTPS pública, auditoria formal de acessibilidade (WCAG/leitor de tela) e teste automatizado de frontend versionado no repositório; o roteiro Playwright desta execução ficou fora do Git.
