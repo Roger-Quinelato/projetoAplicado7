@@ -38,6 +38,12 @@ export default function Support({ params }: { params: URLSearchParams }) {
   const selectedContract = contracts.data?.find(c => c.contractId === contractId)
   const customerName = (id: string) => customers.data?.find(c => c.customerId === id)?.name ?? id.slice(0, 8)
 
+  /** Após abrir o chamado, limpa só a descrição; cliente e contrato são controlados pelo estado. */
+  function resetDescription(form: HTMLFormElement) {
+    const description = form.elements.namedItem('description')
+    if (description instanceof HTMLTextAreaElement) description.value = description.defaultValue
+  }
+
   async function checkEntitlement() {
     if (!selectedContract) return
     const result = await run('Consulta de elegibilidade', () => api.entitlement(selectedContract.contractId, selectedContract.customerId, selectedContract.serviceCode),
@@ -51,22 +57,22 @@ export default function Support({ params }: { params: URLSearchParams }) {
 
     <div className="grid two">
       <Card title="Abrir chamado" roles="support, admin">
-        <ActionForm key={customerId} submit="Abrir chamado" busy={busy} label="Abrir chamado" onSubmit={async f => {
-          const contract = contracts.data?.find(c => c.contractId === text(f, 'contractId'))
-          const intent = 'ticket'
-          const result = await run('Abertura de chamado', () => api.openTicket({
-            customerId: contract?.customerId ?? text(f, 'customerId'), contractId: text(f, 'contractId'),
+        <ActionForm submit="Abrir chamado" busy={busy} label="Abrir chamado" reset={resetDescription} onSubmit={async f => {
+          const contract = contracts.data?.find(c => c.contractId === contractId)
+          const body = {
+            customerId: contract?.customerId ?? customerId, contractId,
             serviceCode: contract?.serviceCode ?? 'RENTAL-FLEX', category: text(f, 'category'), description: text(f, 'description'),
-          }, keys.keyFor(intent)), t => t.status === 'OPEN'
+          }
+          const result = await run('Abertura de chamado', () => keys.send('ticket', body, key => api.openTicket(body, key)), t => t.status === 'OPEN'
             ? `Chamado ${t.ticketId.slice(0, 8)} aberto, prioridade ${t.priority === 'HIGH' ? 'alta' : 'normal'}, SLA até ${dateTime(t.dueAt)}.`
             : `Chamado ${t.ticketId.slice(0, 8)} com elegibilidade pendente; reconcilie quando Contracts voltar.`)
-          if (result) { keys.done(intent); refresh() }
+          if (result) refresh()
           return result !== null
         }}>
-          <SelectField name="customerId" label="Cliente" defaultValue={customerId} onChange={v => { setCustomerId(v); setContractId(''); setEntitlement(null) }}
+          <SelectField name="customerId" label="Cliente" value={customerId} onChange={v => { setCustomerId(v); setContractId(''); setEntitlement(null) }}
             options={(customers.data ?? []).map(c => ({ value: c.customerId, label: `${c.name} · ${c.email}` }))}
             placeholder={customers.status === 'loading' ? 'Carregando…' : 'Selecione'} />
-          <SelectField name="contractId" label="Contrato ativo" defaultValue={contractId} onChange={v => { setContractId(v); setEntitlement(null) }}
+          <SelectField name="contractId" label="Contrato ativo" value={contractId} onChange={v => { setContractId(v); setEntitlement(null) }}
             options={activeContracts.map(c => ({ value: c.contractId, label: `${c.contractId.slice(0, 8)} · ${c.serviceCode} · SLA ${c.slaHours} h` }))}
             placeholder={activeContracts.length ? 'Selecione' : 'Nenhum contrato ativo para este cliente'}
             hint="Apenas contratos ativos aparecem; ative um rascunho em Reservas e contratos." />

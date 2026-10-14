@@ -356,8 +356,11 @@ Financeiro, Atendimento e Workflow; cada aviso de sucesso ou erro exibe o
    no cartão "Trilha por correlação".
 
 Os comandos com repetição segura (reserva, rascunhos, ativação, encerramento e
-abertura de chamado) enviam `Idempotency-Key`; a interface reaproveita a chave
-numa nova tentativa da mesma ação até obter sucesso. Quando a API indica
+abertura de chamado) enviam `Idempotency-Key`. A interface só reaproveita a chave
+quando a nova tentativa da mesma ação envia exatamente o mesmo corpo (por exemplo,
+após uma falha de rede ambígua); se o usuário corrigir algum campo, uma chave nova
+é gerada, evitando `409 IDEMPOTENCY_CONFLICT`. A chave é descartada após sucesso e
+após receber `409 IDEMPOTENCY_CONFLICT`. Quando a API indica
 `Idempotency-Replayed: true`, o aviso informa a repetição idempotente.
 
 ## Mostrar observabilidade e segurança

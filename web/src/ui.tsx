@@ -147,19 +147,39 @@ export function useActions() {
   return { feedback, busy, run, clear: () => setFeedback(null) }
 }
 
+/** JSON com chaves ordenadas: o mesmo corpo sempre gera a mesma impressão digital. */
+export function fingerprint(value: unknown): string {
+  return JSON.stringify(value ?? null, (_key, v: unknown) => v && typeof v === 'object' && !Array.isArray(v)
+    ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)))
+    : v)
+}
+
 /**
- * Chaves de idempotência por intenção do usuário: a mesma intenção repetida (duplo clique,
- * nova tentativa após falha de rede) reaproveita a chave; após sucesso, a chave é descartada.
+ * Chaves de idempotência por intenção e corpo. A chave anterior só é reaproveitada quando a nova
+ * tentativa da mesma intenção envia exatamente o mesmo corpo (duplo clique, nova tentativa após
+ * falha ambígua de rede); se o usuário corrigir um campo, gera-se uma chave nova. A chave é
+ * descartada após sucesso e após `409 IDEMPOTENCY_CONFLICT`.
  */
 export function useIdempotencyKeys() {
-  const keys = useRef(new Map<string, string>())
+  const keys = useRef(new Map<string, { fingerprint: string, key: string }>())
   return {
-    keyFor(intent: string): string {
-      let key = keys.current.get(intent)
-      if (!key) { key = uuid(); keys.current.set(intent, key) }
-      return key
+    keyFor(intent: string, body: unknown): string {
+      const print = fingerprint(body)
+      let entry = keys.current.get(intent)
+      if (!entry || entry.fingerprint !== print) { entry = { fingerprint: print, key: uuid() }; keys.current.set(intent, entry) }
+      return entry.key
     },
-    done(intent: string) { keys.current.delete(intent) },
+    async send<T>(intent: string, body: unknown, call: (key: string) => Promise<ApiResult<T>>): Promise<ApiResult<T>> {
+      const key = this.keyFor(intent, body)
+      try {
+        const result = await call(key)
+        keys.current.delete(intent)
+        return result
+      } catch (error) {
+        if (error instanceof ApiError && error.code === 'IDEMPOTENCY_CONFLICT') keys.current.delete(intent)
+        throw error
+      }
+    },
   }
 }
 
@@ -235,15 +255,18 @@ export function TextArea({ name, label, required = true, defaultValue }: { name:
 }
 
 export interface Option { value: string, label: string }
-export function SelectField({ name, label, options, required = true, placeholder = 'Selecione', defaultValue, onChange, hint }: {
+export function SelectField({ name, label, options, required = true, placeholder = 'Selecione', defaultValue, value, onChange, hint }: {
   name: string, label: string, options: Option[], required?: boolean, placeholder?: string, defaultValue?: string,
+  /** Quando informado, o campo é controlado pelo estado do componente pai. */
+  value?: string,
   onChange?: (value: string) => void, hint?: string,
 }) {
   const id = useId()
   return <div className="field">
     <label htmlFor={id}>{label}{!required && <span className="optional"> (opcional)</span>}</label>
     {/* Remonta quando as opções assíncronas chegam, para que o valor padrão (ex.: cliente pré-selecionado) seja aplicado. */}
-    <select key={`${defaultValue ?? ''}|${options.length > 0}`} id={id} name={name} required={required} defaultValue={defaultValue ?? ''} onChange={e => onChange?.(e.target.value)} aria-describedby={hint ? `${id}-hint` : undefined}>
+    <select key={value === undefined ? `${defaultValue ?? ''}|${options.length > 0}` : 'controlled'} id={id} name={name} required={required}
+      {...(value === undefined ? { defaultValue: defaultValue ?? '' } : { value })} onChange={e => onChange?.(e.target.value)} aria-describedby={hint ? `${id}-hint` : undefined}>
       <option value="">{placeholder}</option>
       {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
@@ -257,14 +280,16 @@ export function Checkbox({ name, label, defaultChecked = true }: { name: string,
 }
 
 /** Formulário que só limpa os campos quando a operação tem sucesso. */
-export function ActionForm({ submit, busy, onSubmit, children, label }: {
+export function ActionForm({ submit, busy, onSubmit, children, label, reset = form => form.reset() }: {
   submit: string, busy: boolean, label?: string, children: ReactNode,
   onSubmit: (data: FormData) => Promise<boolean>,
+  /** Limpeza após sucesso; por padrão, `form.reset()`. Formulários com campos controlados limpam só os demais. */
+  reset?: (form: HTMLFormElement) => void,
 }) {
   async function handle(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = event.currentTarget
-    if (await onSubmit(new FormData(form))) form.reset()
+    if (await onSubmit(new FormData(form))) reset(form)
   }
   return <form onSubmit={e => void handle(e)} aria-label={label}>
     {children}
