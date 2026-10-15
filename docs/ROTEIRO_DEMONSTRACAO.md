@@ -137,6 +137,68 @@ $headers = @{
    Os resultados devem ser `true` para o cabeçalho de replay e `True` para a
    comparação do `contractId`. O banco continua com um rascunho para essa chave.
 
+### F1 verificável por script Python (T11)
+
+[`scripts/demo_f1.py`](../scripts/demo_f1.py) executa o F1 pelo caminho cliente →
+reserva → rascunho e as ramificações do plano, usando `httpx` (já em
+`requirements-dev.txt`). Não tem dependência específica de SO; foi executado só em
+Linux. Pode ser repetido no mesmo banco, pois gera e-mail, ID legado e chaves novas a cada execução.
+
+1. Suba a API local (Docker Compose acima ou diretamente):
+
+   ```bash
+   PYTHONPATH=src uvicorn archcorp.main:app --port 8000
+   ```
+
+   No PowerShell: `$env:PYTHONPATH = "src"; uvicorn archcorp.main:app --port 8000`.
+
+2. Em outro terminal, execute:
+
+   ```bash
+   python scripts/demo_f1.py
+   ```
+
+   Opções: `--base-url` (ou `ARCHCORP_BASE_URL`), `--token` (ou `ARCHCORP_TOKEN`;
+   padrão `demo-admin`) e `--forbidden-token` (padrão `demo-support`). No modo
+   público só existe a credencial compartilhada; informe-a por `ARCHCORP_TOKEN` e use
+   `--forbidden-token ""` para pular a checagem de `403`. Nunca grave a credencial no
+   repositório.
+
+3. Observe cada linha `[OK  ]`/`[FALHA]`: ela traz o passo, o status HTTP e o
+   `correlationId` devolvido pela API. O caminho principal usa um único
+   `correlationId` (impresso no cabeçalho e no resumo); cada ramificação usa um
+   próprio.
+
+   | Passo | O que comprova |
+   |---|---|
+   | 0b | O `/openapi.json` publicado não aceita campos cadastrais em `ReservationInput` nem em `ContractDraftCreate`, e o rascunho a partir da reserva não tem corpo |
+   | 1–2 | O CRM cadastra e devolve o cliente oficial (UUID, nome, e-mail e ID legado sintéticos) |
+   | 3–4 | A reserva é registrada para o `customerId` do CRM; repetir a chave devolve a mesma reserva |
+   | 5–6 | O rascunho é gerado da reserva **sem corpo**, com o `customerId` do CRM e período/cobrança da reserva; a repetição devolve o mesmo `contractId` com `Idempotency-Replayed: true` |
+   | 7–9 | A reserva fica `DRAFTED` e vinculada; há um único contrato; o ID legado resolve o mesmo UUID global |
+   | 10 | `GET /api/v1/operations/{correlationId}` mostra `crm.create_customer`, `contracts.create_reservation`, `contracts.create_draft` e `contracts.draft_from_reservation` |
+   | 11–13 | `422` em `application/problem+json` para validação estrutural, cliente inexistente e cliente inativado após a reserva, com o mesmo `correlationId` enviado |
+   | 14–15 | A mesma `Idempotency-Key` usada em outra reserva retorna `409 IDEMPOTENCY_CONFLICT`; o contrato da primeira reserva continua `DRAFT`. O reaproveitamento de uma chave do rascunho direto é coberto por teste automatizado |
+   | 16–18 | `401` sem credencial, `403` para papel sem permissão e `400` para `X-Correlation-ID` que não é UUID |
+
+4. O script termina com `== N/N checagens aprovadas` e código de saída `0`. Qualquer
+   checagem divergente imprime o esperado e a resposta e termina com código `1`;
+   API inacessível termina com `2`.
+
+A API não possui chave para simular timeout ou indisponibilidade do CRM durante o
+F1, por isso o script não cobre essa ramificação. Ela é demonstrada pelo teste
+`tests/test_f1_cliente_reserva_contrato.py::test_f1_indisponibilidade_do_crm_comportamento_atual_500_sem_efeito_parcial`,
+que substitui o adaptador `CustomerReader` por um simulador sem resposta. O
+comportamento **atual** (não é o contrato-alvo) é: `500 INTERNAL_ERROR` em problem+json com o
+`correlationId`, log `ERROR` com a mesma correlação, nenhum contrato, vínculo ou
+chave idempotente gravados, e a repetição com a mesma chave cria o rascunho uma
+única vez. Não há timeout configurado nem retentativa automática no adaptador
+interno; a repetição cabe ao chamador.
+
+```bash
+PYTHONPATH=src python -m pytest -q tests/test_f1_cliente_reserva_contrato.py -p no:cacheprovider
+```
+
 ## F2: ativar, cobrar e iniciar preparação de retirada
 
 1. Registre o estado anterior, ative o contrato e capture o `eventId`:
@@ -328,6 +390,40 @@ evento em `GET /api/v1/integration/failures` e o retorno ao estado `PENDING` por
 
 Cada chamada ao dispatcher representa uma tentativa. O protótipo não implementa
 agendamento, atraso exponencial ou jitter.
+
+## Executar os fluxos pela interface
+
+A interface em `http://localhost:8000/` cobre F1, F2 e F3 sem terminal. Informe
+`demo-admin` na tela de acesso (no modo público, a credencial configurada no
+provedor). A navegação lateral leva a Visão geral, CRM, Reservas e contratos,
+Financeiro, Atendimento e Workflow; cada aviso de sucesso ou erro exibe o
+`correlationId` da requisição.
+
+1. **F1.** Em CRM, cadastre um cliente fictício. Na linha do cliente, use
+   **Nova reserva**: a tela Reservas e contratos abre com o mesmo cliente
+   selecionado. Registre a reserva e, na tabela Reservas, use **Gerar rascunho**.
+   O contrato aparece como "Rascunho" para o mesmo cliente, sem recadastro.
+2. **F2.** Em Contratos, use **Ativar**. Em Financeiro (ou Visão geral/Workflow),
+   use **Despachar eventos pendentes**: surge a fatura "Em aberto" e, em Workflow,
+   a "Preparação de retirada". Selecione a fatura e registre o pagamento simulado.
+3. **F3.** Em Contratos, use **Abrir chamado** no contrato ativo. Em Atendimento,
+   use **Consultar elegibilidade e SLA**, abra o chamado, despache os eventos,
+   atribua um responsável e resolva. Um novo despacho conclui o processo de
+   resolução em Workflow.
+4. **Erros legíveis.** Registre uma reserva com fim anterior ao início (`422`
+   com a regra violada) ou um contato com telefone fora do E.164 (`422` com o
+   campo). Saia e entre com `demo-support` para ver `403` ao cadastrar cliente.
+   Uma credencial inexistente mostra `401` na tela de acesso.
+5. **Trilha.** Copie o `correlationId` de um aviso e consulte-o em Visão geral,
+   no cartão "Trilha por correlação".
+
+Os comandos com repetição segura (reserva, rascunhos, ativação, encerramento e
+abertura de chamado) enviam `Idempotency-Key`. A interface só reaproveita a chave
+quando a nova tentativa da mesma ação envia exatamente o mesmo corpo (por exemplo,
+após uma falha de rede ambígua); se o usuário corrigir algum campo, uma chave nova
+é gerada, evitando `409 IDEMPOTENCY_CONFLICT`. A chave é descartada após sucesso e
+após receber `409 IDEMPOTENCY_CONFLICT`. Quando a API indica
+`Idempotency-Replayed: true`, o aviso informa a repetição idempotente.
 
 ## Mostrar observabilidade e segurança
 

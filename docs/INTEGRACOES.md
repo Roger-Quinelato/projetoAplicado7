@@ -42,9 +42,23 @@ pela operação. Em uma repetição, a API devolve a resposta armazenada, manté
 mesmo `contractId` e informa `Idempotency-Replayed: true`. Em uma criação nova, a
 mesma transação persiste contrato, registro de idempotência e auditoria.
 
-O protótipo executa `CustomerReader` dentro do mesmo processo. Ele não simula
-timeout ou indisponibilidade do CRM em F1. Esses controles devem entrar no
-adaptador quando o CRM real for conectado.
+No rascunho a partir da reserva (`POST /api/v1/contracts/reservations/{id}/draft`),
+o pedido não tem corpo: Contracts usa o `customerId` e as condições gravadas na
+reserva. A impressão digital idempotente desse pedido inclui o `reservationId`
+(a operação continua `create_contract_draft`; a separação entre os dois caminhos é feita
+pela impressão digital, leitura da regra 11 do ADR-001 registrada aqui): reutilizar a mesma `Idempotency-Key` em outra reserva ou uma
+chave já usada em `POST /api/v1/contracts/drafts` retorna `409` com
+`IDEMPOTENCY_CONFLICT`, sem criar nem vincular contrato.
+
+O protótipo executa `CustomerReader` dentro do mesmo processo. A API não oferece
+chave para simular timeout ou indisponibilidade do CRM em F1, e o adaptador não tem
+timeout configurado nem retentativa automática. Se a porta falhar, a API responde
+hoje `500 INTERNAL_ERROR` em problem+json (comportamento atual, não contrato-alvo) com o `correlationId`, registra log `ERROR`
+com a mesma correlação e não grava contrato, vínculo ou chave idempotente; o
+chamador pode repetir com a mesma chave. Esse comportamento é verificado com um
+simulador em `tests/test_f1_cliente_reserva_contrato.py`. Timeout, retentativa
+limitada e o mapeamento da indisponibilidade (`503` ou estado pendente, a decidir em
+ADR) estão registrados como pendência em `CRONOGRAMA_EXECUCAO.md`.
 
 ## F2: contrato ativo para faturamento e preparação de retirada
 

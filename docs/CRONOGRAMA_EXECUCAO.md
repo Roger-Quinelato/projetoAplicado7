@@ -46,8 +46,8 @@ Cada linha é uma **tarefa** (tipo), salvo os agrupamentos Q1–Q7, que serão *
 | T07 | S5 | Definir dados sintéticos, identificadores globais, migração aditiva e contrato de erro | Alta | Em andamento | T05 |
 | T08 | S6 | Completar CRM: clientes, contatos e oportunidades, validação e autorização | Alta | Em andamento | T06,T07 |
 | T09 | S6 | Completar reservas/contratos: reserva, rascunho, ativação idempotente e encerramento | Alta | Em andamento | T06,T07 |
-| T10 | S7 | Entregar frontend navegável nos cinco contextos, com estados e feedback de erros | Alta | Em andamento | T08,T09 |
-| T11 | S7 | Demonstrar F1 cliente → reserva → contrato sem recadastro | Alta | Em andamento | T08,T09,T10 |
+| T10 | S7 | Entregar frontend navegável nos cinco contextos, com estados e feedback de erros | Alta | Em revisão | T08,T09 |
+| T11 | S7 | Demonstrar F1 cliente → reserva → contrato sem recadastro | Alta | Em revisão | T08,T09,T10 |
 | T12 | S8 | Completar financeiro: fatura, pagamento simulado e inadimplência por vencimento | Alta | Em andamento | T09 |
 | T13 | S8 | Demonstrar F2 ativação → cobrança + preparação; reentrega sem duplicação | Alta | Em andamento | T09,T12 |
 | T14 | S8 | Revisar viabilidade e empreendedorismo: custos zero, limites e evolução comercial | Normal | Planejado | T05 |
@@ -59,6 +59,12 @@ Cada linha é uma **tarefa** (tipo), salvo os agrupamentos Q1–Q7, que serão *
 | T20 | S12 | Publicar app/API em Render Free com Supabase Free; testar URL HTTPS e persistência real | Alta | Planejado | T17,T18 |
 | T21 | S12 | Criar Jira, Trello, Notion, Drive e GitHub Project; publicar tickets, decisões e arquivos oficiais com links cruzados | Alta | Em andamento | T03,T19 |
 | T22 | S13–S14 | Revisar entrega com professor, preencher nomes/contribuições, ensaiar e submeter pacote final | Alta | Aguardando | T19,T20,T21 |
+
+## Pendências registradas
+
+| Origem | Pendência | Gatilho | Escopo |
+|---|---|---|---|
+| T11 (revisão do CTO em 14/10/2026) | Critério de F1 "timeout/retry limitado" não implementado; hoje a falha do `CustomerReader` vira `500` sem efeito parcial | Conector do CRM fora do processo | Timeout configurável no adaptador; retentativa só para erro transitório, com atraso exponencial, jitter e limite; mapeamento da indisponibilidade. A escolha entre `503` e estado `PENDING` será registrada em ADR curto quando o conector entrar |
 
 ## Regras de conclusão
 
