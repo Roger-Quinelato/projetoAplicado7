@@ -160,3 +160,14 @@ Execução local: **178 passed, 6 skipped** (SQLite; skips são exclusivamente
 PostgreSQL). `npm ci --prefix web` e `npm run build --prefix web` aprovados. CI
 PostgreSQL 16 configurada, mas execução ainda não confirmada nesta evidência.
 Sem Docker, deploy ou acesso a sistemas reais.
+
+### Conferência posterior do baseline v1 (2026-10-15)
+
+A CI do SHA `15c9a4e` passou, incluindo PostgreSQL 16 (migrações e concorrência),
+frontend e Docker: https://github.com/Roger-Quinelato/projetoAplicado7/actions/runs/38670396112.
+Comparação com main `5e344e2` identificou limites novos de serviceCode e regex
+nova na moeda: foram retirados para preservar a fronteira v1. TicketResponse
+mantém enum de abertura/reconciliação; TicketDetailResponse continua incluindo
+RESOLVED. Após ajustes: **177 passed, 6 skipped** em SQLite; CI será repetida no
+SHA final. A retirada de dois casos de rejeição de serviceCode foi compensada
+pela manutenção do teste de tamanho da descrição; elegibilidade não mudou.

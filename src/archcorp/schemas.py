@@ -161,7 +161,7 @@ class TicketCreate(BaseModel):
 
     customerId: UUID
     contractId: UUID
-    serviceCode: str = Field(min_length=2, max_length=80)
+    serviceCode: str
     category: str = Field(min_length=2, max_length=80, description="OUTAGE e SECURITY recebem prioridade alta; demais categorias, normal.")
     description: str = Field(min_length=3, max_length=2000, description="Relato da ocorrência, sem documento, cartão, telefone, placa ou e-mail.")
 
@@ -257,7 +257,7 @@ class TicketResponse(BaseModel):
     contractId: UUID
     serviceCode: str
     category: str
-    status: Literal["OPEN", "PENDING_ENTITLEMENT", "REJECTED_ENTITLEMENT", "RESOLVED"]
+    status: Literal["OPEN", "PENDING_ENTITLEMENT", "REJECTED_ENTITLEMENT"]
     priority: Literal["NORMAL", "HIGH"]
     slaHours: int | None
     dueAt: datetime | None

@@ -283,9 +283,8 @@ def test_abertura_inelegivel_nao_grava_nada_nem_consome_a_chave(client, admin_he
 
 
 @pytest.mark.parametrize(("change", "loc"), [
-    ({"serviceCode": ""}, "serviceCode"),
-    ({"serviceCode": "X" * 81}, "serviceCode"),
     ({"category": ""}, "category"),
+    ({"description": "x"}, "description"),
 ])
 def test_validacao_na_fronteira_rejeita_sem_criar_chamado(client, admin_headers, active_contract, change, loc):
     customer, contract = active_contract

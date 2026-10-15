@@ -37,3 +37,9 @@ convergência, ausência de drift e bloqueio de downgrade com preservação de d
 CI passa a executar também PostgreSQL 16 dedicado com credenciais sintéticas
 efêmeras, sem conectar Supabase/Render ou sistemas reais. Resultado configurado
 não é resultado executado: as evidências distinguem execução local e CI.
+
+A comparação com o contrato da main `5e344e2` também retirou os novos limites
+de serviceCode na abertura e a regex da moeda no pagamento. Elegibilidade e
+igualdade da moeda continuam regras de negócio e preservam seus códigos v1.
+TicketResponse mantém seu enum original (abertura/reconciliação); resolução
+continua usando TicketDetailResponse, que inclui RESOLVED.

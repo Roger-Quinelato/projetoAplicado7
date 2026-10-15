@@ -6124,7 +6124,6 @@ components:
           type: string
           maxLength: 3
           minLength: 3
-          pattern: ^[A-Z]{3}$
           title: Currency
         reference:
           type: string
@@ -6685,8 +6684,6 @@ components:
           title: Contractid
         serviceCode:
           type: string
-          maxLength: 80
-          minLength: 2
           title: Servicecode
         category:
           type: string
@@ -6923,7 +6920,6 @@ components:
           - OPEN
           - PENDING_ENTITLEMENT
           - REJECTED_ENTITLEMENT
-          - RESOLVED
           title: Status
         priority:
           type: string
