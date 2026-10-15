@@ -1,6 +1,9 @@
 """Regressões da estabilização v1, sempre com dados sintéticos."""
 import logging
+import sys
+import types
 
+import pytest
 from sqlalchemy import event, select
 
 from archcorp.config import settings
@@ -97,6 +100,82 @@ def test_outbox_recupera_sessao_apos_erro_sql_e_continua(caplog):
         assert len(session.scalars(select(AuditLog)).all()) == 1
         assert len(session.scalars(select(InboxEvent)).all()) == 1
     assert secret not in caplog.text
+
+
+class _UnroutableError(Exception):
+    pass
+
+
+@pytest.fixture
+def fake_pika(monkeypatch):
+    """Substitui o pika por um dublê que registra as chamadas do canal."""
+    calls = {"published": [], "fail_with": None}
+
+    class Channel:
+        def exchange_declare(self, **kwargs):
+            calls["exchange"] = kwargs
+
+        def queue_declare(self, **kwargs):
+            calls["queue"] = kwargs
+
+        def queue_bind(self, **kwargs):
+            calls["bind"] = kwargs
+
+        def confirm_delivery(self):
+            calls["confirm"] = True
+
+        def basic_publish(self, **kwargs):
+            if calls["fail_with"]:
+                raise calls["fail_with"]
+            calls["published"].append(kwargs)
+
+    class Connection:
+        def __init__(self, _parameters):
+            pass
+
+        def channel(self):
+            return Channel()
+
+        def close(self):
+            calls["closed"] = True
+
+    module = types.SimpleNamespace(BlockingConnection=Connection, URLParameters=lambda url: url,
+                                   BasicProperties=lambda **kwargs: kwargs)
+    monkeypatch.setitem(sys.modules, "pika", module)
+    monkeypatch.setattr(settings, "rabbitmq_url", "amqp://sintetico")
+    return calls
+
+
+def test_broker_usa_confirmacao_mandatory_e_fila_declarada(fake_pika):
+    dispatcher = EventDispatcher({})
+    with SessionLocal() as session:
+        session.add(OutboxEvent(event_type="Healthy.v1", producer="test", payload={}, correlation_id="synthetic"))
+        session.commit()
+        assert dispatcher.dispatch_pending(session) == {"processed": 1, "failed": 0}
+    assert fake_pika["confirm"] is True
+    assert fake_pika["queue"] == {"queue": "archcorp.events.all", "durable": True}
+    assert fake_pika["bind"] == {"queue": "archcorp.events.all", "exchange": "archcorp.events", "routing_key": "#"}
+    assert fake_pika["published"][0]["mandatory"] is True
+    assert fake_pika["published"][0]["routing_key"] == "Healthy.v1"
+    assert fake_pika["closed"] is True
+
+
+def test_mensagem_sem_rota_no_broker_nao_marca_evento_publicado(fake_pika):
+    fake_pika["fail_with"] = _UnroutableError("sem rota")
+
+    def effect(session, envelope):
+        audit(session, envelope["correlationId"], "test", "effect", "success")
+
+    dispatcher = EventDispatcher({"Routed.v1": [("effect", effect)]})
+    with SessionLocal() as session:
+        outbox = OutboxEvent(event_type="Routed.v1", producer="test", payload={}, correlation_id="synthetic")
+        session.add(outbox)
+        session.commit()
+        assert dispatcher.dispatch_pending(session) == {"processed": 0, "failed": 1}
+        stored = session.get(OutboxEvent, outbox.event_id)
+        assert (stored.status, stored.attempts) == ("PENDING", 1)
+        assert session.scalars(select(AuditLog)).all() == []
+        assert session.scalars(select(InboxEvent)).all() == []
 
 
 def test_validacao_nao_ecoa_corpo_ou_contexto_sensivel(client, admin_headers):

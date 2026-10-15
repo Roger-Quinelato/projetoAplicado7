@@ -231,5 +231,13 @@ que o SAVEPOINT não vire a transação externa. Métrica de falha e log são em
 após o commit da tentativa. Ao atingir
 `retry_limit`, o evento fica `FAILED`. Reprocessamento preserva inbox e restrições
 de negócio. Logs registram somente tipo da exceção, ID e correlação, sem SQL,
-parâmetros, traceback ou mensagem da exceção. A cópia opcional no RabbitMQ continua
-com entrega ao menos uma vez: falha após publicação pode causar reentrega.
+parâmetros, traceback ou mensagem da exceção.
+
+A cópia opcional no RabbitMQ usa publisher confirms e `mandatory=True`, dentro do
+SAVEPOINT do evento. O despachante declara a fila durável `archcorp.events.all`
+ligada à exchange com `#`; mensagem sem rota (`UnroutableError`) ou recusada
+(`NackError`) conta como falha da tentativa e o evento não vira `PUBLISHED`.
+A entrega ao broker é ao menos uma vez: uma falha depois da confirmação e antes do
+commit pode causar nova publicação do mesmo `eventId`. Consumidores externos devem
+deduplicar por `eventId`. Verificado apenas com `pika` simulado nos testes; não
+há teste automatizado contra RabbitMQ real.

@@ -117,5 +117,10 @@ Após a correção: `PYTHONPATH=src python -m pytest -q tests -p no:cacheprovide
   3 falharam antes da correção. Passo `npm test` adicionado ao job `application`.
 - Local (Python 3.13, Node 22): `PYTHONPATH=src python -m pytest -q tests -p no:cacheprovider`:
   **80 passed** em SQLite; `cd web && npm test`: 4 passed; `npm run build`: sem erro.
+- RabbitMQ: publisher confirms, `mandatory=True` e fila durável `archcorp.events.all`
+  (`#`). Dois testes com `pika` simulado: a configuração do canal (falhou antes da
+  correção) e a mensagem sem rota mantendo o evento `PENDING` sem efeitos
+  (caracterização: qualquer exceção do broker já contava como falha).
+  Após a mudança: **82 passed** em SQLite.
 - Não verificado nesta etapa: PostgreSQL (o job e os testes de concorrência entram
-  na camada #37) e disputa real entre dois despachantes.
+  na camada #37), disputa real entre dois despachantes e RabbitMQ real.

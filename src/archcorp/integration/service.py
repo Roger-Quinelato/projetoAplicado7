@@ -12,6 +12,8 @@ from archcorp.observability import COUNTERS, logger
 
 
 EventHandler = Callable[[Session, dict], None]
+BROKER_EXCHANGE = "archcorp.events"
+BROKER_QUEUE = "archcorp.events.all"
 
 
 class EventDispatcher:
@@ -92,12 +94,20 @@ class EventDispatcher:
         connection = pika.BlockingConnection(pika.URLParameters(settings.rabbitmq_url))
         try:
             channel = connection.channel()
-            channel.exchange_declare(exchange="archcorp.events", exchange_type="topic", durable=True)
+            channel.exchange_declare(exchange=BROKER_EXCHANGE, exchange_type="topic", durable=True)
+            # Fila durável que recebe todos os eventos: sem ela, uma mensagem sem
+            # rota seria descartada pelo broker e o evento marcado PUBLISHED.
+            channel.queue_declare(queue=BROKER_QUEUE, durable=True)
+            channel.queue_bind(queue=BROKER_QUEUE, exchange=BROKER_EXCHANGE, routing_key="#")
+            # Confirmação do broker: UnroutableError (mandatory) e NackError
+            # sobem para o despachante e contam como falha da tentativa.
+            channel.confirm_delivery()
             channel.basic_publish(
-                exchange="archcorp.events",
+                exchange=BROKER_EXCHANGE,
                 routing_key=envelope["eventType"],
                 body=json.dumps(envelope, ensure_ascii=False).encode("utf-8"),
                 properties=pika.BasicProperties(content_type="application/json", delivery_mode=2),
+                mandatory=True,
             )
         finally:
             connection.close()
