@@ -1,13 +1,15 @@
 from datetime import date, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from archcorp.finance.models import Invoice
+from archcorp.infrastructure.db import count_rows
 from archcorp.integration.service import audit
 
 
 def handle_contract_activated(session: Session, envelope: dict) -> None:
+    """Consumidor de ContractActivated.v1: cria a primeira fatura do contrato uma única vez."""
     payload = envelope["payload"]
     if session.scalar(select(Invoice).where(Invoice.contract_id == payload["contractId"])):
         return
@@ -22,4 +24,5 @@ def handle_contract_activated(session: Session, envelope: dict) -> None:
 
 
 def count_invoices(session: Session) -> int:
-    return session.scalar(select(func.count()).select_from(Invoice)) or 0
+    """Conta as faturas gravadas."""
+    return count_rows(session, Invoice)
