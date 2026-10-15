@@ -78,8 +78,8 @@ A ativação altera o contrato e grava `ContractActivated.v1` na outbox na mesma
 transação. O corpo da resposta inclui o `eventId`. Repetir o comando com a mesma
 `Idempotency-Key` devolve esse mesmo evento e não grava outra ativação.
 
-O dispatcher verifica a inbox de cada consumidor. Finance mantém uma cobrança por
-contrato, e Workflow mantém uma instância por tipo e referência. Depois dos
+O dispatcher verifica a inbox de cada consumidor. Finance mantém uma primeira cobrança
+por contrato e por `eventId`, e Workflow mantém uma instância por tipo e referência. Depois dos
 consumidores internos, o dispatcher publica o envelope no RabbitMQ quando
 `RABBITMQ_URL` está configurado. Uma publicação concluída muda o evento para
 `PUBLISHED`.
@@ -141,6 +141,33 @@ altera o cadastro proprietário do CRM.
 
 Esse fluxo sustenta o requisito de atualização cadastral, mas não substitui F1, F2
 ou F3 entre as três integrações avaliadas.
+
+## Fluxo auxiliar: encerramento, faturamento final e inadimplência (T12)
+
+| Item | Definição |
+|---|---|
+| Origem | Contracts (`ContractClosed.v1`) e operador financeiro (API Finance) |
+| Destino | Finance (consumidor `finance-faturamento-final`), depois do consumidor de Workflow |
+| Informação | Contrato, cliente, vigência (`startsOn`, `endsOn`) e cobrança (`amount`, `currency`, `cycle`) do payload público; nenhum dado interno de Contracts |
+| Comunicação | Evento assíncrono para a fatura final; REST síncrono para pagamento simulado, verificação de vencimento e cancelamento |
+| APIs | `POST /api/v1/finance/invoices/{id}/payments` (`Idempotency-Key` opcional), `POST /api/v1/finance/invoices/overdue-check`, `POST /api/v1/finance/invoices/{id}/cancel`, `GET /api/v1/finance/invoices?contractId=` |
+| Erros | `404` fatura inexistente; `409 CONFLICT` sobrepagamento ou referência reutilizada; `409 INVALID_STATE` fatura quitada/cancelada ou cancelamento inválido; `409 IDEMPOTENCY_CONFLICT`; `422` entrada inválida, moeda diferente (`BUSINESS_RULE_VIOLATION`) ou data de referência futura sem simulação |
+
+A fatura final cobra os ciclos iniciados entre `startsOn` e `endsOn` menos o que já
+foi faturado ao contrato (premissa a validar). Ela é única por contrato e por
+`eventId`: a inbox descarta a reentrega e, se o registro da inbox se perder, a
+unicidade `source_event_id` e a unicidade por contrato e tipo impedem a duplicação.
+Sem a primeira fatura, o consumidor falha antes de qualquer escrita; o evento segue
+o caminho normal de tentativas, `FAILED` e reprocessamento.
+
+A inadimplência é registrada por comando explícito, não por agendador: a
+verificação marca como `OVERDUE` as faturas `OPEN` ou `PARTIALLY_PAID` com
+`dueDate` anterior à data UTC de referência, grava `overdueSince` e uma auditoria
+por fatura com o `correlationId` da requisição. Repetir o comando não marca de
+novo. Na leitura, uma fatura vencida ainda não registrada já aparece como
+`OVERDUE`, com `delinquent: false`. Nenhum evento de inadimplência é publicado,
+porque nenhum contexto o consome. O pagamento é simulado: não há PSP, conciliação
+bancária, nota fiscal nem cobrança real.
 
 ## Formato e interoperabilidade
 

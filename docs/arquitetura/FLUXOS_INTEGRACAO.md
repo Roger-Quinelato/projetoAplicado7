@@ -269,6 +269,7 @@ sequenceDiagram
     participant Outbox
     participant Dispatcher
     participant Workflow
+    participant Finance
     Operador->>Contracts: POST /contracts/{id}/close + Idempotency-Key
     Contracts->>Contracts: Validar ACTIVE e data de fim
     Contracts->>Outbox: ContractClosed.v1 na mesma transação
@@ -276,12 +277,51 @@ sequenceDiagram
     Operador->>Dispatcher: POST /integration/outbox/dispatch
     Dispatcher->>Workflow: ContractClosed.v1
     Workflow->>Workflow: Concluir preparação de retirada pendente
+    Dispatcher->>Finance: ContractClosed.v1
+    Finance->>Finance: Fatura FINAL por ciclo iniciado, menos o já faturado (única por eventId e contrato)
 ```
 
 Repetir o encerramento com a mesma chave, ou com outra chave depois de concluído,
 devolve a resposta original com `Idempotency-Replayed: true` e não cria outro
-evento. Sem `Idempotency-Key`, uma repetição recebe `409`. Finance ainda não
-consome `ContractClosed.v1`; o faturamento final pertence à tarefa T12.
+evento. Sem `Idempotency-Key`, uma repetição recebe `409`. Desde a T12, Finance
+consome `ContractClosed.v1` depois do Workflow e emite a fatura final; sem valor
+restante (por exemplo, ciclo `ONCE` já faturado), apenas registra auditoria.
+
+### Ciclo de vida da fatura e inadimplência (T12)
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> OPEN: evento de ativação ou encerramento
+    OPEN --> PARTIALLY_PAID: pagamento parcial
+    OPEN --> PAID: pagamento do total
+    OPEN --> OVERDUE: verificação de vencimento
+    OPEN --> CANCELLED: cancelamento sem pagamento
+    PARTIALLY_PAID --> PARTIALLY_PAID: pagamento parcial
+    PARTIALLY_PAID --> PAID: quitação
+    PARTIALLY_PAID --> OVERDUE: verificação de vencimento
+    OVERDUE --> OVERDUE: pagamento parcial
+    OVERDUE --> PAID: quitação
+```
+
+`OVERDUE` persistido indica inadimplência registrada (`delinquent: true`,
+`overdueSince`). Uma fatura `OPEN` ou `PARTIALLY_PAID` com saldo e data UTC
+posterior a `dueDate` já é exibida como `OVERDUE` na leitura, com
+`delinquent: false`, até a verificação registrar o fato:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Operador as Operador financeiro
+    participant Finance
+    participant Auditoria
+    Operador->>Finance: POST /finance/invoices/overdue-check {asOf?}
+    Finance->>Finance: Selecionar OPEN/PARTIALLY_PAID com dueDate < asOf (UTC) e saldo > 0
+    Finance->>Auditoria: mark_invoice_overdue por fatura e evaluate_overdue (correlationId)
+    Finance-->>Operador: 200 markedOverdue e alreadyOverdue
+    Operador->>Finance: POST /finance/invoices/overdue-check (repetição)
+    Finance-->>Operador: 200 markedOverdue vazio
+```
 
 ## Rastreabilidade operacional
 

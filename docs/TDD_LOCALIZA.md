@@ -15,7 +15,7 @@ decisoes imediatas e eventos para efeitos assíncronos.
 |---|---|
 | CRM | API de cliente, elegibilidade e publicacao de alteracao cadastral. |
 | Contracts | Reserva/contrato de locacao, ativacao, grupo de veiculo, vigencia e SLA. |
-| Finance | Consumidor de `ContractActivated.v1` para criar cobranca da locacao. |
+| Finance | Consumidores de `ContractActivated.v1` (primeira fatura) e `ContractClosed.v1` (fatura final); pagamento simulado e inadimplência por vencimento. |
 | Support | Abertura de chamado, calculo de prioridade e reconciliacao de elegibilidade. |
 | Workflow | Processos de retirada, atendimento, devolucao e tarefas operacionais. |
 | Integration | Correlacao, IDs legados, idempotencia, outbox, inbox, auditoria e falhas. |
@@ -89,6 +89,28 @@ Regras verificadas em `tests/test_contracts.py`:
   maiúsculas e valor com duas casas decimais;
 - o encerramento grava data e motivo, encerra a reserva vinculada, publica
   `ContractClosed.v1` e é auditado.
+
+### Financeiro
+
+| Operação | Papéis |
+|---|---|
+| Listar e consultar faturas | finance, operations, admin |
+| Verificar vencimento e registrar inadimplência | finance, operations, admin |
+| Registrar pagamento simulado, cancelar fatura e listar pagamentos | finance, admin |
+
+Regras verificadas em `tests/test_finance.py`:
+
+- estados e transições da fatura centralizados em `src/archcorp/finance/domain.py`;
+  `PAID` e `CANCELLED` são finais; pagamento parcial em fatura inadimplente mantém
+  `OVERDUE` até a quitação;
+- primeira fatura (`INITIAL`) e fatura final (`FINAL`) são únicas por contrato e
+  por `eventId` de origem; o vencimento é a data UTC do evento mais 10 dias;
+- a fatura final cobra os ciclos iniciados entre `startsOn` e `endsOn` (premissa a
+  validar) menos o já faturado; sem valor restante, apenas audita;
+- pagamento: `Idempotency-Key` opcional, valor positivo com duas casas, moeda igual
+  à da fatura, sem sobrepagamento; a referência não vai para auditoria nem log;
+- inadimplência: fatura com saldo e data UTC posterior a `dueDate`; o comando de
+  verificação a registra com data e auditoria, sem repetir marcações.
 
 ## Fluxos Tecnicos
 

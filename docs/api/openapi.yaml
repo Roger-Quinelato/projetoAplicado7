@@ -3522,15 +3522,28 @@ paths:
       - Financeiro e faturamento
       summary: List Invoices
       operationId: list_invoices_api_v1_finance_invoices_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: contractId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Contractid
+      - *id002
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
+                type: array
                 items:
                   $ref: '#/components/schemas/InvoiceResponse'
-                type: array
                 title: Response List Invoices Api V1 Finance Invoices Get
         '401':
           description: Token ausente ou inválido.
@@ -3559,6 +3572,94 @@ paths:
                 detail: Papel sem permissão para esta operação
                 instance: /api/v1/finance/invoices
                 code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          description: Entrada inválida.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/finance/invoices
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
+  /api/v1/finance/invoices/overdue-check:
+    post:
+      tags:
+      - Financeiro e faturamento
+      summary: Check Overdue
+      description: 'Registra a inadimplência das faturas com saldo e vencimento anterior
+        à data de referência (UTC).
+
+
+        Comando explícito e idempotente pelo estado: repetir não marca de novo nem
+        duplica auditoria por fatura.'
+      operationId: check_overdue_api_v1_finance_invoices_overdue_check_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - $ref: '#/components/schemas/OverdueCheckInput'
+              - type: 'null'
+              title: Body
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OverdueCheckResponse'
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/finance/invoices/overdue-check
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/finance/invoices/overdue-check
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          description: Data de referência futura sem simulação habilitada ou entrada
+            inválida.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:business-rule-violation
+                title: Entrada inválida
+                status: 422
+                detail: Data de referência futura exige FINANCE_ALLOW_FUTURE_AS_OF=true
+                  (simulação local)
+                instance: /api/v1/finance/invoices/overdue-check
+                code: BUSINESS_RULE_VIOLATION
                 correlationId: 11111111-1111-4111-8111-111111111111
       security:
       - HTTPBearer: []
@@ -3652,6 +3753,8 @@ paths:
       tags:
       - Financeiro e faturamento
       summary: Record Payment
+      description: 'Registra pagamento simulado (sem PSP): valida moeda, saldo e estado
+        da fatura e atualiza o saldo.'
       operationId: record_payment_api_v1_finance_invoices__invoice_id__payments_post
       security:
       - HTTPBearer: []
@@ -3663,6 +3766,19 @@ paths:
           type: string
           format: uuid
           title: Invoice Id
+      - name: Idempotency-Key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 100
+          - type: 'null'
+          description: Opcional; com a chave, repetir o pagamento devolve a resposta
+            original.
+          title: Idempotency-Key
+        description: Opcional; com a chave, repetir o pagamento devolve a resposta
+          original.
       - *id002
       requestBody:
         required: true
@@ -3677,6 +3793,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaymentResultResponse'
+          headers:
+            Idempotency-Replayed:
+              description: Retorna true quando a API reutiliza a resposta ou o pagamento
+                já registrado.
+              schema:
+                type: string
+                enum:
+                - 'true'
+                - 'false'
         '401':
           description: Token ausente ou inválido.
           content:
@@ -3720,21 +3845,147 @@ paths:
                 code: NOT_FOUND
                 correlationId: 11111111-1111-4111-8111-111111111111
         '409':
-          description: Referência já usada em outro pagamento ou valor acima do saldo.
+          description: Referência ou Idempotency-Key já usada com outro pagamento,
+            valor acima do saldo, fatura quitada ou cancelada.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                overpayment:
+                  summary: Valor acima do saldo
+                  value:
+                    type: urn:archcorp:problem:conflict
+                    title: Conflito
+                    status: 409
+                    detail: Pagamento excede saldo da fatura
+                    instance: /api/v1/finance/invoices/ffffffff-ffff-4fff-8fff-ffffffffffff/payments
+                    code: CONFLICT
+                    correlationId: 11111111-1111-4111-8111-111111111111
+                paid:
+                  summary: Fatura quitada
+                  value:
+                    type: urn:archcorp:problem:invalid-state
+                    title: Conflito
+                    status: 409
+                    detail: Fatura já quitada
+                    instance: /api/v1/finance/invoices/ffffffff-ffff-4fff-8fff-ffffffffffff/payments
+                    code: INVALID_STATE
+                    correlationId: 11111111-1111-4111-8111-111111111111
+                idempotency:
+                  summary: Chave reutilizada
+                  value:
+                    type: urn:archcorp:problem:idempotency-conflict
+                    title: Conflito
+                    status: 409
+                    detail: Idempotency-Key já utilizada com outro pagamento
+                    instance: /api/v1/finance/invoices/ffffffff-ffff-4fff-8fff-ffffffffffff/payments
+                    code: IDEMPOTENCY_CONFLICT
+                    correlationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          description: Entrada inválida ou moeda diferente da fatura.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
               example:
-                type: urn:archcorp:problem:conflict
+                type: urn:archcorp:problem:business-rule-violation
+                title: Entrada inválida
+                status: 422
+                detail: Moeda diferente da fatura
+                instance: /api/v1/finance/invoices/ffffffff-ffff-4fff-8fff-ffffffffffff/payments
+                code: BUSINESS_RULE_VIOLATION
+                correlationId: 11111111-1111-4111-8111-111111111111
+  /api/v1/finance/invoices/{invoice_id}/cancel:
+    post:
+      tags:
+      - Financeiro e faturamento
+      summary: Cancel Invoice
+      description: Cancela fatura em aberto e sem pagamento; repetir devolve a fatura
+        cancelada.
+      operationId: cancel_invoice_api_v1_finance_invoices__invoice_id__cancel_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: invoice_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Invoice Id
+      - *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceCancelInput'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceResponse'
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/finance/invoices/{invoice_id}/cancel
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/finance/invoices/{invoice_id}/cancel
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '404':
+          description: Fatura não encontrada.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:not-found
+                title: Recurso não encontrado
+                status: 404
+                detail: Fatura não encontrada
+                instance: /api/v1/finance/invoices/{invoice_id}/cancel
+                code: NOT_FOUND
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '409':
+          description: Fatura com pagamento, vencida ou quitada não pode ser cancelada.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:invalid-state
                 title: Conflito
                 status: 409
-                detail: Referência já usada em outro pagamento ou valor acima do saldo
-                instance: /api/v1/finance/invoices/{invoice_id}/payments
-                code: CONFLICT
+                detail: Fatura com pagamento registrado não pode ser cancelada
+                instance: /api/v1/finance/invoices/ffffffff-ffff-4fff-8fff-ffffffffffff/cancel
+                code: INVALID_STATE
                 correlationId: 11111111-1111-4111-8111-111111111111
         '422':
-          description: Entrada inválida ou moeda diferente da fatura.
+          description: Entrada inválida.
           content:
             application/problem+json:
               schema:
@@ -3743,10 +3994,13 @@ paths:
                 type: urn:archcorp:problem:validation-error
                 title: Entrada inválida
                 status: 422
-                detail: Entrada inválida ou moeda diferente da fatura
-                instance: /api/v1/finance/invoices/{invoice_id}/payments
+                detail:
+                - *id001
+                instance: /api/v1/finance/invoices/{invoice_id}/cancel
                 code: VALIDATION_ERROR
                 correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/finance/payments:
     get:
       tags:
@@ -5204,6 +5458,19 @@ components:
       examples:
       - database: UP
         status: UP
+    InvoiceCancelInput:
+      properties:
+        reason:
+          type: string
+          maxLength: 200
+          minLength: 3
+          title: Reason
+      type: object
+      required:
+      - reason
+      title: InvoiceCancelInput
+      examples:
+      - reason: Cobrança emitida em duplicidade
     InvoiceResponse:
       properties:
         invoiceId:
@@ -5218,6 +5485,14 @@ components:
           type: string
           format: uuid
           title: Customerid
+        kind:
+          type: string
+          enum:
+          - INITIAL
+          - FINAL
+          title: Kind
+          description: 'INITIAL: primeira cobrança (ContractActivated.v1); FINAL:
+            faturamento final (ContractClosed.v1).'
         amount:
           type: number
           title: Amount
@@ -5231,32 +5506,70 @@ components:
         paidAmount:
           type: number
           title: Paidamount
+        balance:
+          type: number
+          title: Balance
+          description: 'Saldo em aberto: amount - paidAmount, na moeda da fatura.'
         status:
           type: string
           enum:
           - OPEN
+          - PARTIALLY_PAID
           - PAID
           - OVERDUE
+          - CANCELLED
           title: Status
+          description: OVERDUE também aparece, calculado na leitura, quando a data
+            UTC passou do vencimento com saldo; `delinquent` indica se a inadimplência
+            já foi registrada pela verificação de vencimento.
+        delinquent:
+          type: boolean
+          title: Delinquent
+          description: Inadimplência registrada e ainda com saldo.
+        overdueSince:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Overduesince
+          description: Momento UTC do registro da inadimplência; mantido como histórico
+            após a quitação.
+        sourceEventId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Sourceeventid
+          description: eventId que originou a fatura; nulo em faturas anteriores à
+            T12.
       type: object
       required:
       - invoiceId
       - contractId
       - customerId
+      - kind
       - amount
       - currency
       - dueDate
       - paidAmount
+      - balance
       - status
+      - delinquent
+      - overdueSince
+      - sourceEventId
       title: InvoiceResponse
       examples:
       - amount: 2500.0
+        balance: 2500.0
         contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
         currency: BRL
         customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+        delinquent: false
         dueDate: '2026-10-11'
         invoiceId: ffffffff-ffff-4fff-8fff-ffffffffffff
+        kind: INITIAL
         paidAmount: 0.0
+        sourceEventId: cccccccc-cccc-4ccc-8ccc-cccccccccccc
         status: OPEN
     LegacyIdResponse:
       properties:
@@ -5426,6 +5739,54 @@ components:
       - status: WON
       - notes: Revisar volume
         title: Renovação de frota 2027 - fase 2
+    OverdueCheckInput:
+      properties:
+        asOf:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Asof
+          description: Data UTC de referência; padrão é a data UTC atual. Data futura
+            só com FINANCE_ALLOW_FUTURE_AS_OF=true (simulação local).
+      type: object
+      title: OverdueCheckInput
+      examples:
+      - asOf: '2026-10-25'
+    OverdueCheckResponse:
+      properties:
+        asOf:
+          type: string
+          format: date
+          title: Asof
+        evaluatedAt:
+          type: string
+          format: date-time
+          title: Evaluatedat
+        markedOverdue:
+          items:
+            type: string
+            format: uuid
+          type: array
+          title: Markedoverdue
+          description: Faturas que passaram a OVERDUE nesta execução.
+        alreadyOverdue:
+          type: integer
+          title: Alreadyoverdue
+          description: Faturas que já estavam com inadimplência registrada.
+      type: object
+      required:
+      - asOf
+      - evaluatedAt
+      - markedOverdue
+      - alreadyOverdue
+      title: OverdueCheckResponse
+      examples:
+      - alreadyOverdue: 0
+        asOf: '2026-10-25'
+        evaluatedAt: '2026-10-25T09:00:00Z'
+        markedOverdue:
+        - ffffffff-ffff-4fff-8fff-ffffffffffff
     PaymentInput:
       properties:
         amount:
@@ -5433,12 +5794,13 @@ components:
           - type: number
             exclusiveMinimum: 0.0
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,12}|(?=[\d.]{1,15}0*$)\d{0,12}\.\d{0,2}0*$)
           title: Amount
         currency:
           type: string
           maxLength: 3
           minLength: 3
+          pattern: ^[A-Z]{3}$
           title: Currency
         reference:
           type: string
@@ -5504,12 +5866,16 @@ components:
       examples:
       - invoice:
           amount: 2500.0
+          balance: 0.0
           contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
           currency: BRL
           customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+          delinquent: false
           dueDate: '2026-10-11'
           invoiceId: ffffffff-ffff-4fff-8fff-ffffffffffff
+          kind: INITIAL
           paidAmount: 2500.0
+          sourceEventId: cccccccc-cccc-4ccc-8ccc-cccccccccccc
           status: PAID
         paymentId: 12121212-1212-4121-8121-121212121212
     ProcessResponse:

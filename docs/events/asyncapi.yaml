@@ -63,7 +63,7 @@ operations:
       $ref: '#/channels/contractActivated'
   receiveContractActivated:
     action: receive
-    summary: 'Consumidores: `finance` (primeira fatura) e `workflow-preparacao-retirada` (processo ONBOARDING).'
+    summary: 'Consumidores: `finance` (primeira fatura `INITIAL`, vencimento em 10 dias a partir da data UTC de `occurredAt`, única por contrato e por `eventId`) e `workflow-preparacao-retirada` (processo ONBOARDING).'
     channel:
       $ref: '#/channels/contractActivated'
   publishContractClosed:
@@ -73,7 +73,7 @@ operations:
       $ref: '#/channels/contractClosed'
   receiveContractClosed:
     action: receive
-    summary: 'Consumidor: `workflow-encerramento-contrato` (conclui a preparação de retirada pendente). Finance ainda não consome este evento.'
+    summary: 'Consumidores: `workflow-encerramento-contrato` (conclui a preparação de retirada pendente) e `finance-faturamento-final` (fatura `FINAL` por ciclo iniciado entre `startsOn` e `endsOn`, menos o já faturado; sem valor restante, só auditoria). O faturamento final é único por contrato e por `eventId`; sem a primeira fatura, o consumidor falha sem efeito e o evento pode ser reprocessado.'
     channel:
       $ref: '#/channels/contractClosed'
   publishTicketOpened:

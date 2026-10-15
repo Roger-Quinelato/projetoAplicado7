@@ -42,7 +42,11 @@
   contrato no fluxo academico.
 - **Contrato de locacao:** so pode ser ativado uma vez; reexecucao retorna a
   mesma resposta idempotente.
-- **Cobranca:** e unica por contrato no fluxo de primeira cobranca.
+- **Cobranca:** e unica por contrato no fluxo de primeira cobranca; a fatura
+  final do encerramento tambem e unica por contrato (T12).
+- **Fatura:** `OPEN` -> `PARTIALLY_PAID` -> `PAID`; com saldo apos o vencimento
+  (data UTC) passa a `OVERDUE` quando a inadimplencia e registrada; so pode ser
+  cancelada em aberto e sem pagamento. Pagamento nunca excede o saldo.
 - **Chamado:** pode abrir como pendente quando a elegibilidade nao estiver
   disponivel; reconciliacao posterior confirma ou rejeita.
 - **Processo operacional:** e unico por tipo e referencia de negocio.
@@ -51,6 +55,7 @@
 
 - `CustomerUpdated.v1`: CRM alterou dado cadastral relevante.
 - `ContractActivated.v1`: contrato de locacao foi ativado.
+- `ContractClosed.v1`: contrato de locacao foi encerrado; Finance emite a fatura final.
 - `TicketOpened.v1`: chamado de atendimento foi registrado.
 
 ## Invariantes

@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from archcorp.errors import problem_content, problem_example
 from archcorp.finance.models import Payment
 from archcorp.finance.service import FinanceService
 from archcorp.infrastructure.db import get_session
@@ -60,6 +61,7 @@ EXAMPLE_PAYMENT = {
     "reference": "SIMULATED-001",
 }
 NOT_FOUND = {404: {"description": "Fatura não encontrada."}}
+PAYMENT_PATH = "/api/v1/finance/invoices/ffffffff-ffff-4fff-8fff-ffffffffffff/payments"
 REPLAY_HEADERS = {
     "Idempotency-Replayed": {
         "description": "Retorna true quando a API reutiliza a resposta ou o pagamento já registrado.",
@@ -150,7 +152,12 @@ def list_invoices(contractId: UUID | None = None, session: Session = Depends(get
 @router.post(
     "/invoices/overdue-check",
     response_model=OverdueCheckResponse,
-    responses={422: {"description": "Data de referência futura sem simulação habilitada ou entrada inválida."}},
+    responses={422: {
+        "description": "Data de referência futura sem simulação habilitada ou entrada inválida.",
+        "content": problem_content(problem_example(
+            422, "Data de referência futura exige FINANCE_ALLOW_FUTURE_AS_OF=true (simulação local)",
+            "/api/v1/finance/invoices/overdue-check", "BUSINESS_RULE_VIOLATION")),
+    }},
     dependencies=[Depends(OVERDUE_OPERATORS)],
 )
 def check_overdue(body: OverdueCheckInput | None = None, session: Session = Depends(get_session),
@@ -174,8 +181,18 @@ def get_invoice(invoice_id: UUID, session: Session = Depends(get_session), servi
     responses={
         **NOT_FOUND,
         201: {"headers": REPLAY_HEADERS},
-        409: {"description": "Referência ou Idempotency-Key já usada com outro pagamento, valor acima do saldo, fatura quitada ou cancelada."},
-        422: {"description": "Entrada inválida ou moeda diferente da fatura."},
+        409: {
+            "description": "Referência ou Idempotency-Key já usada com outro pagamento, valor acima do saldo, fatura quitada ou cancelada.",
+            "content": problem_content(examples={
+                "overpayment": {"summary": "Valor acima do saldo", "value": problem_example(409, "Pagamento excede saldo da fatura", PAYMENT_PATH, "CONFLICT")},
+                "paid": {"summary": "Fatura quitada", "value": problem_example(409, "Fatura já quitada", PAYMENT_PATH, "INVALID_STATE")},
+                "idempotency": {"summary": "Chave reutilizada", "value": problem_example(409, "Idempotency-Key já utilizada com outro pagamento", PAYMENT_PATH, "IDEMPOTENCY_CONFLICT")},
+            }),
+        },
+        422: {
+            "description": "Entrada inválida ou moeda diferente da fatura.",
+            "content": problem_content(problem_example(422, "Moeda diferente da fatura", PAYMENT_PATH, "BUSINESS_RULE_VIOLATION")),
+        },
     },
     dependencies=[Depends(FINANCE_OPERATORS)])
 def record_payment(
@@ -196,7 +213,11 @@ def record_payment(
 @router.post(
     "/invoices/{invoice_id}/cancel",
     response_model=InvoiceResponse,
-    responses={**NOT_FOUND, 409: {"description": "Fatura com pagamento, vencida ou quitada não pode ser cancelada."}},
+    responses={**NOT_FOUND, 409: {
+        "description": "Fatura com pagamento, vencida ou quitada não pode ser cancelada.",
+        "content": problem_content(problem_example(409, "Fatura com pagamento registrado não pode ser cancelada",
+                                                   "/api/v1/finance/invoices/ffffffff-ffff-4fff-8fff-ffffffffffff/cancel", "INVALID_STATE")),
+    }},
     dependencies=[Depends(FINANCE_OPERATORS)],
 )
 def cancel_invoice(invoice_id: UUID, body: InvoiceCancelInput, session: Session = Depends(get_session),

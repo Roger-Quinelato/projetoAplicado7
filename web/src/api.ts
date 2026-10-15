@@ -78,20 +78,28 @@ export interface ReservationDraft { reservationId: Uuid, contract: Contract }
 export interface ContractCloseInput { endsOn?: string | null, reason?: string | null }
 export interface Entitlement { eligible: boolean, slaHours: number | null }
 
-export type InvoiceStatus = 'OPEN' | 'PAID' | 'OVERDUE'
+export type InvoiceStatus = 'OPEN' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE' | 'CANCELLED'
 export interface Invoice {
   invoiceId: Uuid
   contractId: Uuid
   customerId: Uuid
+  /** INITIAL: primeira cobrança (ativação); FINAL: faturamento final (encerramento). */
+  kind: 'INITIAL' | 'FINAL'
   amount: number
   currency: string
   dueDate: string
   paidAmount: number
+  balance: number
+  /** OVERDUE também é calculado na leitura; `delinquent` indica inadimplência já registrada. */
   status: InvoiceStatus
+  delinquent: boolean
+  overdueSince: string | null
+  sourceEventId: Uuid | null
 }
 export interface Payment { paymentId: Uuid, invoiceId: Uuid, amount: number, currency: string, reference: string }
 export interface PaymentInput { amount: number, currency: string, reference: string }
 export interface PaymentResult { paymentId: Uuid, invoice: Invoice }
+export interface OverdueCheckResult { asOf: string, evaluatedAt: string, markedOverdue: Uuid[], alreadyOverdue: number }
 
 export type TicketStatus = 'OPEN' | 'PENDING_ENTITLEMENT' | 'REJECTED_ENTITLEMENT' | 'RESOLVED'
 export interface Ticket {
@@ -168,7 +176,7 @@ const FIELD_LABELS: Record<string, string> = {
   startsOn: 'Início', endsOn: 'Fim', amount: 'Valor', currency: 'Moeda', billingCycle: 'Ciclo de cobrança',
   cycle: 'Ciclo de cobrança', slaHours: 'SLA (horas)', reference: 'Referência', category: 'Categoria',
   description: 'Descrição', owner: 'Responsável', state: 'Estado', processId: 'Processo', status: 'Estado',
-  legacyId: 'ID legado', reason: 'Motivo', 'Idempotency-Key': 'Chave de idempotência',
+  legacyId: 'ID legado', reason: 'Motivo', asOf: 'Data de referência', 'Idempotency-Key': 'Chave de idempotência',
 }
 
 /** Converte um item de erro de validação (FastAPI/Pydantic) em texto legível em português. */
@@ -301,10 +309,14 @@ export function createApi(token: string, fetcher: typeof fetch = (...args) => fe
       get<Entitlement>(`/api/v1/contracts/${id}/entitlement`, { customerId, serviceCode }),
 
     // Financeiro
-    listInvoices: () => get<Invoice[]>('/api/v1/finance/invoices'),
+    listInvoices: (contractId?: Uuid) => get<Invoice[]>('/api/v1/finance/invoices', { contractId }),
     listPayments: (invoiceId?: Uuid) => get<Payment[]>('/api/v1/finance/payments', { invoiceId }),
-    recordPayment: (invoiceId: Uuid, body: PaymentInput) =>
-      request<PaymentResult>('POST', `/api/v1/finance/invoices/${invoiceId}/payments`, { body }),
+    recordPayment: (invoiceId: Uuid, body: PaymentInput, idempotencyKey: string) =>
+      request<PaymentResult>('POST', `/api/v1/finance/invoices/${invoiceId}/payments`, { body, idempotencyKey }),
+    checkOverdue: (asOf?: string) =>
+      request<OverdueCheckResult>('POST', '/api/v1/finance/invoices/overdue-check', { body: asOf ? { asOf } : {} }),
+    cancelInvoice: (invoiceId: Uuid, reason: string) =>
+      request<Invoice>('POST', `/api/v1/finance/invoices/${invoiceId}/cancel`, { body: { reason } }),
 
     // Atendimento
     listTickets: () => get<Ticket[]>('/api/v1/support/tickets'),
