@@ -167,13 +167,13 @@ sub.paragraph_format.space_before = Pt(18)
 meta = doc.add_paragraph()
 meta.alignment = WD_ALIGN_PARAGRAPH.CENTER
 meta.paragraph_format.space_before = Pt(150)
-meta.add_run("Equipe do Projeto Aplicado — nomes e contribuições pendentes\n27 de setembro de 2026\nRelatório técnico em revisão")
+meta.add_run("Equipe do Projeto Aplicado — nomes e contribuições pendentes\n14 de outubro de 2026\nRelatório técnico em revisão")
 
 # Página 2
 page(doc, "Resumo")
 para(doc, "A organização do Cenário 4 utiliza CRM, sistema de reservas e contratos, sistema financeiro e faturamento, sistema de atendimento e assistência 24h e gestão de processos operacionais. O enunciado associa o crescimento da organização a duplicidade de dados, lançamentos manuais, integrações frágeis e processos fragmentados. Este trabalho propõe e implementa uma arquitetura orientada a serviços entregue como monólito modular, com APIs REST para interações imediatas e eventos para efeitos desacoplados.")
 para(doc, "O método combinou análise do enunciado, levantamento de requisitos, modelagem AS-IS e TO-BE, registro de decisão arquitetural, implementação incremental e verificação automatizada. O protótipo separa os contextos CRM, Contracts, Finance, Support, Workflow e Integration. As fronteiras usam portas públicas; cada contexto controla seus dados e regras. A entrega confiável emprega outbox, inbox, idempotência, correlação e reprocessamento auditado.")
-para(doc, "A avaliação histórica de setembro executou 13 testes automatizados; a suíte ampliada inclui agora reservas, pagamentos simulados, resolução de chamados e proteção da demo pública. Os três fluxos obrigatórios funcionaram no banco de testes: cliente do CRM para contrato; ativação para primeira fatura e preparação de retirada; chamado com contrato e SLA. A medição anterior de 200 consultas locais de prontidão teve p95 de 6,36 ms e não representa latência em hospedagem pública.")
+para(doc, "Em 14 de outubro de 2026, a suíte automatizada local executou 194 testes aprovados e 10 ignorados; os ignorados exigem PostgreSQL ou RabbitMQ reais, não configurados no ambiente. A suíte cobre reservas e contratos, ciclo de vida da fatura, pagamentos simulados, atendimento com SLA e proteção da demo pública. Os três fluxos obrigatórios funcionaram no banco de testes: cliente do CRM para contrato; ativação para primeira fatura e preparação de retirada; chamado com contrato e SLA. A medição anterior de 200 consultas locais de prontidão teve p95 de 6,36 ms e não representa latência em hospedagem pública.")
 para(doc, "Palavras-chave: arquitetura de sistemas corporativos; SOA; monólito modular; integração; REST; eventos; interoperabilidade.")
 
 # Página 3
@@ -275,7 +275,7 @@ para(doc, "A decisão adota SOA pragmática em monólito modular. CRM, Contracts
 table(doc, ["Contexto", "Responsabilidade", "Interface"], [
     ["CRM", "Cadastro e elegibilidade", "CustomerReader"],
     ["Contracts", "Contrato, plano e SLA", "ContractEntitlementPort"],
-    ["Finance", "Cobranças", "Consumidor de ContractActivated"],
+    ["Finance", "Faturas inicial e final, pagamentos e inadimplência", "Consumidor de ContractActivated e ContractClosed"],
     ["Support", "Chamados e reconciliação", "API de atendimento e assistência 24h"],
     ["Workflow", "Preparação de retirada e resolução", "Consumidores de eventos"],
     ["Integration", "Entrega e rastreabilidade", "API operacional"],
@@ -285,7 +285,7 @@ para(doc, "O banco compartilhado pertence à implantação acadêmica. Prefixos 
 # Página 11
 page(doc, "6 Arquitetura proposta TO BE continuação")
 doc.add_heading("6.1 Componentes e implantação", level=2)
-para(doc, "Docker Compose inicia a API, PostgreSQL e RabbitMQ. A API atende canais e documentação. PostgreSQL persiste transações e registros de integração. RabbitMQ recebe cópias duráveis dos eventos para observação e integração externa. Os handlers internos demonstram consumidores substituíveis.")
+para(doc, "A interface React/TypeScript navega entre os cinco contextos, mostra estados de carregamento, vazio e erro e exibe o corpo application/problem+json (RFC 9457) com code e correlationId. Docker Compose inicia a API, PostgreSQL e RabbitMQ. A API atende canais e documentação. PostgreSQL persiste transações e registros de integração. RabbitMQ recebe cópias duráveis dos eventos para observação e integração externa. Os handlers internos demonstram consumidores substituíveis.")
 table(doc, ["Camada", "Elementos", "Regra de dependência"], [
     ["Entrada", "Rotas REST, autenticação e validação", "Converte dados e chama casos de uso"],
     ["Aplicação", "Serviços de cada contexto", "Depende de portas públicas"],
@@ -306,18 +306,19 @@ table(doc, ["Campo", "Origem", "Destino", "Regra"], [
     ["currency", "Venda", "Contrato", "Três letras maiúsculas"],
     ["Idempotency-Key", "Cliente HTTP", "Integration", "Resposta original por operação"],
 ], [1.35, 1.45, 1.45, 2.4])
-para(doc, "Uma repetição com a mesma chave devolve o mesmo contractId. A auditoria registra operação, resultado e correlação. O teste F1 comprovou o comportamento.")
+para(doc, "Uma repetição com a mesma chave devolve o mesmo contractId. A auditoria registra operação, resultado e correlação. O teste F1 e a demonstração contra o servidor local (14/10/2026) comprovaram o comportamento. A reserva idempotente pode ser cancelada ou convertida em rascunho na mesma transação; a ativação revalida o cliente e o encerramento é idempotente e publica ContractClosed.v1.")
 
 # Página 13
 page(doc, "8 Integração F2 Ativação e preparação de retirada")
 para(doc, "Contracts grava a ativação e ContractActivated.v1 na mesma transação. O dispatcher lê a outbox, entrega o evento a Finance e Workflow e registra uma inbox por consumidor. Depois publica o envelope no RabbitMQ quando configurado.")
 table(doc, ["Consumidor", "Efeito", "Proteção contra duplicidade"], [
-    ["Finance", "Primeira cobrança", "Contrato único na tabela financeira"],
+    ["Finance", "Primeira fatura (INITIAL)", "Uma fatura por contrato e tipo (ADR-003)"],
     ["Workflow", "Processo de preparação de retirada", "Tipo e referência únicos"],
     ["Integration", "Publicação e auditoria", "eventId por consumidor na inbox"],
 ], [1.45, 2.15, 3.05])
-para(doc, "Uma falha mantém o evento pendente até nova chamada de despacho. Após três tentativas, o evento passa a FAILED com motivo e correlação. Um operador autorizado pode agendar o reprocessamento. A operação preserva o contador acumulado; uma nova falha retorna imediatamente a FAILED. Inbox e restrições únicas continuam válidas, portanto um efeito já confirmado não se repete.")
+para(doc, "Uma falha mantém o evento pendente até nova chamada de despacho. Após três tentativas, o evento passa a FAILED com motivo e correlação. Um operador autorizado pode agendar o reprocessamento. A operação audita o valor anterior em previousAttempts e zera o contador, abrindo nova janela de tentativas. Inbox e restrições únicas continuam válidas, portanto um efeito já confirmado não se repete.")
 para(doc, "O teste F2 repetiu a ativação e o despacho e encontrou uma cobrança e uma preparação de retirada. Essa evidência atende ao requisito de demonstração de reentrega.")
+para(doc, "No encerramento, ContractClosed.v1 faz Finance emitir a fatura final (FINAL), idempotente por eventId, descontando as faturas já emitidas. A fatura segue os estados OPEN, PARTIALLY_PAID, PAID, OVERDUE e CANCELLED; o pagamento simulado recusa sobrepagamento e expõe o saldo. O comando overdue-check registra a inadimplência. O faturamento por ciclo e o prazo de 10 dias são premissas a validar.")
 
 # Página 14
 page(doc, "9 Integração F3 Chamado com SLA")
@@ -328,7 +329,7 @@ table(doc, ["Condição", "Estado do chamado", "Ação"], [
     ["Consulta indisponível", "PENDING_ENTITLEMENT", "Preserva solicitação"],
     ["Consulta restaurada", "OPEN ou REJECTED_ENTITLEMENT", "Reconcilia com auditoria"],
 ], [2.1, 2.0, 2.55])
-para(doc, "O evento omite a descrição do chamado. Workflow recebe apenas os identificadores, categoria, prioridade, estado e SLA necessários ao processo. O teste de degradação abriu o chamado pendente e o reconciliou depois que Contracts voltou. A reconciliação atualiza o prazo do processo de resolução no Workflow.")
+para(doc, "O evento omite a descrição do chamado. Workflow recebe apenas os identificadores, categoria, prioridade, estado e SLA necessários ao processo. O teste de degradação abriu o chamado pendente e o reconciliou depois que Contracts voltou. A reconciliação, individual ou em lote, atualiza o prazo do processo de resolução no Workflow. O chamado também tem atribuição com histórico, slaStatus (PENDING, WITHIN, BREACHED, MET ou NOT_APPLICABLE) e resolução com replay por Idempotency-Key.")
 
 # Página 15
 page(doc, "10 Qualidade arquitetural")
@@ -341,7 +342,7 @@ table(doc, ["Atributo", "Estratégia", "Evidência"], [
     ["Disponibilidade", "Estado pendente e reconciliação", "Teste de indisponibilidade"],
     ["Desempenho", "API sem estado e índices", "p95 de 6,36 ms"],
     ["Escalabilidade", "Consumidores idempotentes", "Escala por fila possível"],
-    ["Testabilidade", "Suíte e adaptadores", "Verificar suíte ampliada antes da submissão"],
+    ["Testabilidade", "Suíte e adaptadores", "194 testes aprovados e 10 ignorados (14/10/2026)"],
 ], [1.35, 2.7, 2.6])
 para(doc, "As medições representam o ambiente local e não substituem capacidade planejada com volumes reais. A equipe deve registrar hardware e amostra quando repetir o teste na apresentação.")
 
@@ -364,7 +365,7 @@ para(doc, "Os componentes permanecem organizados por responsabilidade. REST aten
 doc.add_heading("12.2 Desafios e aprendizados", level=2)
 para(doc, "Os principais desafios foram preservar fronteiras mesmo com um banco e um processo compartilhados, coordenar efeitos assíncronos sem duplicidade e manter a mesma correlação em HTTP, auditoria e eventos. A implementação mostrou que contratos versionados não bastam sozinhos: outbox, inbox, idempotência, estados de recuperação e evidências precisam ser projetados junto com o fluxo.")
 doc.add_heading("12.3 Limitações, riscos e evolução", level=2)
-para(doc, "O principal limite decorre dos dados organizacionais ausentes. Produtos, volumes e interfaces reais podem alterar adaptadores, timeout e capacidade. O protótipo não agenda retentativas com atraso, não oferece OIDC ou tracing distribuído e não usa RabbitMQ como transporte de entrada dos consumidores. No modo público, usa uma credencial compartilhada definida no servidor. Após reconciliação, o prazo do processo é atualizado e o reprocessamento reinicia o contador de tentativas.")
+para(doc, "O principal limite decorre dos dados organizacionais ausentes. Produtos, volumes e interfaces reais podem alterar adaptadores, timeout e capacidade. O protótipo não agenda retentativas com atraso, não oferece OIDC ou tracing distribuído e não usa RabbitMQ como transporte de entrada dos consumidores. No modo público, usa uma credencial compartilhada definida no servidor. Não há agendador: vencimento de fatura e SLA dependem de ação via API, e CustomerReader não tem timeout nem retentativa. Valores monetários continuam float na API v1 (dívida para a v2). RLS e PostgreSQL do Supabase não foram verificados, e não há teste de frontend versionado. Encerramentos anteriores à T12 não geram fatura final retroativa, e o financeiro completo estava em revisão. Após reconciliação, o prazo do processo é atualizado e o reprocessamento reinicia o contador de tentativas.")
 para(doc, "Os próximos passos são validar o AS-IS com a disciplina, publicar e testar o ambiente gratuito, conectar identidade e sistemas reais apenas com autorização e automatizar retentativas transitórias. Métricas de escala, disponibilidade ou cadência devem orientar extrações futuras. Decisões estruturais adicionais exigem novo ADR.")
 
 # Página 18
@@ -384,7 +385,7 @@ for ref in refs:
     p.paragraph_format.left_indent = Inches(0.25)
     p.paragraph_format.first_line_indent = Inches(-0.25)
     p.paragraph_format.space_after = Pt(9)
-para(doc, "Documentos complementares do repositório: ADR-001; requisitos; plano de implementação; matriz de rastreabilidade; arquitetura AS-IS, TO-BE e fluxos de integração; exemplos de API; reservas e contratos OpenAPI e AsyncAPI; roteiro de demonstração; evidências de validação.")
+para(doc, "Documentos complementares do repositório: ADR-001 a ADR-005; requisitos; plano de implementação; matriz de rastreabilidade; arquitetura AS-IS, TO-BE e fluxos de integração; exemplos de API; reservas e contratos OpenAPI e AsyncAPI; roteiro de demonstração; evidências de validação.")
 
 doc.core_properties.title = "Arquitetura de Integração para Empresa de Serviços"
 doc.core_properties.subject = "Projeto Aplicado Cenário 4"
