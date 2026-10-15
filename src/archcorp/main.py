@@ -19,8 +19,8 @@ from archcorp.errors import (
     problem_response,
     register_error_handlers,
 )
-from archcorp.finance.service import count_invoices, handle_contract_activated as finance_contract_activated
-from archcorp.finance.routes import router as finance_router
+from archcorp.finance.service import FinanceService, count_invoices
+from archcorp.finance.routes import configure as configure_finance, router as finance_router
 from archcorp.infrastructure.db import engine, get_session, protect_public_demo_tables
 from archcorp.infrastructure.migrate import upgrade_to_head
 from archcorp.integration.models import AuditLog, OutboxEvent
@@ -337,9 +337,12 @@ customers = CustomerService()
 contracts = ContractService(customers)
 tickets = TicketService(contracts)
 configure_contracts(contracts)
+finance = FinanceService()
+configure_finance(finance)
 dispatcher = EventDispatcher({
-    "ContractActivated.v1": [("finance", finance_contract_activated), ("workflow-preparacao-retirada", workflow_contract_activated)],
-    "ContractClosed.v1": [("workflow-encerramento-contrato", workflow_contract_closed)],
+    "ContractActivated.v1": [("finance", finance.handle_contract_activated), ("workflow-preparacao-retirada", workflow_contract_activated)],
+    # Finance depois do Workflow: se o faturamento final falhar, o encerramento operacional já ficou registrado na inbox.
+    "ContractClosed.v1": [("workflow-encerramento-contrato", workflow_contract_closed), ("finance-faturamento-final", finance.handle_contract_closed)],
     "TicketOpened.v1": [("workflow-ticket-resolution", handle_ticket_opened)],
     "TicketEntitlementReconciled.v1": [("workflow-ticket-entitlement", handle_ticket_entitlement_reconciled)],
     "TicketResolved.v1": [("workflow-ticket-resolution-complete", handle_ticket_resolved)],
