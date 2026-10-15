@@ -45,7 +45,8 @@ mesma transação persiste contrato, registro de idempotência e auditoria.
 No rascunho a partir da reserva (`POST /api/v1/contracts/reservations/{id}/draft`),
 o pedido não tem corpo: Contracts usa o `customerId` e as condições gravadas na
 reserva. A impressão digital idempotente desse pedido inclui o `reservationId`
-(ADR-001, regra 11): reutilizar a mesma `Idempotency-Key` em outra reserva ou uma
+(a operação continua `create_contract_draft`; a separação entre os dois caminhos é feita
+pela impressão digital, leitura da regra 11 do ADR-001 registrada aqui): reutilizar a mesma `Idempotency-Key` em outra reserva ou uma
 chave já usada em `POST /api/v1/contracts/drafts` retorna `409` com
 `IDEMPOTENCY_CONFLICT`, sem criar nem vincular contrato.
 
