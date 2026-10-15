@@ -90,6 +90,35 @@ Regras verificadas em `tests/test_contracts.py`:
 - o encerramento grava data e motivo, encerra a reserva vinculada, publica
   `ContractClosed.v1` e é auditado.
 
+### Atendimento
+
+| Operação | Papéis |
+|---|---|
+| Abrir chamado | support, admin |
+| Listar e consultar chamados; consultar histórico | support, operations, admin |
+| Atribuir, reatribuir e resolver chamado | support, admin |
+| Reconciliar chamado pendente (individual ou em lote) | support, operations, admin |
+
+Regras verificadas em `tests/test_t15_atendimento.py` (T15):
+
+- estados e transições centralizados em `src/archcorp/support/domain.py`:
+  `PENDING_ENTITLEMENT` → `OPEN` ou `REJECTED_ENTITLEMENT`; `OPEN` → `RESOLVED`;
+  `RESOLVED` e `REJECTED_ENTITLEMENT` são finais (sem reabertura nem pausa de SLA,
+  que o plano não pede); transição inválida retorna `409 INVALID_STATE`;
+- Support consulta Contracts somente por `ContractEntitlementPort`
+  (`contracts/public.py`); indisponibilidade (configuração, `ContractsUnavailableError`,
+  `TimeoutError` ou `ConnectionError`) abre o chamado em `PENDING_ENTITLEMENT`;
+- prioridade pela categoria (`OUTAGE`/`SECURITY` → `HIGH`); prazo = abertura + SLA
+  do contrato, com relógio injetado em `TicketService`; `slaStatus` calculado na
+  leitura e fixado na resolução;
+- `Idempotency-Key` obrigatória na abertura, com impressão digital de todo o
+  pedido; resolução e reconciliação repetidas devolvem o estado atual com
+  `Idempotency-Replayed: true`, sem novo evento;
+- descrição e responsável rejeitam documento, cartão, telefone, placa e e-mail
+  (`422`); a descrição não entra em eventos, auditoria nem logs;
+- histórico próprio (`support_ticket_history`) com ação, estados, responsável
+  anterior e novo, papel do ator (nunca o token), estado de SLA e `correlationId`.
+
 ## Fluxos Tecnicos
 
 1. **F1 - Cliente para reserva/contrato:** CRM fornece `customerId`; Contracts

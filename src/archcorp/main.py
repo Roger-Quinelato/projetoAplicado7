@@ -49,10 +49,10 @@ from archcorp.schemas import (
     TicketCreate,
     TicketResponse,
 )
-from archcorp.security import require_roles
+from archcorp.security import Principal, require_roles
 from archcorp.config import settings
 from archcorp.support.service import TicketService
-from archcorp.support.routes import router as support_router
+from archcorp.support.routes import acting_role, configure as configure_support, router as support_router
 from archcorp.workflow.routes import router as workflow_router
 from archcorp.workflow.service import count_processes, handle_contract_activated as workflow_contract_activated, handle_contract_closed as workflow_contract_closed, handle_ticket_opened, handle_ticket_entitlement_reconciled, handle_ticket_resolved
 
@@ -221,8 +221,15 @@ TICKET_RESPONSES = {
 RECONCILIATION_RESPONSES = {
     **COMMON_API_ERRORS,
     200: {
-        "description": "Chamado reconciliado com a elegibilidade atual.",
-        "headers": {"X-Correlation-ID": CORRELATION_RESPONSE_HEADER},
+        "description": "Chamado reconciliado com a elegibilidade atual, ou estado atual de chamado já reconciliado.",
+        "headers": {
+            "X-Correlation-ID": CORRELATION_RESPONSE_HEADER,
+            "Idempotency-Replayed": {
+                "description": "true quando o chamado já havia sido reconciliado e nenhum efeito novo foi gravado.",
+                "schema": {"type": "string", "enum": ["true", "false"]},
+                "example": "false",
+            },
+        },
         "content": {
             "application/json": {
                 "examples": {
@@ -235,6 +242,7 @@ RECONCILIATION_RESPONSES = {
                         "value": {
                             **EXAMPLE_PENDING_TICKET_RESPONSE,
                             "status": "REJECTED_ENTITLEMENT",
+                            "slaStatus": "NOT_APPLICABLE",
                         },
                     },
                 }
@@ -248,6 +256,10 @@ RECONCILIATION_RESPONSES = {
     409: {
         "description": "Chamado não está pendente de elegibilidade.",
         "content": problem_content(problem_example(409, "Somente chamado pendente pode ser reconciliado", "/api/v1/support/tickets/dddddddd-dddd-4ddd-8ddd-dddddddddddd/reconcile", "INVALID_STATE")),
+    },
+    503: {
+        "description": "Contracts ainda indisponível; o chamado permanece pendente.",
+        "content": problem_content(problem_example(503, "Contracts indisponível; o chamado permanece em PENDING_ENTITLEMENT", "/api/v1/support/tickets/dddddddd-dddd-4ddd-8ddd-dddddddddddd/reconcile")),
     },
 }
 DISPATCH_RESPONSES = {
@@ -337,6 +349,7 @@ customers = CustomerService()
 contracts = ContractService(customers)
 tickets = TicketService(contracts)
 configure_contracts(contracts)
+configure_support(tickets)
 dispatcher = EventDispatcher({
     "ContractActivated.v1": [("finance", finance_contract_activated), ("workflow-preparacao-retirada", workflow_contract_activated)],
     "ContractClosed.v1": [("workflow-encerramento-contrato", workflow_contract_closed)],
@@ -481,7 +494,6 @@ def entitlement(contract_id: UUID, customerId: UUID, serviceCode: str, session: 
     status_code=201,
     response_model=TicketResponse,
     tags=["Atendimento e assistência 24h"],
-    dependencies=[Depends(require_roles("support", "admin"))],
     responses=TICKET_RESPONSES,
     openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
@@ -491,10 +503,11 @@ def open_ticket(
     idempotency_key: str = Header(
         alias="Idempotency-Key", max_length=IDEMPOTENCY_KEY_MAX_LENGTH, examples=["demo-ticket-001"]
     ),
+    principal: Principal = Depends(require_roles("support", "admin")),
     session: Session = Depends(get_session),
 ) -> dict:
     ticket_data = body.model_dump(mode="json")
-    result, replay = tickets.open(session, ticket_data, idempotency_key, correlation_id_var.get())
+    result, replay = tickets.open(session, ticket_data, idempotency_key, correlation_id_var.get(), acting_role(principal))
     response.headers["Idempotency-Replayed"] = str(replay).lower()
     return result
 
@@ -503,12 +516,19 @@ def open_ticket(
     "/api/v1/support/tickets/{ticket_id}/reconcile",
     response_model=TicketResponse,
     tags=["Atendimento e assistência 24h"],
-    dependencies=[Depends(require_roles("support", "operations", "admin"))],
     responses=RECONCILIATION_RESPONSES,
     openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
 )
-def reconcile_ticket(ticket_id: UUID, session: Session = Depends(get_session)) -> dict:
-    return tickets.reconcile(session, str(ticket_id), correlation_id_var.get())
+def reconcile_ticket(
+    ticket_id: UUID,
+    response: Response,
+    principal: Principal = Depends(require_roles("support", "operations", "admin")),
+    session: Session = Depends(get_session),
+) -> dict:
+    """Reconcilia um chamado pendente; repetir sobre chamado já reconciliado devolve o estado atual sem novo evento."""
+    result, replay = tickets.reconcile(session, str(ticket_id), correlation_id_var.get(), acting_role(principal))
+    response.headers["Idempotency-Replayed"] = str(replay).lower()
+    return result
 
 
 @app.post(

@@ -179,8 +179,8 @@ sequenceDiagram
         Support-->>API: Mesmo ticketId
         API-->>Atendimento e assistência 24h: 201 e Idempotency-Replayed true
     else Nova solicitação
-        alt Adaptador de Contracts indisponível
-            Support->>Support: Definir PENDING_ENTITLEMENT<br/>sem SLA e sem dueAt
+        alt Adaptador de Contracts indisponível, timeout ou desativado
+            Support->>Support: Definir PENDING_ENTITLEMENT<br/>sem SLA e sem dueAt, com log WARNING
             Support->>Outbox: Gravar TicketOpened.v1, auditoria e idempotência
             Support-->>API: Chamado pendente
             API-->>Atendimento e assistência 24h: 201
@@ -191,7 +191,7 @@ sequenceDiagram
                 Support-->>API: Erro de negócio
                 API-->>Atendimento e assistência 24h: 422
             else Elegibilidade confirmada
-                Support->>Support: Calcular prioridade e dueAt
+                Support->>Support: Calcular prioridade e dueAt = openedAt + SLA (relógio injetado)
                 Support->>Outbox: Gravar TicketOpened.v1, auditoria e idempotência
                 Support-->>API: Chamado OPEN com SLA
                 API-->>Atendimento e assistência 24h: 201
@@ -213,17 +213,24 @@ sequenceDiagram
         Dispatcher->>Outbox: Marcar PUBLISHED
     end
 
-    opt Chamado em PENDING_ENTITLEMENT e Contracts restabelecido
-        Operador->>API: POST /support/tickets/{ticketId}/reconcile
-        API->>Support: reconcile(ticketId, correlação)
-        Support->>Contracts: Consultar elegibilidade novamente
-        Contracts-->>Support: eligible e slaHours
-        alt Elegibilidade confirmada
-            Support->>Support: Mudar para OPEN e recalcular dueAt
-            Support-->>Operador: 200 com SLA
-        else Elegibilidade rejeitada
-            Support->>Support: Mudar para REJECTED_ENTITLEMENT
-            Support-->>Operador: 200 sem SLA
+    opt Chamado em PENDING_ENTITLEMENT
+        Operador->>API: POST /support/tickets/{ticketId}/reconcile<br/>ou POST /support/tickets/reconcile-pending
+        API->>Support: reconcile(ticketId) ou reconcile_pending()
+        alt Chamado já reconciliado
+            Support-->>Operador: 200 com estado atual e Idempotency-Replayed true
+        else Contracts ainda indisponível
+            Support->>Integration: Auditoria reconcile_entitlement unavailable
+            Support-->>Operador: 503 e chamado continua pendente
+        else Contracts restabelecido
+            Support->>Contracts: Consultar elegibilidade novamente
+            Contracts-->>Support: eligible e slaHours
+            alt Elegibilidade confirmada
+                Support->>Support: OPEN e dueAt = openedAt + SLA<br/>(update condicionado ao estado PENDING)
+            else Elegibilidade rejeitada
+                Support->>Support: REJECTED_ENTITLEMENT sem SLA
+            end
+            Support->>Outbox: TicketEntitlementReconciled.v1, histórico e auditoria
+            Support-->>Operador: 200 (lote: confirmados, rejeitados e restantes)
         end
     end
 ```
@@ -231,6 +238,24 @@ sequenceDiagram
 `TicketOpened.v1` nunca contém a descrição. A reconciliação atualiza o chamado e a
 auditoria e publica `TicketEntitlementReconciled.v1`; Workflow ajusta o prazo do
 processo de resolução ou o cancela quando a elegibilidade é rejeitada.
+
+### Ciclo de vida do chamado (T15)
+
+As transições ficam em `src/archcorp/support/domain.py`. Uma transição fora do
+diagrama recebe `409` com código `INVALID_STATE`. Atribuição e reatribuição não
+mudam o estado e só são aceitas em `PENDING_ENTITLEMENT` e `OPEN`. O plano não
+prevê reabertura nem pausa de SLA; `RESOLVED` e `REJECTED_ENTITLEMENT` são finais.
+
+```mermaid
+stateDiagram-v2
+    [*] --> OPEN: abertura com elegibilidade<br/>dueAt = openedAt + SLA
+    [*] --> PENDING_ENTITLEMENT: abertura com Contracts indisponível
+    PENDING_ENTITLEMENT --> OPEN: reconciliação confirmada<br/>TicketEntitlementReconciled.v1
+    PENDING_ENTITLEMENT --> REJECTED_ENTITLEMENT: reconciliação rejeitada<br/>TicketEntitlementReconciled.v1
+    OPEN --> RESOLVED: resolução<br/>TicketResolved.v1 e slaStatus MET ou BREACHED
+    RESOLVED --> [*]
+    REJECTED_ENTITLEMENT --> [*]
+```
 
 ## Ciclo de vida de reserva e contrato
 

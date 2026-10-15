@@ -7,6 +7,7 @@ os.environ.pop("RABBITMQ_URL", None)
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 
 from archcorp.infrastructure.db import Base, engine
 from archcorp.main import app
@@ -15,6 +16,10 @@ from archcorp.main import app
 @pytest.fixture(autouse=True)
 def clean_database():
     Base.metadata.drop_all(engine)
+    # `alembic_version` não pertence aos modelos; sem removê-la, um banco de teste
+    # carimbado numa revisão anterior falha ao receber uma migração nova.
+    with engine.begin() as connection:
+        connection.execute(text("DROP TABLE IF EXISTS alembic_version"))
     Base.metadata.create_all(engine)
     yield
 

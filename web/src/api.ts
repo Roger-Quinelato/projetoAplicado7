@@ -94,6 +94,8 @@ export interface PaymentInput { amount: number, currency: string, reference: str
 export interface PaymentResult { paymentId: Uuid, invoice: Invoice }
 
 export type TicketStatus = 'OPEN' | 'PENDING_ENTITLEMENT' | 'REJECTED_ENTITLEMENT' | 'RESOLVED'
+/** Estado de SLA calculado pela API no instante da resposta (T15). */
+export type SlaStatus = 'PENDING' | 'WITHIN' | 'BREACHED' | 'MET' | 'NOT_APPLICABLE'
 export interface Ticket {
   ticketId: Uuid
   customerId: Uuid
@@ -106,7 +108,23 @@ export interface Ticket {
   dueAt: string | null
   description?: string
   owner?: string | null
+  openedAt?: string | null
+  resolvedAt?: string | null
+  slaStatus?: SlaStatus | null
 }
+export type TicketHistoryAction = 'OPENED' | 'ASSIGNED' | 'REASSIGNED' | 'ENTITLEMENT_CONFIRMED' | 'ENTITLEMENT_REJECTED' | 'RESOLVED'
+export interface TicketHistoryEntry {
+  occurredAt: string
+  action: TicketHistoryAction
+  fromStatus: TicketStatus | null
+  toStatus: TicketStatus
+  owner: string | null
+  previousOwner: string | null
+  actorRole: string | null
+  slaStatus: SlaStatus | null
+  correlationId: string
+}
+export interface PendingReconciliation { confirmed: number, rejected: number, remaining: number, contractsAvailable: boolean, tickets: Ticket[] }
 export interface TicketCreate { customerId: Uuid, contractId: Uuid, serviceCode: string, category: string, description: string }
 
 export interface Process { processId: Uuid, processType: string, referenceId: Uuid, customerId: Uuid, state: string, owner: string, dueAt: string | null }
@@ -313,6 +331,8 @@ export function createApi(token: string, fetcher: typeof fetch = (...args) => fe
     assignTicket: (id: Uuid, owner: string) => request<Ticket>('POST', `/api/v1/support/tickets/${id}/assign`, { body: { owner } }),
     resolveTicket: (id: Uuid) => request<Ticket>('POST', `/api/v1/support/tickets/${id}/resolve`),
     reconcileTicket: (id: Uuid) => request<Ticket>('POST', `/api/v1/support/tickets/${id}/reconcile`),
+    reconcilePendingTickets: () => request<PendingReconciliation>('POST', '/api/v1/support/tickets/reconcile-pending'),
+    ticketHistory: (id: Uuid) => get<TicketHistoryEntry[]>(`/api/v1/support/tickets/${id}/history`),
 
     // Workflow
     listProcesses: () => get<Process[]>('/api/v1/workflow/processes'),
