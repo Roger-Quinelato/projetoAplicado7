@@ -78,20 +78,28 @@ export interface ReservationDraft { reservationId: Uuid, contract: Contract }
 export interface ContractCloseInput { endsOn?: string | null, reason?: string | null }
 export interface Entitlement { eligible: boolean, slaHours: number | null }
 
-export type InvoiceStatus = 'OPEN' | 'PAID' | 'OVERDUE'
+export type InvoiceStatus = 'OPEN' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE' | 'CANCELLED'
 export interface Invoice {
   invoiceId: Uuid
   contractId: Uuid
   customerId: Uuid
+  /** INITIAL: primeira cobrança (ativação); FINAL: faturamento final (encerramento). */
+  kind: 'INITIAL' | 'FINAL'
   amount: number
   currency: string
   dueDate: string
   paidAmount: number
+  balance: number
+  /** OVERDUE também é calculado na leitura; `delinquent` indica inadimplência já registrada. */
   status: InvoiceStatus
+  delinquent: boolean
+  overdueSince: string | null
+  sourceEventId: Uuid | null
 }
 export interface Payment { paymentId: Uuid, invoiceId: Uuid, amount: number, currency: string, reference: string }
 export interface PaymentInput { amount: number, currency: string, reference: string }
 export interface PaymentResult { paymentId: Uuid, invoice: Invoice }
+export interface OverdueCheckResult { asOf: string, evaluatedAt: string, markedOverdue: Uuid[], alreadyOverdue: number }
 
 export type TicketStatus = 'OPEN' | 'PENDING_ENTITLEMENT' | 'REJECTED_ENTITLEMENT' | 'RESOLVED'
 export interface Ticket {
@@ -168,31 +176,41 @@ const FIELD_LABELS: Record<string, string> = {
   startsOn: 'Início', endsOn: 'Fim', amount: 'Valor', currency: 'Moeda', billingCycle: 'Ciclo de cobrança',
   cycle: 'Ciclo de cobrança', slaHours: 'SLA (horas)', reference: 'Referência', category: 'Categoria',
   description: 'Descrição', owner: 'Responsável', state: 'Estado', processId: 'Processo', status: 'Estado',
-  legacyId: 'ID legado', reason: 'Motivo', 'Idempotency-Key': 'Chave de idempotência',
+  legacyId: 'ID legado', reason: 'Motivo', asOf: 'Data de referência', 'Idempotency-Key': 'Chave de idempotência',
 }
 
-/** Converte um item de erro de validação (FastAPI/Pydantic) em texto legível em português. */
+/**
+ * Converte um item de erro de validação em texto legível em português.
+ *
+ * A API v1 devolve apenas `type`, `loc` e `msg` minimizada ("Field required" ou
+ * "Entrada inválida"), sem `ctx` nem `input`, para não ecoar dados enviados.
+ * Os limites (`ctx`) só entram no texto quando presentes; sem eles a mensagem
+ * descreve a regra sem inventar valores.
+ */
 export function describeIssue(issue: ValidationIssue): string {
   const loc = (issue.loc ?? []).filter(part => part !== 'body' && part !== 'query' && part !== 'path' && part !== 'header')
   const fieldKey = loc.length ? String(loc[loc.length - 1]) : ''
   const field = FIELD_LABELS[fieldKey] ?? fieldKey
   const ctx = issue.ctx ?? {}
-  const raw = (issue.msg ?? '').replace(/^Value error, /, '').replace(/^Assertion failed, /, '')
+  const limit = (key: string, withLimit: (value: string) => string, without: string): string =>
+    ctx[key] === undefined || ctx[key] === null ? without : withLimit(String(ctx[key]))
   let message: string
   switch (issue.type) {
     case 'missing': message = 'campo obrigatório'; break
-    case 'string_too_short': message = `mínimo de ${String(ctx.min_length ?? '?')} caracteres`; break
-    case 'string_too_long': message = `máximo de ${String(ctx.max_length ?? '?')} caracteres`; break
+    case 'string_too_short': message = limit('min_length', v => `mínimo de ${v} caracteres`, 'texto curto demais'); break
+    case 'string_too_long': message = limit('max_length', v => `máximo de ${v} caracteres`, 'texto longo demais'); break
     case 'string_pattern_mismatch': message = 'formato inválido'; break
     case 'uuid_parsing': case 'uuid_type': message = 'identificador inválido'; break
     case 'date_parsing': case 'date_from_datetime_parsing': case 'date_type': message = 'data inválida'; break
-    case 'greater_than': message = `deve ser maior que ${String(ctx.gt ?? '0')}`; break
-    case 'greater_than_equal': message = `deve ser no mínimo ${String(ctx.ge ?? '0')}`; break
-    case 'less_than_equal': message = `deve ser no máximo ${String(ctx.le ?? '')}`; break
+    case 'greater_than': message = limit('gt', v => `deve ser maior que ${v}`, 'valor abaixo do permitido'); break
+    case 'greater_than_equal': message = limit('ge', v => `deve ser no mínimo ${v}`, 'valor abaixo do permitido'); break
+    case 'less_than': message = limit('lt', v => `deve ser menor que ${v}`, 'valor acima do permitido'); break
+    case 'less_than_equal': message = limit('le', v => `deve ser no máximo ${v}`, 'valor acima do permitido'); break
     case 'decimal_parsing': case 'float_parsing': case 'int_parsing': message = 'número inválido'; break
     case 'enum': case 'literal_error': message = 'valor fora das opções permitidas'; break
-    case 'value_error': message = /email/i.test(raw) && !/[À-ú]/.test(raw) ? 'e-mail inválido' : raw; break
-    default: message = raw || 'valor inválido'
+    // A mensagem do validador não é devolvida; o campo identifica o caso de e-mail.
+    case 'value_error': message = fieldKey === 'email' ? 'e-mail inválido' : 'valor inválido'; break
+    default: message = 'valor inválido'
   }
   return field ? `${field}: ${message}` : message
 }
@@ -301,10 +319,12 @@ export function createApi(token: string, fetcher: typeof fetch = (...args) => fe
       get<Entitlement>(`/api/v1/contracts/${id}/entitlement`, { customerId, serviceCode }),
 
     // Financeiro
-    listInvoices: () => get<Invoice[]>('/api/v1/finance/invoices'),
+    listInvoices: (contractId?: Uuid) => get<Invoice[]>('/api/v1/finance/invoices', { contractId }),
     listPayments: (invoiceId?: Uuid) => get<Payment[]>('/api/v1/finance/payments', { invoiceId }),
-    recordPayment: (invoiceId: Uuid, body: PaymentInput) =>
-      request<PaymentResult>('POST', `/api/v1/finance/invoices/${invoiceId}/payments`, { body }),
+    recordPayment: (invoiceId: Uuid, body: PaymentInput, idempotencyKey: string) =>
+      request<PaymentResult>('POST', `/api/v1/finance/invoices/${invoiceId}/payments`, { body, idempotencyKey }),
+    checkOverdue: (asOf?: string) =>
+      request<OverdueCheckResult>('POST', '/api/v1/finance/invoices/overdue-check', { body: asOf ? { asOf } : {} }),
 
     // Atendimento
     listTickets: () => get<Ticket[]>('/api/v1/support/tickets'),

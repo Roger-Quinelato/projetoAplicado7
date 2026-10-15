@@ -15,6 +15,10 @@ from archcorp.main import app
 @pytest.fixture(autouse=True)
 def clean_database():
     Base.metadata.drop_all(engine)
+    # Sem isto, um banco de teste antigo guarda o carimbo de uma revisão anterior enquanto
+    # create_all já cria o esquema novo, e o upgrade da inicialização reaplicaria migrações.
+    with engine.begin() as connection:
+        connection.exec_driver_sql("DROP TABLE IF EXISTS alembic_version")
     Base.metadata.create_all(engine)
     yield
 
