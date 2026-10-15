@@ -80,7 +80,7 @@ IDEMPOTENCY_RESPONSE_HEADERS = {
 }
 
 def validation_problem_response(description: str, instance: str, field: str, rule_summary: str, rule_detail: str) -> dict:
-    invalid = [{"type": "uuid_parsing", "loc": ["body", field], "msg": "Input should be a valid UUID", "input": "not-a-uuid"}]
+    invalid = [{"type": "uuid_parsing", "loc": ["body", field], "msg": "Entrada inválida"}]
     return {
         "description": description,
         "content": problem_content(examples={
@@ -221,7 +221,7 @@ TICKET_RESPONSES = {
 RECONCILIATION_RESPONSES = {
     **COMMON_API_ERRORS,
     200: {
-        "description": "Chamado reconciliado com a elegibilidade atual, ou estado atual de chamado já reconciliado.",
+        "description": "Chamado reconciliado, ou resposta original recuperada pela mesma Idempotency-Key.",
         "headers": {
             "X-Correlation-ID": CORRELATION_RESPONSE_HEADER,
             "Idempotency-Replayed": {

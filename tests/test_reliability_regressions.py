@@ -1,5 +1,8 @@
 """Regressões da estabilização v1, sempre com dados sintéticos."""
 import logging
+from datetime import datetime, timezone
+
+import pytest
 
 from sqlalchemy import select
 
@@ -9,6 +12,7 @@ from archcorp.integration.models import AuditLog, InboxEvent, OutboxEvent
 from archcorp.integration.service import EventDispatcher, audit
 from archcorp.security import Principal
 from archcorp.support.routes import acting_role
+from archcorp.observability import COUNTERS
 
 
 def test_outbox_recupera_sessao_apos_erro_sql_e_continua(caplog):
@@ -65,6 +69,45 @@ def test_validacao_nao_ecoa_corpo_ou_contexto_sensivel(client, admin_headers):
     assert all(set(error) == {"type", "loc", "msg"} for error in body["errors"])
 
 
+def test_outbox_preserva_evento_anterior_confirmado():
+    def healthy(session, event):
+        audit(session, event["correlationId"], "test", "confirmed", "success")
+
+    def broken(_session, _event):
+        raise RuntimeError("falha sintética")
+
+    dispatcher = EventDispatcher({"Healthy.v1": [("healthy", healthy)], "Broken.v1": [("broken", broken)]})
+    with SessionLocal() as session:
+        first = OutboxEvent(event_type="Healthy.v1", producer="test", payload={}, correlation_id="synthetic",
+                            occurred_at=datetime(2026, 1, 1, tzinfo=timezone.utc))
+        second = OutboxEvent(event_type="Broken.v1", producer="test", payload={}, correlation_id="synthetic",
+                             occurred_at=datetime(2026, 1, 2, tzinfo=timezone.utc))
+        session.add_all([first, second])
+        session.commit()
+        assert dispatcher.dispatch_pending(session) == {"processed": 1, "failed": 1}
+        assert first.status == "PUBLISHED" and second.status == "PENDING"
+        assert len(list(session.scalars(select(AuditLog)))) == 1
+        assert len(list(session.scalars(select(InboxEvent)))) == 1
+
+
+def test_outbox_nao_contabiliza_falha_antes_de_confirmar_tentativa(monkeypatch):
+    def broken(_session, _event):
+        raise RuntimeError("falha sintética")
+
+    def cannot_commit():
+        raise RuntimeError("commit sintético indisponível")
+
+    with SessionLocal() as session:
+        session.add(OutboxEvent(event_type="Broken.v1", producer="test", payload={}, correlation_id="synthetic",
+                                attempts=settings.retry_limit - 1))
+        session.commit()
+        previous = COUNTERS["events_failed_total"]
+        monkeypatch.setattr(session, "commit", cannot_commit)
+        with pytest.raises(RuntimeError, match="commit sintético"):
+            EventDispatcher({"Broken.v1": [("broken", broken)]}).dispatch_pending(session)
+        assert COUNTERS["events_failed_total"] == previous
+
+
 def test_resolve_repetido_sem_chave_preserva_conflito_v1(client, admin_headers, integrated_contract):
     customer, contract = integrated_contract
     client.post(f"/api/v1/contracts/{contract['contractId']}/activate",
@@ -104,8 +147,6 @@ def test_papel_auditado_e_autorizado_e_nao_o_primeiro_alfabetico():
 
 
 def test_replay_persistido_do_suporte_nao_muda_com_relogio_ou_estado(client, admin_headers, integrated_contract, monkeypatch):
-    from archcorp.main import tickets
-
     customer, contract = integrated_contract
     client.post(f"/api/v1/contracts/{contract['contractId']}/activate",
                 headers={**admin_headers, "Idempotency-Key": "activate-replay"})

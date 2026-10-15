@@ -233,8 +233,7 @@ paths:
                       loc:
                       - body
                       - customerId
-                      msg: Input should be a valid UUID
-                      input: not-a-uuid
+                      msg: Entrada inválida
                     instance: /api/v1/contracts/drafts
                     code: VALIDATION_ERROR
                     correlationId: 11111111-1111-4111-8111-111111111111
@@ -243,8 +242,7 @@ paths:
                       loc:
                       - body
                       - customerId
-                      msg: Input should be a valid UUID
-                      input: not-a-uuid
+                      msg: Entrada inválida
   /api/v1/contracts/{contract_id}/activate:
     post:
       tags:
@@ -737,8 +735,7 @@ paths:
                       loc:
                       - body
                       - contractId
-                      msg: Input should be a valid UUID
-                      input: not-a-uuid
+                      msg: Entrada inválida
                     instance: /api/v1/support/tickets
                     code: VALIDATION_ERROR
                     correlationId: 11111111-1111-4111-8111-111111111111
@@ -747,8 +744,7 @@ paths:
                       loc:
                       - body
                       - contractId
-                      msg: Input should be a valid UUID
-                      input: not-a-uuid
+                      msg: Entrada inválida
     get:
       tags:
       - Atendimento e assistência 24h
@@ -841,8 +837,8 @@ paths:
         example: 11111111-1111-4111-8111-111111111111
       responses:
         '200':
-          description: Chamado reconciliado com a elegibilidade atual, ou estado atual
-            de chamado já reconciliado.
+          description: Chamado reconciliado, ou resposta original recuperada pela
+            mesma Idempotency-Key.
           content:
             application/json:
               schema:
@@ -4581,7 +4577,8 @@ paths:
                     description: Serviço indisponível durante a demonstração
                     owner: Equipe de assistência
                 replayed:
-                  summary: Chamado já resolvido; Idempotency-Replayed true
+                  summary: Resposta persistida da mesma chave; Idempotency-Replayed
+                    true
                   value:
                     ticketId: dddddddd-dddd-4ddd-8ddd-dddddddddddd
                     customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa

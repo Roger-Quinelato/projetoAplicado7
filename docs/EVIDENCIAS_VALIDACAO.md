@@ -171,3 +171,9 @@ mantém enum de abertura/reconciliação; TicketDetailResponse continua incluind
 RESOLVED. Após ajustes: **177 passed, 6 skipped** em SQLite; CI será repetida no
 SHA final. A retirada de dois casos de rejeição de serviceCode foi compensada
 pela manutenção do teste de tamanho da descrição; elegibilidade não mudou.
+
+Na auto-revisão final, a métrica de falhas passou a incrementar somente após o
+commit da tentativa. Testes adicionais verificam falha de commit sem contagem
+antecipada e preservação do evento anterior já confirmado. Exemplos 422 e de
+replay foram alinhados ao comportamento. Suíte local após o ajuste: **179 passed,
+6 skipped**; PostgreSQL novamente coberto pela CI do SHA final.

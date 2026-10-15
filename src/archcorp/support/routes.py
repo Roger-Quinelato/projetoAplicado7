@@ -192,7 +192,7 @@ def assign_ticket(
         **NOT_FOUND,
         200: {"headers": REPLAY_HEADER, "content": {"application/json": {"examples": {
             "resolved": {"summary": "Chamado resolvido dentro do SLA", "value": EXAMPLE_RESOLVED_DETAIL},
-            "replayed": {"summary": "Chamado já resolvido; Idempotency-Replayed true", "value": EXAMPLE_RESOLVED_DETAIL},
+            "replayed": {"summary": "Resposta persistida da mesma chave; Idempotency-Replayed true", "value": EXAMPLE_RESOLVED_DETAIL},
         }}}},
         409: {"description": "Somente chamado aberto pode ser resolvido."},
     },

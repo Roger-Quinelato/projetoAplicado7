@@ -51,11 +51,13 @@ class EventDispatcher:
                     continue
                 event.attempts += 1
                 event.last_error = "Falha no despacho do evento; consulte a correlação e reprocesse após corrigir a causa"
-                if event.attempts >= settings.retry_limit:
+                permanently_failed = event.attempts >= settings.retry_limit
+                if permanently_failed:
                     event.status = "FAILED"
-                    COUNTERS["events_failed_total"] += 1
-                failed += 1
                 session.commit()
+                failed += 1
+                if permanently_failed:
+                    COUNTERS["events_failed_total"] += 1
                 # Não registrar exceção/traceback: SQLAlchemy inclui parâmetros
                 # e adaptadores podem incluir payloads ou credenciais na mensagem.
                 logger.warning("Falha ao despachar evento", extra={"operation": "dispatch_event", "result": "failure",
