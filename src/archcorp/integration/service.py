@@ -12,6 +12,8 @@ from archcorp.observability import COUNTERS, logger
 
 
 EventHandler = Callable[[Session, dict], None]
+BROKER_EXCHANGE = "archcorp.events"
+BROKER_QUEUE = "archcorp.events.all"
 
 
 class EventDispatcher:
@@ -27,60 +29,117 @@ class EventDispatcher:
                                    OutboxEvent.status == "PENDING").with_for_update(skip_locked=True))
             if event is None:
                 continue
-            correlation_id = event.correlation_id
             try:
-                for consumer, handler in self.handlers.get(event.event_type, []):
-                    exists = session.scalar(select(InboxEvent).where(InboxEvent.event_id == event.event_id, InboxEvent.consumer == consumer))
-                    if exists:
-                        continue
-                    handler(session, event.envelope())
-                    session.add(InboxEvent(event_id=event.event_id, consumer=consumer))
-                self._publish_broker(event.envelope())
-                event.status = "PUBLISHED"
-                event.last_error = None
-                session.commit()
-                processed += 1
-                COUNTERS["events_published_total"] += 1
+                # O savepoint isola consumidores e broker: em falha, desfaz só os
+                # efeitos deste evento e mantém o bloqueio da linha na transação
+                # externa, sem janela para outro despachante disputar a tentativa.
+                with session.begin_nested():
+                    for consumer, handler in self.handlers.get(event.event_type, []):
+                        exists = session.scalar(select(InboxEvent).where(InboxEvent.event_id == event.event_id, InboxEvent.consumer == consumer))
+                        if exists:
+                            continue
+                        handler(session, event.envelope())
+                        session.add(InboxEvent(event_id=event.event_id, consumer=consumer))
+                    session.flush()
+                    self._publish_broker(event.envelope())
             except Exception as exc:
-                # Flush/commit podem invalidar a sessão. Desfaz também efeitos de
-                # consumidores anteriores; a tentativa usa uma transação nova.
+                self._register_failure(event)
+                self._commit_attempt(session, event_id, exc)
+                self._report_failure(event, exc)
+                failed += 1
+                continue
+            event.status = "PUBLISHED"
+            event.last_error = None
+            try:
+                session.commit()
+            except Exception as exc:
+                # Falha no commit externo invalida a transação e libera o bloqueio;
+                # a tentativa é registrada em transação nova, se o evento seguir pendente.
                 session.rollback()
                 event = session.scalar(select(OutboxEvent).where(OutboxEvent.event_id == event_id).with_for_update())
                 if event is None or event.status != "PENDING":
                     session.rollback()
                     continue
-                event.attempts += 1
-                event.last_error = "Falha no despacho do evento; consulte a correlação e reprocesse após corrigir a causa"
-                permanently_failed = event.attempts >= settings.retry_limit
-                if permanently_failed:
-                    event.status = "FAILED"
-                session.commit()
+                self._register_failure(event)
+                self._commit_attempt(session, event_id, exc)
+                self._report_failure(event, exc)
                 failed += 1
-                if permanently_failed:
-                    COUNTERS["events_failed_total"] += 1
-                # Não registrar exceção/traceback: SQLAlchemy inclui parâmetros
-                # e adaptadores podem incluir payloads ou credenciais na mensagem.
-                logger.warning("Falha ao despachar evento", extra={"operation": "dispatch_event", "result": "failure",
-                               "eventId": event_id, "correlationId": correlation_id, "errorType": type(exc).__name__})
+                continue
+            processed += 1
+            COUNTERS["events_published_total"] += 1
         return {"processed": processed, "failed": failed}
+
+    @staticmethod
+    def _commit_attempt(session: Session, event_id: str, cause: Exception) -> None:
+        """Confirma a tentativa; se nem isso for possível, interrompe o lote.
+
+        Sem gravar a tentativa, o banco está indisponível ou inconsistente e os
+        próximos eventos falhariam igual. A transação é desfeita (o evento segue
+        PENDING com a contagem anterior) e a falha sobe ao chamador.
+        """
+        try:
+            session.commit()
+        except Exception as exc:
+            session.rollback()
+            logger.error("Falha ao registrar tentativa de despacho; lote interrompido",
+                         extra={"operation": "dispatch_event", "result": "attempt_not_recorded", "eventId": event_id,
+                                "errorType": f"{type(cause).__name__}/{type(exc).__name__}"})
+            raise
+
+    @staticmethod
+    def _register_failure(event: OutboxEvent) -> None:
+        event.attempts += 1
+        event.last_error = "Falha no despacho do evento; consulte a correlação e reprocesse após corrigir a causa"
+        if event.attempts >= settings.retry_limit:
+            event.status = "FAILED"
+
+    @staticmethod
+    def _report_failure(event: OutboxEvent, exc: Exception) -> None:
+        """Métrica e log só depois do commit que registrou a tentativa."""
+        if event.status == "FAILED":
+            COUNTERS["events_failed_total"] += 1
+        # Não registrar exceção/traceback: SQLAlchemy inclui parâmetros
+        # e adaptadores podem incluir payloads ou credenciais na mensagem.
+        logger.warning("Falha ao despachar evento", extra={"operation": "dispatch_event", "result": "failure",
+                       "eventId": event.event_id, "correlationId": event.correlation_id, "errorType": type(exc).__name__})
 
     @staticmethod
     def _publish_broker(envelope: dict) -> None:
         if not settings.rabbitmq_url:
             return
         import pika
-        connection = pika.BlockingConnection(pika.URLParameters(settings.rabbitmq_url))
+        parameters = pika.URLParameters(settings.rabbitmq_url)
+        # Sem esses limites, um broker que bloqueia publicadores (memória/disco)
+        # prende o despacho e o bloqueio da linha da outbox indefinidamente.
+        parameters.blocked_connection_timeout = settings.rabbitmq_blocked_timeout_seconds
+        parameters.socket_timeout = settings.rabbitmq_socket_timeout_seconds
+        parameters.heartbeat = settings.rabbitmq_heartbeat_seconds
+        parameters.connection_attempts = 1
+        connection = pika.BlockingConnection(parameters)
         try:
             channel = connection.channel()
-            channel.exchange_declare(exchange="archcorp.events", exchange_type="topic", durable=True)
+            channel.exchange_declare(exchange=BROKER_EXCHANGE, exchange_type="topic", durable=True)
+            # Fila durável que recebe todos os eventos: sem ela, uma mensagem sem
+            # rota seria descartada pelo broker e o evento marcado PUBLISHED.
+            # Cheia, recusa novas publicações (nack) em vez de descartar as antigas.
+            declared = channel.queue_declare(queue=BROKER_QUEUE, durable=True, arguments={
+                "x-max-length": settings.rabbitmq_queue_max_length, "x-overflow": "reject-publish"})
+            COUNTERS["broker_queue_messages"] = declared.method.message_count
+            channel.queue_bind(queue=BROKER_QUEUE, exchange=BROKER_EXCHANGE, routing_key="#")
+            # Confirmação do broker: UnroutableError (mandatory), NackError (fila
+            # cheia ou recusa) e ConnectionBlockedTimeout sobem para o despachante
+            # e contam como falha da tentativa.
+            channel.confirm_delivery()
             channel.basic_publish(
-                exchange="archcorp.events",
+                exchange=BROKER_EXCHANGE,
                 routing_key=envelope["eventType"],
                 body=json.dumps(envelope, ensure_ascii=False).encode("utf-8"),
                 properties=pika.BasicProperties(content_type="application/json", delivery_mode=2),
+                mandatory=True,
             )
         finally:
-            connection.close()
+            if connection.is_open:
+                connection.close()
 
 
 def audit(session: Session, correlation_id: str, module: str, operation: str, result: str, entity_id: str | None = None, **details) -> None:

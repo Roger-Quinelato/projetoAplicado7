@@ -197,28 +197,38 @@ const FIELD_LABELS: Record<string, string> = {
   legacyId: 'ID legado', reason: 'Motivo', asOf: 'Data de referência', 'Idempotency-Key': 'Chave de idempotência',
 }
 
-/** Converte um item de erro de validação (FastAPI/Pydantic) em texto legível em português. */
+/**
+ * Converte um item de erro de validação em texto legível em português.
+ *
+ * A API v1 devolve apenas `type`, `loc` e `msg` minimizada ("Field required" ou
+ * "Entrada inválida"), sem `ctx` nem `input`, para não ecoar dados enviados.
+ * Os limites (`ctx`) só entram no texto quando presentes; sem eles a mensagem
+ * descreve a regra sem inventar valores.
+ */
 export function describeIssue(issue: ValidationIssue): string {
   const loc = (issue.loc ?? []).filter(part => part !== 'body' && part !== 'query' && part !== 'path' && part !== 'header')
   const fieldKey = loc.length ? String(loc[loc.length - 1]) : ''
   const field = FIELD_LABELS[fieldKey] ?? fieldKey
   const ctx = issue.ctx ?? {}
-  const raw = (issue.msg ?? '').replace(/^Value error, /, '').replace(/^Assertion failed, /, '')
+  const limit = (key: string, withLimit: (value: string) => string, without: string): string =>
+    ctx[key] === undefined || ctx[key] === null ? without : withLimit(String(ctx[key]))
   let message: string
   switch (issue.type) {
     case 'missing': message = 'campo obrigatório'; break
-    case 'string_too_short': message = `mínimo de ${String(ctx.min_length ?? '?')} caracteres`; break
-    case 'string_too_long': message = `máximo de ${String(ctx.max_length ?? '?')} caracteres`; break
+    case 'string_too_short': message = limit('min_length', v => `mínimo de ${v} caracteres`, 'texto curto demais'); break
+    case 'string_too_long': message = limit('max_length', v => `máximo de ${v} caracteres`, 'texto longo demais'); break
     case 'string_pattern_mismatch': message = 'formato inválido'; break
     case 'uuid_parsing': case 'uuid_type': message = 'identificador inválido'; break
     case 'date_parsing': case 'date_from_datetime_parsing': case 'date_type': message = 'data inválida'; break
-    case 'greater_than': message = `deve ser maior que ${String(ctx.gt ?? '0')}`; break
-    case 'greater_than_equal': message = `deve ser no mínimo ${String(ctx.ge ?? '0')}`; break
-    case 'less_than_equal': message = `deve ser no máximo ${String(ctx.le ?? '')}`; break
+    case 'greater_than': message = limit('gt', v => `deve ser maior que ${v}`, 'valor abaixo do permitido'); break
+    case 'greater_than_equal': message = limit('ge', v => `deve ser no mínimo ${v}`, 'valor abaixo do permitido'); break
+    case 'less_than': message = limit('lt', v => `deve ser menor que ${v}`, 'valor acima do permitido'); break
+    case 'less_than_equal': message = limit('le', v => `deve ser no máximo ${v}`, 'valor acima do permitido'); break
     case 'decimal_parsing': case 'float_parsing': case 'int_parsing': message = 'número inválido'; break
     case 'enum': case 'literal_error': message = 'valor fora das opções permitidas'; break
-    case 'value_error': message = /email/i.test(raw) && !/[À-ú]/.test(raw) ? 'e-mail inválido' : raw; break
-    default: message = raw || 'valor inválido'
+    // A mensagem do validador não é devolvida; o campo identifica o caso de e-mail.
+    case 'value_error': message = fieldKey === 'email' ? 'e-mail inválido' : 'valor inválido'; break
+    default: message = 'valor inválido'
   }
   return field ? `${field}: ${message}` : message
 }
