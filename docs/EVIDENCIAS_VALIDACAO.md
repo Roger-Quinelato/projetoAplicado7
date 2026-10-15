@@ -111,7 +111,7 @@ ataque de carga ou teste no deploy público.
   desenvolvimento sem `--host 0.0.0.0`.
 - Erros 422 sem `input`/`ctx` e com `msg` genérica, igual ao #35, e `describeIssue`
   ajustado na interface (`web/tests/api.test.ts`), para a main não esperar a pilha.
-- CI: passos `pip-audit` e `npm audit --audit-level=high` reprovam a execução.
+- CI: passos `pip-audit` e `npm audit --audit-level=moderate` reprovam a execução.
 - Local (Python 3.13, Node 22): **79 passed** em SQLite; `npm test` 4 passed;
   `npm run build` sem erro.
 - Limites mantidos: credencial pública compartilhada com todos os papéis, contêiner
