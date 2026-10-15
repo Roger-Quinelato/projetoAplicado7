@@ -1,4 +1,7 @@
+import ast
 import importlib.util
+import re
+from collections import Counter
 from io import StringIO
 from pathlib import Path
 
@@ -127,12 +130,90 @@ def test_migracoes_geram_sql_valido_para_postgresql():
     assert "ALTER TABLE crm_customers ADD COLUMN active BOOLEAN DEFAULT true NOT NULL" in sql
 
 
+# Exceções aprovadas à regra aditiva do ADR-002, por operação e contagem exata. Cada entrada exige ADR e
+# data; a comparação é de igualdade: operação nova, contagem maior ou exceção que deixou de ocorrer falham.
+MIGRATION_EXCEPTIONS = {
+    # 14/10/2026 · ADR-003 · T12: troca uq_invoice_contract -> uq_invoice_contract_kind (1 drop_constraint)
+    # e reclassifica faturas OPEN com pagamento para PARTIALLY_PAID (1 UPDATE literal).
+    "0004_finance_lifecycle.py": Counter({"drop_constraint": 1, "execute UPDATE": 1}),
+}
+DESTRUCTIVE_CALLS = {"drop_table", "drop_column", "alter_column", "rename_table", "drop_constraint", "drop_index"}
+DESTRUCTIVE_SQL = ("UPDATE", "DELETE", "DROP", "ALTER", "RENAME", "TRUNCATE")
+
+
+def destructive_operations(source: str) -> Counter:
+    """Conta operações destrutivas na função `upgrade`, analisando a AST (não o texto).
+
+    Qualquer chamada `.execute(...)` (op, batch_op, conexão) precisa receber uma string literal, para que o
+    SQL possa ser inspecionado; argumento não literal (f-string, `sa.text`, variável) conta como
+    `execute non-literal`, que não tem exceção possível sem novo ADR.
+    """
+    tree = ast.parse(source)
+    functions = {node.name: node for node in tree.body if isinstance(node, ast.FunctionDef)}
+    upgrade = functions["upgrade"]
+    aliases = {node.targets[0].id: node.value.attr for node in ast.walk(tree)
+               if isinstance(node, ast.Assign) and len(node.targets) == 1
+               and isinstance(node.targets[0], ast.Name) and isinstance(node.value, ast.Attribute)}
+    found: Counter = Counter()
+    pending = [upgrade]
+    visited = set()
+    while pending:
+        function = pending.pop()
+        if function.name in visited:
+            continue
+        visited.add(function.name)
+        for node in ast.walk(function):
+            if not isinstance(node, ast.Call):
+                continue
+            if isinstance(node.func, ast.Name) and node.func.id in functions:
+                pending.append(functions[node.func.id])
+            method = node.func.attr if isinstance(node.func, ast.Attribute) else aliases.get(getattr(node.func, "id", ""))
+            if method in DESTRUCTIVE_CALLS:
+                found[method] += 1
+            elif method in {"execute", "exec_driver_sql"}:
+                argument = node.args[0] if node.args else None
+                if not (isinstance(argument, ast.Constant) and isinstance(argument.value, str)):
+                    found["execute non-literal"] += 1
+                    continue
+                for verb in DESTRUCTIVE_SQL:
+                    if re.search(rf"\b{verb}\b", argument.value, re.IGNORECASE):
+                        found[f"execute {verb}"] += 1
+    return found
+
+
 def test_migracoes_sao_aditivas():
     versions = Path("src/archcorp/infrastructure/migrations/versions")
-    forbidden = ("drop_table", "drop_column", "alter_column(", "rename_table")
-    for file in versions.glob("*.py"):
-        upgrade = file.read_text(encoding="utf-8").split("def downgrade", 1)[0]
-        assert not any(term in upgrade for term in forbidden), f"{file.name} contém operação destrutiva no upgrade"
+    files = {file.name: file for file in versions.glob("*.py")}
+    assert set(MIGRATION_EXCEPTIONS) <= set(files)
+    for name, file in files.items():
+        found = destructive_operations(file.read_text(encoding="utf-8"))
+        allowed = MIGRATION_EXCEPTIONS.get(name, Counter())
+        assert found == allowed, f"{name}: operações destrutivas no upgrade {dict(found)} diferem das exceções registradas {dict(allowed)}"
+
+
+def test_guarda_aditiva_detecta_operacoes_destrutivas():
+    def ops(body: str) -> dict:
+        return dict(destructive_operations("def upgrade():\n" + "\n".join("    " + line for line in body.splitlines()) + "\n\ndef downgrade():\n    op.drop_table('t')\n"))
+
+    assert ops("batch_op.drop_index('ix')\nop.execute(\n  'DELETE FROM t')") == {"drop_index": 1, "execute DELETE": 1}
+    assert ops("op.execute('update t set a = 1')\nop.execute('UPDATE u SET b = 2')") == {"execute UPDATE": 2}
+    assert ops("op.execute('drop table t')") == {"execute DROP": 1}
+    assert ops("op.execute('ALTER TABLE t RENAME TO u')") == {"execute ALTER": 1, "execute RENAME": 1}
+    assert ops("op.execute('TRUNCATE t')") == {"execute TRUNCATE": 1}
+    assert ops("op.get_bind().execute('DELETE FROM t')") == {"execute DELETE": 1}
+    assert ops("op.execute(sa.text('DELETE FROM t'))") == {"execute non-literal": 1}
+    assert ops("op.execute(f'DELETE FROM {name}')") == {"execute non-literal": 1}
+    assert ops("op.execute(statement)") == {"execute non-literal": 1}
+    assert ops("op.get_bind().exec_driver_sql('DELETE FROM t')") == {"execute DELETE": 1}
+    assert ops("op.get_bind().exec_driver_sql(statement)") == {"execute non-literal": 1}
+    assert ops("remove = op.drop_table\nremove('t')") == {"drop_table": 1}
+    assert ops("op.drop_constraint('a')\nop.drop_constraint('b')") == {"drop_constraint": 2}
+    assert ops("op.execute('CREATE INDEX ix ON t (a)')\nbatch_op.add_column(x)") == {}
+
+
+def test_guarda_aditiva_inspeciona_helpers_alcancaveis():
+    source = "def upgrade():\n    migrate()\n\ndef migrate():\n    op.drop_index('ix')\n\ndef downgrade():\n    op.drop_table('t')\n"
+    assert destructive_operations(source) == Counter({"drop_index": 1})
 
 
 def test_carga_sintetica_e_idempotente(client):

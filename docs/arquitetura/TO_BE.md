@@ -21,7 +21,7 @@ direcionadores do ADR exige nova decisão arquitetural.
 |---|---|---|
 | Comercial e canais digitais | Cadastrar cliente e criar contrato sem recadastro | API CRM e criação de reserva/rascunho |
 | Reservas e contratos de locação | Elaborar, ativar e consultar contrato de locação, grupo de veículo, proteções e SLA | API Contracts |
-| Financeiro e faturamento | Receber contrato ativo e criar cobrança | Consumidor de evento |
+| Financeiro e faturamento | Receber contrato ativo ou encerrado e faturar; registrar pagamento simulado e inadimplência | Consumidor de evento e API Finance |
 | Atendimento e assistência 24h | Abrir chamado com elegibilidade e SLA | API Support e consulta pública de Contracts |
 | Operações e gestão | Iniciar e acompanhar processos e falhas | Consumidores de eventos e APIs operacionais |
 | Sistemas externos | Integrar capacidades sem conhecer tabelas internas | Adaptadores, REST/JSON e eventos versionados |
@@ -64,7 +64,7 @@ SLA, cobrança, prioridade ou estado dos processos.
 |---|---|---|---|---|
 | CRM | Cadastro, atualização, elegibilidade e consentimento | API CRM e `CustomerReader` | Cliente, contatos, consentimentos, perfil de locação e oportunidade | `crm_customers` |
 | Contracts | Rascunho, ativação, plano, vigência e SLA | API Contracts e `ContractEntitlementPort` | Reserva, contrato de locação, grupo de veículo, vigência, proteções e SLA | `contracts_contracts` |
-| Finance | Criação da primeira cobrança da locação | Consumidor de `ContractActivated.v1` | Pré-autorização, cobrança, fatura, pagamento, caução, multa e inadimplência | `finance_invoices` |
+| Finance | Primeira cobrança, faturamento final, pagamento simulado e inadimplência por vencimento | Consumidores de `ContractActivated.v1` e `ContractClosed.v1`; API Finance | Pré-autorização, cobrança, fatura, pagamento, caução, multa e inadimplência | `finance_invoices` |
 | Support | Abertura, prioridade, prazo e reconciliação de chamado | API Support | Chamado, assistência, prioridade, histórico e resolução | `support_tickets` |
 | Workflow | Preparação de retirada e processo de resolução | Consumidores de eventos | Instância, tarefa, responsável, prazo e estado operacional | `workflow_instances` |
 | Integration | IDs legados, correlação, outbox, inbox, auditoria e falhas | APIs operacionais e dispatcher | Mapeamentos, correlação e registros de entrega | tabelas `integration_*` |

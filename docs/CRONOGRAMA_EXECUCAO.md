@@ -48,7 +48,7 @@ Cada linha é uma **tarefa** (tipo), salvo os agrupamentos Q1–Q7, que serão *
 | T09 | S6 | Completar reservas/contratos: reserva, rascunho, ativação idempotente e encerramento | Alta | Em andamento | T06,T07 |
 | T10 | S7 | Entregar frontend navegável nos cinco contextos, com estados e feedback de erros | Alta | Em revisão | T08,T09 |
 | T11 | S7 | Demonstrar F1 cliente → reserva → contrato sem recadastro | Alta | Em revisão | T08,T09,T10 |
-| T12 | S8 | Completar financeiro: fatura, pagamento simulado e inadimplência por vencimento | Alta | Em andamento | T09 |
+| T12 | S8 | Completar financeiro: fatura, pagamento simulado e inadimplência por vencimento | Alta | Em revisão (14/10/2026) | T09 |
 | T13 | S8 | Demonstrar F2 ativação → cobrança + preparação; reentrega sem duplicação | Alta | Em andamento | T09,T12 |
 | T14 | S8 | Revisar viabilidade e empreendedorismo: custos zero, limites e evolução comercial | Normal | Planejado | T05 |
 | T15 | S9 | Completar atendimento: abertura, SLA, responsável, resolução e reconciliação | Alta | Em andamento | T09 |
