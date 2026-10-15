@@ -60,6 +60,12 @@ Cada linha é uma **tarefa** (tipo), salvo os agrupamentos Q1–Q7, que serão *
 | T21 | S12 | Criar Jira, Trello, Notion, Drive e GitHub Project; publicar tickets, decisões e arquivos oficiais com links cruzados | Alta | Em andamento | T03,T19 |
 | T22 | S13–S14 | Revisar entrega com professor, preencher nomes/contribuições, ensaiar e submeter pacote final | Alta | Aguardando | T19,T20,T21 |
 
+## Pendências registradas
+
+| Origem | Pendência | Gatilho | Escopo |
+|---|---|---|---|
+| T11 (revisão do CTO em 14/10/2026) | Critério de F1 "timeout/retry limitado" não implementado; hoje a falha do `CustomerReader` vira `500` sem efeito parcial | Conector do CRM fora do processo | Timeout configurável no adaptador; retentativa só para erro transitório, com atraso exponencial, jitter e limite; mapeamento da indisponibilidade. A escolha entre `503` e estado `PENDING` será registrada em ADR curto quando o conector entrar |
+
 ## Regras de conclusão
 
 - `Concluído` exige link para artefato e verificação; código local isolado não comprova deploy.

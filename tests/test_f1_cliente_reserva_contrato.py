@@ -129,12 +129,11 @@ def test_f1_contratos_de_entrada_nao_aceitam_dados_cadastrais():
     assert "requestBody" not in schema["paths"]["/api/v1/contracts/reservations/{reservation_id}/draft"]["post"]
 
 
-def test_f1_rejeita_cliente_inexistente_inativo_ou_sem_consentimento_sem_efeito_parcial(client, admin_headers, crm_customer, reservation, json_logs):
+def test_f1_cliente_rejeitado_nao_deixa_efeito_parcial_nem_consome_a_chave(client, admin_headers, crm_customer, reservation, json_logs):
     missing_cid = str(uuid4())
     missing = client.post("/api/v1/contracts/drafts", headers={**admin_headers, "X-Correlation-ID": missing_cid, "Idempotency-Key": "f1-missing"},
                           json=draft_body(MISSING_ID))
     assert assert_problem(missing, 422, "BUSINESS_RULE_VIOLATION", missing_cid)["detail"] == "Cliente inexistente ou inelegível"
-    assert_problem(client.post("/api/v1/contracts/reservations", headers=admin_headers, json=reservation_body(MISSING_ID)), 404, "NOT_FOUND")
     # Erro rastreado: a linha de log da requisição carrega o mesmo correlationId e o status.
     assert any(line["correlationId"] == missing_cid and line["result"] == 422 for line in json_logs())
 
@@ -154,30 +153,23 @@ def test_f1_rejeita_cliente_inexistente_inativo_ou_sem_consentimento_sem_efeito_
     accepted = client.post(path, headers={**admin_headers, "Idempotency-Key": "f1-consent"})
     assert accepted.status_code == 200, accepted.text
     assert accepted.headers["Idempotency-Replayed"] == "false"
-
-    other = client.post("/api/v1/crm/customers", headers=admin_headers, json={"name": "Cliente Inativo F1", "email": "inativo-f1@example.com"}).json()
-    other_reservation = client.post("/api/v1/contracts/reservations", headers=admin_headers, json=reservation_body(other["customerId"])).json()
-    assert client.post(f"/api/v1/crm/customers/{other['customerId']}/deactivate", headers=admin_headers).status_code == 200
-    inactive = client.post(f"/api/v1/contracts/reservations/{other_reservation['reservationId']}/draft", headers={**admin_headers, "Idempotency-Key": "f1-inactive"})
-    assert_problem(inactive, 422, "BUSINESS_RULE_VIOLATION")
-    assert client.get(f"/api/v1/contracts/reservations/{other_reservation['reservationId']}", headers=admin_headers).json()["status"] == "REQUESTED"
     assert [c.customer_id for c in contracts_in_db()] == [crm_customer["customerId"]]
 
 
-@pytest.mark.parametrize(("change", "loc"), [
-    ({"billing": {"amount": 0, "currency": "BRL", "cycle": "MONTHLY"}}, ["body", "billing", "amount"]),
-    ({"billing": {"amount": 10.555, "currency": "BRL", "cycle": "MONTHLY"}}, ["body", "billing", "amount"]),
-    ({"billing": {"amount": 100, "currency": "brl", "cycle": "MONTHLY"}}, ["body", "billing", "currency"]),
-    ({"billing": {"amount": 100, "currency": "BRL", "cycle": "WEEKLY"}}, ["body", "billing", "cycle"]),
-    ({"billing": None}, ["body", "billing"]),
-    ({"serviceCode": "X"}, ["body", "serviceCode"]),
-    ({"startsOn": "2027-02-30"}, ["body", "startsOn"]),
-    ({"slaHours": 0}, ["body", "slaHours"]),
+@pytest.mark.parametrize(("change", "removed", "loc"), [
+    ({"billing": {"amount": 0, "currency": "BRL", "cycle": "MONTHLY"}}, None, ["body", "billing", "amount"]),
+    ({"billing": {"amount": 10.555, "currency": "BRL", "cycle": "MONTHLY"}}, None, ["body", "billing", "amount"]),
+    ({"billing": {"amount": 100, "currency": "brl", "cycle": "MONTHLY"}}, None, ["body", "billing", "currency"]),
+    ({"billing": {"amount": 100, "currency": "BRL", "cycle": "WEEKLY"}}, None, ["body", "billing", "cycle"]),
+    ({}, "billing", ["body", "billing"]),
+    ({"serviceCode": "X"}, None, ["body", "serviceCode"]),
+    ({"startsOn": "2027-02-30"}, None, ["body", "startsOn"]),
+    ({"slaHours": 0}, None, ["body", "slaHours"]),
 ])
-def test_f1_validacao_estrutural_do_rascunho_retorna_422_sem_criar_contrato(client, admin_headers, crm_customer, change, loc):
+def test_f1_validacao_estrutural_do_rascunho_retorna_422_sem_criar_contrato(client, admin_headers, crm_customer, change, removed, loc):
     body = draft_body(crm_customer["customerId"], **change)
-    if change.get("billing", ...) is None:
-        body.pop("billing")
+    if removed:
+        body.pop(removed)
     response = client.post("/api/v1/contracts/drafts", headers={**admin_headers, "Idempotency-Key": "f1-invalid"}, json=body)
     problem = assert_problem(response, 422, "VALIDATION_ERROR", admin_headers["X-Correlation-ID"])
     assert loc in [error["loc"] for error in problem["errors"]]
@@ -208,13 +200,15 @@ class UnavailableCustomerReader:
         raise TimeoutError("CRM sem resposta no prazo (simulado)")
 
 
-def test_f1_indisponibilidade_do_crm_retorna_erro_rastreado_sem_efeito_parcial(client, admin_headers, reservation, monkeypatch, json_logs):
+def test_f1_indisponibilidade_do_crm_comportamento_atual_500_sem_efeito_parcial(client, admin_headers, reservation, monkeypatch, json_logs):
     path = f"/api/v1/contracts/reservations/{reservation['reservationId']}/draft"
     correlation_id = str(uuid4())
     headers = {**admin_headers, "X-Correlation-ID": correlation_id, "Idempotency-Key": "f1-timeout"}
     with monkeypatch.context() as patch:
         patch.setattr(main.contracts, "customers", UnavailableCustomerReader())
         failed = client.post(path, headers=headers)
+    # Comportamento ATUAL, não contrato-alvo: sem timeout/retentativa no adaptador, a falha vira 500 genérico.
+    # A resposta-alvo (503 ou chamado PENDING) será decidida em ADR quando o conector do CRM sair do processo.
     problem = assert_problem(failed, 500, "INTERNAL_ERROR", correlation_id)
     assert "CRM sem resposta" not in json.dumps(problem)
     assert any(line["correlationId"] == correlation_id and line["level"] == "ERROR" for line in json_logs())
@@ -285,3 +279,20 @@ def test_f1_mesma_chave_em_outra_reserva_nao_vincula_contrato_alheio(client, adm
     assert client.get(f"/api/v1/contracts/{contract_id}", headers=admin_headers).json()["status"] == "DRAFT"
     with SessionLocal() as session:
         assert session.scalars(select(Reservation.reservation_id).where(Reservation.contract_id == contract_id)).all() == [first["reservationId"]]
+
+
+@pytest.mark.parametrize("same_terms", [True, False], ids=["mesmas-condicoes", "outras-condicoes"])
+def test_f1_chave_do_rascunho_direto_reaproveitada_na_reserva_retorna_409(client, admin_headers, crm_customer, reservation, same_terms):
+    starts_on = reservation["startsOn"] if same_terms else "2027-03-01"
+    direct = client.post("/api/v1/contracts/drafts", headers={**admin_headers, "Idempotency-Key": "f1-cross-route"}, json=draft_body(
+        crm_customer["customerId"], startsOn=starts_on, slaHours=reservation["slaHours"],
+        billing={"amount": reservation["amount"], "currency": reservation["currency"], "cycle": reservation["billingCycle"]}))
+    assert direct.status_code == 201, direct.text
+
+    reused = client.post(f"/api/v1/contracts/reservations/{reservation['reservationId']}/draft", headers={**admin_headers, "Idempotency-Key": "f1-cross-route"})
+    assert_problem(reused, 409, "IDEMPOTENCY_CONFLICT")
+    untouched = client.get(f"/api/v1/contracts/reservations/{reservation['reservationId']}", headers=admin_headers).json()
+    assert (untouched["status"], untouched["contractId"]) == ("REQUESTED", None)
+    assert [c.contract_id for c in contracts_in_db()] == [direct.json()["contractId"]]
+    with SessionLocal() as session:
+        assert session.scalar(select(AuditLog).where(AuditLog.operation == "draft_from_reservation")) is None

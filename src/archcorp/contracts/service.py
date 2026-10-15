@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from archcorp.contracts.domain import ContractStatus, ReservationStatus, ensure_contract_transition, ensure_reservation_transition
 from archcorp.contracts.models import Contract, Reservation
 from archcorp.crm.public import CustomerData, CustomerReader
-from archcorp.exceptions import BusinessRuleError, ConflictError, IdempotencyConflictError, InvalidStateError, NotFoundError
+from archcorp.exceptions import BusinessRuleError, ConflictError, InvalidStateError, NotFoundError
 from archcorp.integration.models import IdempotencyRecord
 from archcorp.integration.service import IdempotencyStore, audit, enqueue
 
@@ -31,13 +31,17 @@ class ContractService:
         session.commit()
         return response, replay
 
-    def _draft(self, session: Session, data: dict, idempotency_key: str, correlation_id: str) -> tuple[dict, bool]:
+    def _draft(self, session: Session, data: dict, idempotency_key: str, correlation_id: str,
+               reservation_id: str | None = None) -> tuple[dict, bool]:
         request = {
             "customerId": data["customerId"], "serviceCode": data["serviceCode"], "startsOn": str(data["startsOn"]),
             "endsOn": str(data["endsOn"]) if data.get("endsOn") else None,
             "billing": {"amount": money(data["billing"]["amount"]), "currency": data["billing"]["currency"], "cycle": data["billing"]["cycle"]},
             "slaHours": data.get("slaHours", 8),
         }
+        if reservation_id:
+            # ADR-001, regra 11: a chave identifica a origem do rascunho; reutilizá-la em outra reserva ou na rota direta é conflito.
+            request["reservationId"] = reservation_id
         stored = IdempotencyStore.replay(session, idempotency_key, "create_contract_draft", request, "Idempotency-Key já utilizada com outro contrato")
         if stored:
             return stored, True
@@ -194,11 +198,7 @@ class ReservationService:
         data = {"customerId": reservation.customer_id, "serviceCode": reservation.service_code,
                 "startsOn": reservation.starts_on, "endsOn": reservation.ends_on, "slaHours": reservation.sla_hours,
                 "billing": {"amount": reservation.amount, "currency": reservation.currency, "cycle": reservation.billing_cycle}}
-        contract, replay = self.contracts._draft(session, data, idempotency_key, correlation_id)
-        if replay and session.scalar(select(Reservation.reservation_id).where(
-                Reservation.contract_id == contract["contractId"], Reservation.reservation_id != reservation_id)):
-            # A chave já gerou o rascunho de outra reserva; vincular aqui faria duas reservas compartilharem o contrato.
-            raise IdempotencyConflictError("Idempotency-Key já utilizada com outra reserva")
+        contract, replay = self.contracts._draft(session, data, idempotency_key, correlation_id, reservation_id)
         reservation.contract_id = contract["contractId"]
         reservation.status = ReservationStatus.DRAFTED
         audit(session, correlation_id, "contracts", "draft_from_reservation", "success", reservation.reservation_id, contractId=contract["contractId"])

@@ -1,8 +1,8 @@
 """Demonstração verificável do F1: cliente do CRM -> reserva -> rascunho de contrato sem recadastro.
 
-Equivalente portátil (Windows, Linux, macOS) da parte F1 de `scripts/demo.ps1`, com as ramificações
-do plano: validação 4xx, cliente inexistente/inativo, idempotência, autorização e erro rastreado por
-`correlationId`. Usa somente dados sintéticos e a API local; não acessa sistemas da Localiza.
+Equivalente em Python da parte F1 de `scripts/demo.ps1`, sem dependência específica de SO; executado só
+em Linux. Cobre as ramificações do plano: validação 4xx, cliente inexistente/inativo, idempotência,
+autorização e erro rastreado por `correlationId`. Usa somente dados sintéticos e a API local; não acessa sistemas da Localiza.
 
 Uso:
     python scripts/demo_f1.py [--base-url http://localhost:8000] [--token demo-admin] [--forbidden-token demo-support]
@@ -12,7 +12,7 @@ URL de ARCHCORP_BASE_URL. Use `--forbidden-token ""` para pular a checagem de 40
 Cada execução gera e-mail, ID legado e chaves novas; pode ser repetida no mesmo banco.
 Código de saída: 0 se todas as checagens passarem, 1 se alguma falhar, 2 se a API estiver inacessível.
 A indisponibilidade/timeout do CRM não tem chave de ativação na API; ela é coberta por
-`tests/test_f1_cliente_reserva_contrato.py::test_f1_indisponibilidade_do_crm_retorna_erro_rastreado_sem_efeito_parcial`.
+`tests/test_f1_cliente_reserva_contrato.py::test_f1_indisponibilidade_do_crm_comportamento_atual_500_sem_efeito_parcial`.
 """
 import argparse
 import os
@@ -100,6 +100,17 @@ def run(demo: Demo, forbidden_token: str) -> None:
     ready = demo.client.get("/health/ready")
     demo.check("0. API pronta (/health/ready)", ready, [("status UP e banco UP", safe_json(ready) == {"status": "UP", "database": "UP"})])
 
+    # Sem recadastro pelo contrato publicado: as entradas de F1 só aceitam o customerId, nunca dados cadastrais.
+    spec = demo.client.get("/openapi.json")
+    schemas = safe_json(spec).get("components", {}).get("schemas", {})
+    inputs = {name: set(schemas.get(name, {}).get("properties", {})) for name in ("ReservationInput", "ContractDraftCreate")}
+    draft_operation = safe_json(spec).get("paths", {}).get("/api/v1/contracts/reservations/{reservation_id}/draft", {}).get("post", {})
+    demo.check("0b. OpenAPI: entradas de reserva e rascunho sem campos cadastrais", spec, [
+        *((f"{name} com customerId e sem {sorted(CADASTRAL_FIELDS & fields) or 'campo cadastral'}", "customerId" in fields and CADASTRAL_FIELDS.isdisjoint(fields))
+          for name, fields in inputs.items()),
+        ("rascunho a partir da reserva sem corpo", bool(draft_operation) and "requestBody" not in draft_operation),
+    ], "; ".join(f"{name}={sorted(fields)}" for name, fields in inputs.items()))
+
     created = demo.call("POST", "/api/v1/crm/customers", flow, json={
         "name": f"Cliente Sintético F1 {run_id}", "email": f"f1-{run_id}@cliente-sintetico.example.com", "legacyId": f"SINT-F1-{run_id}",
     })
@@ -110,7 +121,10 @@ def run(demo: Demo, forbidden_token: str) -> None:
         return
 
     official = demo.call("GET", f"/api/v1/crm/customers/{customer_id}", flow)
-    demo.check("2. CRM devolve o cadastro (fonte oficial)", official, [("200", official.status_code == 200), ("mesmo nome e e-mail", safe_json(official).get("email") == customer["email"])],
+    demo.check("2. CRM devolve o cadastro (fonte oficial)", official, [
+        ("200", official.status_code == 200),
+        ("mesmo nome e e-mail", (safe_json(official).get("name"), safe_json(official).get("email")) == (customer["name"], customer["email"])),
+    ],
                f"name={customer['name']!r} email={customer['email']}")
 
     body = {"customerId": customer_id, "vehicleGroup": "SUV-COMPACTO", "protectionCode": "BASICA", "serviceCode": "RENTAL-FLEX",
@@ -119,10 +133,10 @@ def run(demo: Demo, forbidden_token: str) -> None:
     reserved = demo.call("POST", "/api/v1/contracts/reservations", flow, key=reservation_key, json=body)
     reservation = safe_json(reserved)
     reservation_id = reservation.get("reservationId")
-    if not demo.check("3. Reserva referencia só o customerId (sem dados cadastrais no corpo)", reserved, [
-        ("201", reserved.status_code == 201), ("corpo sem campos cadastrais", CADASTRAL_FIELDS.isdisjoint(body)),
+    if not demo.check("3. Reserva registrada para o customerId do CRM", reserved, [
+        ("201", reserved.status_code == 201),
         ("mesmo customerId", reservation.get("customerId") == customer_id), ("status REQUESTED", reservation.get("status") == "REQUESTED"),
-    ], f"reservationId={reservation_id} campos enviados={sorted(body)}"):
+    ], f"reservationId={reservation_id}"):
         return
 
     replay = demo.call("POST", "/api/v1/contracts/reservations", flow, key=reservation_key, json=body)

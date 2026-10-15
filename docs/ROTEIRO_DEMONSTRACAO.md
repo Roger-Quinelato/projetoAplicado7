@@ -137,12 +137,12 @@ $headers = @{
    Os resultados devem ser `true` para o cabeçalho de replay e `True` para a
    comparação do `contractId`. O banco continua com um rascunho para essa chave.
 
-### F1 verificável em qualquer sistema operacional (T11)
+### F1 verificável por script Python (T11)
 
 [`scripts/demo_f1.py`](../scripts/demo_f1.py) executa o F1 pelo caminho cliente →
 reserva → rascunho e as ramificações do plano, usando `httpx` (já em
-`requirements-dev.txt`). Funciona no Windows, Linux e macOS e pode ser repetido no
-mesmo banco, pois gera e-mail, ID legado e chaves novas a cada execução.
+`requirements-dev.txt`). Não tem dependência específica de SO; foi executado só em
+Linux. Pode ser repetido no mesmo banco, pois gera e-mail, ID legado e chaves novas a cada execução.
 
 1. Suba a API local (Docker Compose acima ou diretamente):
 
@@ -171,13 +171,14 @@ mesmo banco, pois gera e-mail, ID legado e chaves novas a cada execução.
 
    | Passo | O que comprova |
    |---|---|
-   | 1–2 | O CRM cadastra e devolve o cliente oficial (UUID e ID legado sintético) |
-   | 3–4 | A reserva envia só `customerId` e condições da locação; repetir a chave devolve a mesma reserva |
+   | 0b | O `/openapi.json` publicado não aceita campos cadastrais em `ReservationInput` nem em `ContractDraftCreate`, e o rascunho a partir da reserva não tem corpo |
+   | 1–2 | O CRM cadastra e devolve o cliente oficial (UUID, nome, e-mail e ID legado sintéticos) |
+   | 3–4 | A reserva é registrada para o `customerId` do CRM; repetir a chave devolve a mesma reserva |
    | 5–6 | O rascunho é gerado da reserva **sem corpo**, com o `customerId` do CRM e período/cobrança da reserva; a repetição devolve o mesmo `contractId` com `Idempotency-Replayed: true` |
    | 7–9 | A reserva fica `DRAFTED` e vinculada; há um único contrato; o ID legado resolve o mesmo UUID global |
    | 10 | `GET /api/v1/operations/{correlationId}` mostra `crm.create_customer`, `contracts.create_reservation`, `contracts.create_draft` e `contracts.draft_from_reservation` |
    | 11–13 | `422` em `application/problem+json` para validação estrutural, cliente inexistente e cliente inativado após a reserva, com o mesmo `correlationId` enviado |
-   | 14–15 | A mesma `Idempotency-Key` usada em outra reserva retorna `409 IDEMPOTENCY_CONFLICT`; o contrato da primeira reserva continua `DRAFT` |
+   | 14–15 | A mesma `Idempotency-Key` usada em outra reserva retorna `409 IDEMPOTENCY_CONFLICT`; o contrato da primeira reserva continua `DRAFT`. O reaproveitamento de uma chave do rascunho direto é coberto por teste automatizado |
    | 16–18 | `401` sem credencial, `403` para papel sem permissão e `400` para `X-Correlation-ID` que não é UUID |
 
 4. O script termina com `== N/N checagens aprovadas` e código de saída `0`. Qualquer
@@ -186,9 +187,9 @@ mesmo banco, pois gera e-mail, ID legado e chaves novas a cada execução.
 
 A API não possui chave para simular timeout ou indisponibilidade do CRM durante o
 F1, por isso o script não cobre essa ramificação. Ela é demonstrada pelo teste
-`tests/test_f1_cliente_reserva_contrato.py::test_f1_indisponibilidade_do_crm_retorna_erro_rastreado_sem_efeito_parcial`,
+`tests/test_f1_cliente_reserva_contrato.py::test_f1_indisponibilidade_do_crm_comportamento_atual_500_sem_efeito_parcial`,
 que substitui o adaptador `CustomerReader` por um simulador sem resposta. O
-comportamento verificado é: `500 INTERNAL_ERROR` em problem+json com o
+comportamento **atual** (não é o contrato-alvo) é: `500 INTERNAL_ERROR` em problem+json com o
 `correlationId`, log `ERROR` com a mesma correlação, nenhum contrato, vínculo ou
 chave idempotente gravados, e a repetição com a mesma chave cria o rascunho uma
 única vez. Não há timeout configurado nem retentativa automática no adaptador
