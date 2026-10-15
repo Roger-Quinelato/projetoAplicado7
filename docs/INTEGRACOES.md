@@ -248,12 +248,55 @@ Erros 422 preservam `detail` e `errors` como listas idênticas, com `type`, `loc
 e `msg`. Por exceção de segurança, não retornam `input`, `ctx` ou mensagens que
 possam interpolar dados da entrada; `msg` é genérica, exceto campo obrigatório.
 O código `VALIDATION_ERROR`, status e correlação permanecem iguais. Clientes não
-devem depender do eco de dados rejeitados.
+devem depender do eco de dados rejeitados. A interface (`describeIssue` em
+`web/src/api.ts`) monta o texto pelo `type` e pelo campo em `loc`, sem limites
+inventados quando `ctx` não vem; o caso de e-mail é identificado pelo campo.
 
 Cada evento da outbox usa uma transação: todos os consumidores internos e inbox
-são confirmados juntos. Em falha, os efeitos parciais são desfeitos e a tentativa
-é registrada numa transação válida; os próximos eventos continuam. Ao atingir
+são confirmados juntos. Consumidores e cópia no broker rodam num SAVEPOINT dentro
+da transação que bloqueou o evento (`FOR UPDATE SKIP LOCKED`). Em falha, o
+SAVEPOINT desfaz os efeitos parciais e a tentativa é registrada na mesma
+transação, sem liberar o bloqueio; os próximos eventos continuam. Só uma falha no
+commit final usa transação nova e relê o evento antes de contar a tentativa.
+No SQLite, `infrastructure/db.py` faz o pysqlite emitir `BEGIN` explícito, para
+que o SAVEPOINT não vire a transação externa. Métrica de falha e log são emitidos
+após o commit da tentativa. Ao atingir
 `retry_limit`, o evento fica `FAILED`. Reprocessamento preserva inbox e restrições
 de negócio. Logs registram somente tipo da exceção, ID e correlação, sem SQL,
-parâmetros, traceback ou mensagem da exceção. A cópia opcional no RabbitMQ continua
-com entrega ao menos uma vez: falha após publicação pode causar reentrega.
+parâmetros, traceback ou mensagem da exceção.
+
+A cópia opcional no RabbitMQ usa publisher confirms e `mandatory=True`, dentro do
+SAVEPOINT do evento. O despachante declara a fila durável `archcorp.events.all`
+ligada à exchange com `#`; mensagem sem rota (`UnroutableError`) ou recusada
+(`NackError`) conta como falha da tentativa e o evento não vira `PUBLISHED`.
+A entrega ao broker é ao menos uma vez: uma falha depois da confirmação e antes do
+commit pode causar nova publicação do mesmo `eventId`. Consumidores externos devem
+deduplicar por `eventId`.
+
+Limites da publicação (`config.py`): `rabbitmq_blocked_timeout_seconds` (10 s;
+broker que bloqueia publicadores por memória ou disco gera
+`ConnectionBlockedTimeout`), `rabbitmq_socket_timeout_seconds` (5 s), heartbeat de
+30 s e uma tentativa de conexão. Enquanto publica, o despachante segura o bloqueio
+do evento; esses limites devolvem o controle, desfazem os efeitos pelo SAVEPOINT e
+registram a tentativa.
+
+Estratégia operacional da fila `archcorp.events.all`: o protótipo não tem consumidor
+que a esvazie; ela é a cópia durável para consumidores externos futuros e para
+inspeção no console do RabbitMQ. Tem limite `x-max-length`
+(`rabbitmq_queue_max_length`, 10.000) com `x-overflow=reject-publish`: cheia, recusa
+novas publicações (nack) em vez de descartar as antigas. A recusa conta como falha da
+tentativa e, como broker e consumidores internos estão no mesmo SAVEPOINT, o evento
+inteiro fica pendente até `retry_limit` e depois `FAILED`, reprocessável após
+esvaziar a fila. A métrica `archcorp_broker_queue_messages` (profundidade lida a cada
+declaração) permite monitorar o acúmulo. Alterar o limite exige recriar a fila,
+porque o RabbitMQ recusa redeclaração com argumentos diferentes.
+
+Fronteira de continuidade: falhas de consumidor ou broker não interrompem o lote.
+Se o commit que registra a tentativa também falhar (banco indisponível), a
+transação é desfeita, o evento segue `PENDING` com a contagem anterior, o log
+`attempt_not_recorded` é emitido sem mensagem da exceção e a falha sobe ao chamador,
+interrompendo o lote.
+
+Verificação: `pika` simulado nos testes padrão (ordem das chamadas, limites e falha
+em cada etapa) e RabbitMQ 3.13 real no job `rabbitmq` da CI
+(`tests/test_rabbitmq_real.py`: publicação confirmada na fila e nack com fila cheia).
