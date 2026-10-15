@@ -14,7 +14,7 @@ Requisitos: Docker Desktop com Docker Compose.
 docker compose up --build
 ```
 
-A interface e a API ficam em `http://localhost:8000`, a documentação Swagger em `http://localhost:8000/docs` e o RabbitMQ local em `http://localhost:15672` (`guest`/`guest`). No Compose, o navegador usa a mesma origem da API. O despacho da outbox é explícito pelo botão da interface ou por `POST /api/v1/integration/outbox/dispatch`.
+A interface e a API ficam em `http://localhost:8000`, a documentação Swagger em `http://localhost:8000/docs` e o RabbitMQ local em `http://localhost:15672` (`guest`/`guest`). O Compose publica as portas só em `127.0.0.1`: fora do modo público, a API aceita os tokens fixos `demo-*`, inclusive `demo-admin`. Para acesso pela rede, use `PUBLIC_DEMO=true` com `DEMO_ACCESS_TOKEN` configurado no ambiente, nunca as portas abertas com os tokens locais. No Compose, o navegador usa a mesma origem da API. O despacho da outbox é explícito pelo botão da interface ou por `POST /api/v1/integration/outbox/dispatch`.
 
 Para executar a demonstração completa:
 
@@ -28,7 +28,7 @@ No desenvolvimento local, as rotas protegidas aceitam tokens fixos de demonstra�
 
 ## Frontend e deploy gratuito
 
-Para desenvolver a interface: `cd web`, `npm ci`, `npm run dev`, com a API rodando na porta 8000. `npm run build` gera `web/dist`, servido pelo FastAPI na raiz. A interface navega por hash entre Visão geral e os cinco contextos (CRM, Reservas e contratos, Financeiro, Atendimento, Workflow); a credencial é informada pelo usuário na tela de acesso. Trata-se do token de demonstração (local `demo-*` ou a credencial compartilhada do modo público), guardado no `sessionStorage` da aba apenas para sobreviver ao recarregamento; ele é apagado ao fechar a aba ou ao usar **Sair**. Nunca use credenciais pessoais ou reais. Erros da API aparecem com mensagem legível e `correlationId`. O Dockerfile compila a interface e usa a porta definida por `PORT`.
+Para desenvolver a interface: `cd web`, `npm ci`, `npm run dev` (servidor Vite apenas em `localhost`), com a API rodando na porta 8000. `npm test` executa os testes de `web/tests` com `node:test`. `npm run build` gera `web/dist`, servido pelo FastAPI na raiz. A interface navega por hash entre Visão geral e os cinco contextos (CRM, Reservas e contratos, Financeiro, Atendimento, Workflow); a credencial é informada pelo usuário na tela de acesso. Trata-se do token de demonstração (local `demo-*` ou a credencial compartilhada do modo público), guardado no `sessionStorage` da aba apenas para sobreviver ao recarregamento; ele é apagado ao fechar a aba ou ao usar **Sair**. Nunca use credenciais pessoais ou reais. Erros da API aparecem com mensagem legível e `correlationId`. O Dockerfile compila a interface e usa a porta definida por `PORT`.
 
 O arquivo `render.yaml` prepara um **Render Free** com `DATABASE_URL` (PostgreSQL do Supabase Free) e `DEMO_ACCESS_TOKEN` definidos no painel, nunca no Git. `PUBLIC_DEMO=true` bloqueia os tokens locais. No PostgreSQL, a inicialização ativa RLS e revoga os privilégios de `anon` e `authenticated` nas tabelas do protótipo, pois o acesso de demonstração passa somente pela API FastAPI; consulte a [orientação de segurança do Supabase](https://supabase.com/docs/guides/database/postgres/row-level-security). A publicação ainda exige vincular as contas Render/Supabase, fornecer os segredos, aplicar o deploy e verificar HTTPS, `/health/ready`, criação/leitura e persistência após reinício. A infraestrutura gratuita pode suspender ou hibernar por inatividade; consulte [Render Free](https://render.com/docs/free) e [Supabase Free](https://supabase.com/docs/guides/platform/free-project-pausing) antes de usar. O banco SQLite local é somente para desenvolvimento.
 
@@ -132,7 +132,7 @@ A ordem segue a estrutura do `Guia.pdf` (requisitos → arquitetura atual → ar
 
 - `GET /health/live`: processo vivo;
 - `GET /health/ready`: banco acessível;
-- `GET /metrics`: contadores e latência no formato Prometheus;
+- `GET /metrics`: contadores e latência no formato Prometheus, rotulados pelo template da rota (sem IDs da URL); exige papel `operations` ou `admin`;
 - `GET /api/v1/operations/{correlationId}`: trilha de auditoria de uma operação;
 - `GET /api/v1/integration/failures`: mensagens com falha;
 - `POST /api/v1/integration/failures/{eventId}/reprocess`: reprocessamento auditável;

@@ -441,7 +441,7 @@ após receber `409 IDEMPOTENCY_CONFLICT`. Quando a API indica
 2. Consulte as métricas:
 
    ```powershell
-   Invoke-WebRequest "$baseUrl/metrics" | Select-Object -ExpandProperty Content
+   Invoke-WebRequest "$baseUrl/metrics" -Headers $headers | Select-Object -ExpandProperty Content
    ```
 
 3. Demonstre a autorização por papel:

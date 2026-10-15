@@ -410,7 +410,9 @@ def ready(session: Session = Depends(get_session)) -> dict:
     "/metrics",
     response_class=PlainTextResponse,
     tags=["Operação"],
-    responses={200: {"description": "Contadores e latência no formato de texto do Prometheus.",
+    dependencies=[Depends(require_roles("operations", "admin"))],
+    responses={**COMMON_API_ERRORS,
+               200: {"description": "Contadores e latência no formato de texto do Prometheus, rotulados pelo template da rota.",
                      "content": {"text/plain": {"example": "archcorp_requests_total{operation=\"GET_/health/live\",status=\"200\"} 1\n"}}}},
 )
 def metrics() -> str:

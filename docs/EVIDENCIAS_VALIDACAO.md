@@ -91,3 +91,29 @@ Ambiente: contêiner Linux, Python 3.13.16, Node 22, SQLite local novo e API ser
 - `cd web && npm run build`: concluído sem erro (frontend não alterado).
 - Pendência registrada em `CRONOGRAMA_EXECUCAO.md`: timeout e retentativa limitada do adaptador do CRM (critério de F1 ainda parcial em RF-02).
 - Não verificado: F1 na URL HTTPS pública (Render/Supabase), PostgreSQL real e timeout de rede de um CRM externo. O adaptador `CustomerReader` roda no mesmo processo, sem timeout configurado nem retentativa automática; a indisponibilidade é coberta só pelo simulador do teste. Nenhuma integração real com a Localiza.
+
+## Endurecimento de segurança sobre a main (2026-10-15)
+
+Origem: auditoria de código, configuração e logs do CI. Dados sintéticos; nenhum
+ataque de carga ou teste no deploy público.
+
+- Dependências: FastAPI 0.143.2 e Starlette 1.8.0 (antes 0.116.1/0.47.3, com
+  CVE-2025-62727 e avisos posteriores corrigidos até a 1.3.1); `pip-audit -r
+  requirements.txt` sem vulnerabilidades conhecidas. Vite 7.3.7
+  (GHSA-rq7h-c2jc-7f22) e `source-map-js` 1.2.2 (GHSA-68fv-2mgg-jv7q, o aviso
+  "high" do `npm ci`); `npm audit` sem vulnerabilidades. Lockfile gerado com npm 11.
+  O OpenAPI exportado não mudou com a atualização do FastAPI.
+- Métricas: rótulo pelo template da rota, método fora da lista conhecida vira
+  `OTHER`, escape de rótulos e `/metrics` com `operations`/`admin`.
+  `tests/test_security_hardening.py`: 2.000 URLs sintéticas criam no máximo as
+  séries dos templates; saída válida com aspas e método desconhecido; 401/403/200.
+- Compose: API e console do RabbitMQ publicados em `127.0.0.1`. Servidor Vite de
+  desenvolvimento sem `--host 0.0.0.0`.
+- Erros 422 sem `input`/`ctx` e com `msg` genérica, igual ao #35, e `describeIssue`
+  ajustado na interface (`web/tests/api.test.ts`), para a main não esperar a pilha.
+- CI: passos `pip-audit` e `npm audit --audit-level=moderate` reprovam a execução.
+- Local (Python 3.13, Node 22): **79 passed** em SQLite; `npm test` 4 passed;
+  `npm run build` sem erro.
+- Limites mantidos: credencial pública compartilhada com todos os papéis, contêiner
+  como root e ausência de limitação de taxa. Não verificado: deploy público e
+  configurações reais do provedor.

@@ -58,7 +58,8 @@ paths:
       operationId: metrics_metrics_get
       responses:
         '200':
-          description: Contadores e latência no formato de texto do Prometheus.
+          description: Contadores e latência no formato de texto do Prometheus, rotulados
+            pelo template da rota.
           content:
             text/plain:
               schema:
@@ -67,6 +68,50 @@ paths:
                 1
 
                 '
+        '400':
+          description: Cabeçalho de correlação inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:bad-request
+                title: Requisição inválida
+                status: 400
+                detail: X-Correlation-ID deve ser UUID
+                instance: /api/v1/contracts/drafts
+                code: BAD_REQUEST
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/contracts/drafts
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/contracts/drafts
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+      security:
+      - HTTPBearer: []
       parameters: []
   /api/v1/contracts/drafts:
     post:
@@ -424,7 +469,6 @@ paths:
                   - body
                   - name
                   msg: Field required
-                  input: {}
                 instance: /api/v1/contracts/{contract_id}/activate
                 code: VALIDATION_ERROR
                 correlationId: 11111111-1111-4111-8111-111111111111
