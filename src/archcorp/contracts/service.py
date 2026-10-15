@@ -9,7 +9,7 @@ from archcorp.contracts.models import Contract, Reservation
 from archcorp.crm.public import CustomerData, CustomerReader
 from archcorp.exceptions import BusinessRuleError, ConflictError, InvalidStateError, NotFoundError
 from archcorp.infrastructure.db import count_rows, get_or_raise
-from archcorp.integration.service import IdempotencyStore, audit, enqueue
+from archcorp.integration.public import IdempotencyStore, audit, enqueue
 
 
 def money(value) -> str:
@@ -71,13 +71,13 @@ class ContractService:
     def activate(self, session: Session, contract_id: str, idempotency_key: str, correlation_id: str) -> tuple[dict, bool]:
         """Ativa o contrato em rascunho, ativa a reserva vinculada e grava ContractActivated.v1 na outbox, de forma idempotente."""
         operation = f"activate_contract:{contract_id}"
-        stored = IdempotencyStore.replay(session, idempotency_key, operation, {}, "Idempotency-Key já utilizada com outra ativação")
-        if stored:
+        stored = IdempotencyStore.previous(session, operation, idempotency_key)
+        if stored is not None:
             return stored, True
         contract = self.require(session, contract_id)
         if contract.status == ContractStatus.ACTIVE:
             previous = IdempotencyStore.previous(session, operation)
-            if previous:
+            if previous is not None:
                 return previous, True
             raise InvalidStateError("Contrato já ativo sem registro da ativação original")
         ensure_contract_transition(contract.status, ContractStatus.ACTIVE)
@@ -91,7 +91,7 @@ class ContractService:
         event = enqueue(session, "ContractActivated.v1", "contracts", payload, correlation_id)
         session.flush()
         response = {**payload, "eventId": event.event_id}
-        IdempotencyStore.save(session, idempotency_key, operation, {}, response)
+        IdempotencyStore.save_legacy(session, idempotency_key, operation, response)
         audit(session, correlation_id, "contracts", "activate_contract", "success", contract.contract_id)
         session.commit()
         return response, False
@@ -102,12 +102,12 @@ class ContractService:
         request = {"endsOn": str(data["endsOn"]) if data.get("endsOn") else None, "reason": data.get("reason")}
         if idempotency_key:
             stored = IdempotencyStore.replay(session, idempotency_key, operation, request, "Idempotency-Key já utilizada com outro encerramento")
-            if stored:
+            if stored is not None:
                 return stored, True
         contract = self.require(session, contract_id)
         if contract.status == ContractStatus.CLOSED and idempotency_key:
             previous = IdempotencyStore.previous(session, operation)
-            if previous:
+            if previous is not None:
                 return previous, True
         ensure_contract_transition(contract.status, ContractStatus.CLOSED)
         ends_on = data.get("endsOn") or max(date.today(), contract.starts_on)
@@ -123,8 +123,11 @@ class ContractService:
         contract_data = self.to_dict(contract)
         event = enqueue(session, "ContractClosed.v1", "contracts", {**contract_data, "closeReason": contract.close_reason}, correlation_id)
         session.flush()
-        response = {**contract_data, "eventId": event.event_id}
-        IdempotencyStore.save(session, idempotency_key or f"auto:{event.event_id}", operation, request, response)
+        response = {**self.to_dict(contract), "eventId": event.event_id}
+        if idempotency_key:
+            IdempotencyStore.save(session, idempotency_key, operation, request, response)
+        else:
+            IdempotencyStore.save_legacy(session, f"auto:{event.event_id}", operation, response)
         audit(session, correlation_id, "contracts", "close_contract", "success", contract.contract_id, endsOn=ends_on.isoformat())
         session.commit()
         return response, False

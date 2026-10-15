@@ -179,8 +179,8 @@ sequenceDiagram
         Support-->>API: Mesmo ticketId
         API-->>Atendimento e assistência 24h: 201 e Idempotency-Replayed true
     else Nova solicitação
-        alt Adaptador de Contracts indisponível
-            Support->>Support: Definir PENDING_ENTITLEMENT<br/>sem SLA e sem dueAt
+        alt Adaptador de Contracts indisponível, timeout ou desativado
+            Support->>Support: Definir PENDING_ENTITLEMENT<br/>sem SLA e sem dueAt, com log WARNING
             Support->>Outbox: Gravar TicketOpened.v1, auditoria e idempotência
             Support-->>API: Chamado pendente
             API-->>Atendimento e assistência 24h: 201
@@ -191,7 +191,7 @@ sequenceDiagram
                 Support-->>API: Erro de negócio
                 API-->>Atendimento e assistência 24h: 422
             else Elegibilidade confirmada
-                Support->>Support: Calcular prioridade e dueAt
+                Support->>Support: Calcular prioridade e dueAt = openedAt + SLA (relógio injetado)
                 Support->>Outbox: Gravar TicketOpened.v1, auditoria e idempotência
                 Support-->>API: Chamado OPEN com SLA
                 API-->>Atendimento e assistência 24h: 201
@@ -213,17 +213,26 @@ sequenceDiagram
         Dispatcher->>Outbox: Marcar PUBLISHED
     end
 
-    opt Chamado em PENDING_ENTITLEMENT e Contracts restabelecido
-        Operador->>API: POST /support/tickets/{ticketId}/reconcile
-        API->>Support: reconcile(ticketId, correlação)
-        Support->>Contracts: Consultar elegibilidade novamente
-        Contracts-->>Support: eligible e slaHours
-        alt Elegibilidade confirmada
-            Support->>Support: Mudar para OPEN e recalcular dueAt
-            Support-->>Operador: 200 com SLA
-        else Elegibilidade rejeitada
-            Support->>Support: Mudar para REJECTED_ENTITLEMENT
-            Support-->>Operador: 200 sem SLA
+    opt Chamado em PENDING_ENTITLEMENT
+        Operador->>API: POST /support/tickets/{ticketId}/reconcile<br/>ou POST /support/tickets/reconcile-pending
+        API->>Support: reconcile(ticketId) ou reconcile_pending()
+        alt Mesma chave e comando já confirmado
+            Support-->>Operador: 200 com resposta persistida e Idempotency-Replayed true
+        else Chamado já reconciliado sem chave
+            Support-->>Operador: 409 INVALID_STATE
+        else Contracts ainda indisponível
+            Support->>Integration: Auditoria reconcile_entitlement unavailable
+            Support-->>Operador: 503 e chamado continua pendente
+        else Contracts restabelecido
+            Support->>Contracts: Consultar elegibilidade novamente
+            Contracts-->>Support: eligible e slaHours
+            alt Elegibilidade confirmada
+                Support->>Support: OPEN e dueAt = openedAt + SLA<br/>(update condicionado ao estado PENDING)
+            else Elegibilidade rejeitada
+                Support->>Support: REJECTED_ENTITLEMENT sem SLA
+            end
+            Support->>Outbox: TicketEntitlementReconciled.v1, histórico e auditoria
+            Support-->>Operador: 200 (lote: confirmados, rejeitados e restantes)
         end
     end
 ```
@@ -231,6 +240,24 @@ sequenceDiagram
 `TicketOpened.v1` nunca contém a descrição. A reconciliação atualiza o chamado e a
 auditoria e publica `TicketEntitlementReconciled.v1`; Workflow ajusta o prazo do
 processo de resolução ou o cancela quando a elegibilidade é rejeitada.
+
+### Ciclo de vida do chamado (T15)
+
+As transições ficam em `src/archcorp/support/domain.py`. Uma transição fora do
+diagrama recebe `409` com código `INVALID_STATE`. Atribuição e reatribuição não
+mudam o estado e só são aceitas em `PENDING_ENTITLEMENT` e `OPEN`. O plano não
+prevê reabertura nem pausa de SLA; `RESOLVED` e `REJECTED_ENTITLEMENT` são finais.
+
+```mermaid
+stateDiagram-v2
+    [*] --> OPEN: abertura com elegibilidade<br/>dueAt = openedAt + SLA
+    [*] --> PENDING_ENTITLEMENT: abertura com Contracts indisponível
+    PENDING_ENTITLEMENT --> OPEN: reconciliação confirmada<br/>TicketEntitlementReconciled.v1
+    PENDING_ENTITLEMENT --> REJECTED_ENTITLEMENT: reconciliação rejeitada<br/>TicketEntitlementReconciled.v1
+    OPEN --> RESOLVED: resolução<br/>TicketResolved.v1 e slaStatus MET ou BREACHED
+    RESOLVED --> [*]
+    REJECTED_ENTITLEMENT --> [*]
+```
 
 ## Ciclo de vida de reserva e contrato
 
@@ -269,6 +296,7 @@ sequenceDiagram
     participant Outbox
     participant Dispatcher
     participant Workflow
+    participant Finance
     Operador->>Contracts: POST /contracts/{id}/close + Idempotency-Key
     Contracts->>Contracts: Validar ACTIVE e data de fim
     Contracts->>Outbox: ContractClosed.v1 na mesma transação
@@ -276,12 +304,51 @@ sequenceDiagram
     Operador->>Dispatcher: POST /integration/outbox/dispatch
     Dispatcher->>Workflow: ContractClosed.v1
     Workflow->>Workflow: Concluir preparação de retirada pendente
+    Dispatcher->>Finance: ContractClosed.v1
+    Finance->>Finance: Fatura FINAL por ciclo iniciado, menos o já faturado (única por eventId e contrato; marcador se não houver valor)
 ```
 
 Repetir o encerramento com a mesma chave, ou com outra chave depois de concluído,
 devolve a resposta original com `Idempotency-Replayed: true` e não cria outro
-evento. Sem `Idempotency-Key`, uma repetição recebe `409`. Finance ainda não
-consome `ContractClosed.v1`; o faturamento final pertence à tarefa T12.
+evento. Sem `Idempotency-Key`, uma repetição recebe `409`. Desde a T12, Finance
+consome `ContractClosed.v1` depois do Workflow e emite a fatura final; sem valor
+restante (por exemplo, ciclo `ONCE` já faturado), apenas registra auditoria.
+
+### Ciclo de vida da fatura e inadimplência (T12)
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> OPEN: evento de ativação ou encerramento
+    OPEN --> PARTIALLY_PAID: pagamento parcial
+    OPEN --> PAID: pagamento do total
+    OPEN --> OVERDUE: verificação de vencimento
+    OPEN --> CANCELLED: cancelamento sem pagamento
+    PARTIALLY_PAID --> PARTIALLY_PAID: pagamento parcial
+    PARTIALLY_PAID --> PAID: quitação
+    PARTIALLY_PAID --> OVERDUE: verificação de vencimento
+    OVERDUE --> OVERDUE: pagamento parcial
+    OVERDUE --> PAID: quitação
+```
+
+`OVERDUE` persistido indica inadimplência registrada (`delinquent: true`,
+`overdueSince`). Uma fatura `OPEN` ou `PARTIALLY_PAID` com saldo e data UTC
+posterior a `dueDate` já é exibida como `OVERDUE` na leitura, com
+`delinquent: false`, até a verificação registrar o fato:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Operador as Operador financeiro
+    participant Finance
+    participant Auditoria
+    Operador->>Finance: POST /finance/invoices/overdue-check {asOf?}
+    Finance->>Finance: Selecionar OPEN/PARTIALLY_PAID com dueDate < asOf (UTC) e saldo > 0
+    Finance->>Auditoria: mark_invoice_overdue por fatura e evaluate_overdue (correlationId)
+    Finance-->>Operador: 200 markedOverdue e alreadyOverdue
+    Operador->>Finance: POST /finance/invoices/overdue-check (repetição)
+    Finance-->>Operador: 200 markedOverdue vazio
+```
 
 ## Rastreabilidade operacional
 
@@ -292,3 +359,7 @@ outro `X-Correlation-ID`, mesmo quando pertencem à mesma demonstração.
 
 Os diagramas descrevem o protótipo acadêmico. Produtos, interfaces e topologia dos
 sistemas reais continuam como premissas a validar com a organização.
+
+As revisões T12 e T15 convergem na head `0005_merge_finance_support` sem
+renumerar histórico publicado (ADR-004). Mutações do chamado bloqueiam a mesma
+linha Ticket; histórico, auditoria, idempotência e outbox são atômicos.

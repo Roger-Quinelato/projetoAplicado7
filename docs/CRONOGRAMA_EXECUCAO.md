@@ -48,10 +48,10 @@ Cada linha é uma **tarefa** (tipo), salvo os agrupamentos Q1–Q7, que serão *
 | T09 | S6 | Completar reservas/contratos: reserva, rascunho, ativação idempotente e encerramento | Alta | Em andamento | T06,T07 |
 | T10 | S7 | Entregar frontend navegável nos cinco contextos, com estados e feedback de erros | Alta | Em revisão | T08,T09 |
 | T11 | S7 | Demonstrar F1 cliente → reserva → contrato sem recadastro | Alta | Em revisão | T08,T09,T10 |
-| T12 | S8 | Completar financeiro: fatura, pagamento simulado e inadimplência por vencimento | Alta | Em andamento | T09 |
+| T12 | S8 | Completar financeiro: fatura, pagamento simulado e inadimplência por vencimento | Alta | Em revisão (14/10/2026) | T09 |
 | T13 | S8 | Demonstrar F2 ativação → cobrança + preparação; reentrega sem duplicação | Alta | Em andamento | T09,T12 |
 | T14 | S8 | Revisar viabilidade e empreendedorismo: custos zero, limites e evolução comercial | Normal | Planejado | T05 |
-| T15 | S9 | Completar atendimento: abertura, SLA, responsável, resolução e reconciliação | Alta | Em andamento | T09 |
+| T15 | S9 | Completar atendimento: abertura, SLA, responsável, resolução e reconciliação | Alta | Em revisão (14/10) | T09 |
 | T16 | S9 | Completar workflow: processos, tarefas, prazos, responsáveis e transições; demonstrar F3 | Alta | Em andamento | T15 |
 | T17 | S10 | Endurecer demo pública: segredo, papéis, dados sintéticos, logs e falhas recuperáveis | Alta | Em andamento | T10,T16 |
 | T18 | S10 | Validar qualidade: testes de integração/contrato, acessibilidade, desempenho e evidências | Alta | Planejado | T13,T16,T17 |
@@ -65,6 +65,9 @@ Cada linha é uma **tarefa** (tipo), salvo os agrupamentos Q1–Q7, que serão *
 | Origem | Pendência | Gatilho | Escopo |
 |---|---|---|---|
 | T11 (revisão do CTO em 14/10/2026) | Critério de F1 "timeout/retry limitado" não implementado; hoje a falha do `CustomerReader` vira `500` sem efeito parcial | Conector do CRM fora do processo | Timeout configurável no adaptador; retentativa só para erro transitório, com atraso exponencial, jitter e limite; mapeamento da indisponibilidade. A escolha entre `503` e estado `PENDING` será registrada em ADR curto quando o conector entrar |
+| T15 (14/10/2026) | Workflow calcula o prazo de `TICKET_RESOLUTION` com a hora do despacho (`now + slaHours`), não com o `dueAt` de `TicketOpened.v1`; o responsável atribuído em Support não chega ao processo | T16 | Usar `payload.dueAt` quando presente; decidir se a atribuição vira evento (`TicketAssigned.v1`, aditivo) ou consulta |
+| T15 (14/10/2026) | Vencimento do SLA só é calculado na leitura; não há alerta nem evento de violação; reconciliação depende de ação do operador | Requisito de alerta ou agendador | Agendador ou consumidor periódico é decisão estrutural (novo processo) e exige ADR |
+| T15 (14/10/2026) | Migração `0004_support_sla_history` parte de `0003_contract_closing`; outra migração criada em paralelo (T12) a partir da mesma base gera duas cabeças no Alembic | Merge de T12 e T15 | Ajustar `down_revision` da migração que entrar por último (ou `alembic merge`) e rodar `test_migracoes_*` |
 
 ## Regras de conclusão
 

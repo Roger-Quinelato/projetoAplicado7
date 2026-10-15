@@ -5,6 +5,7 @@
 - Decisores: equipe do Projeto Aplicado
 - Tarefa: T07 (ARCH7-7) - dados sintéticos, identificadores globais, migração aditiva e contrato de erro
 - Relaciona-se com: [ADR-001](ADR-001-integracao-empresa-de-servicos.md)
+- Emendado em 14/10/2026 pelo [ADR-003](ADR-003-financeiro-fatura-final-e-excecao-aditiva.md) (exceção no item de verificação).
 
 ## Contexto
 
@@ -49,7 +50,10 @@ imediato.
   detectada pelo autogenerate do Alembic;
 - um banco criado antes das migrações é carimbado e atualizado sem erro;
 - nenhum `upgrade` contém `drop_table`, `drop_column`, `alter_column` ou
-  `rename_table`.
+  `rename_table`; desde 14/10/2026 também `drop_constraint`, `drop_index` e
+  qualquer `.execute(...)` com `UPDATE`, `DELETE`, `DROP`, `ALTER`, `RENAME` ou
+  `TRUNCATE` (argumento não literal é recusado), salvo exceção registrada por
+  operação e contagem.
 
 Para criar uma migração nova, altere o modelo e execute:
 
@@ -59,6 +63,10 @@ PYTHONPATH=src alembic revision --autogenerate --rev-id 000N_descricao -m "descr
 
 Revise o arquivo gerado antes do commit; o autogenerate não substitui a revisão
 humana.
+
+Exceções aprovadas ficam em `MIGRATION_EXCEPTIONS` (`tests/test_foundation.py`), cada
+uma com data e ADR próprio. Em 14/10/2026: `0004_finance_lifecycle`, ver
+[ADR-003](ADR-003-financeiro-fatura-final-e-excecao-aditiva.md).
 
 ## Consequências
 

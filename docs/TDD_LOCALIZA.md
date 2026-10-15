@@ -15,7 +15,7 @@ decisoes imediatas e eventos para efeitos assíncronos.
 |---|---|
 | CRM | API de cliente, elegibilidade e publicacao de alteracao cadastral. |
 | Contracts | Reserva/contrato de locacao, ativacao, grupo de veiculo, vigencia e SLA. |
-| Finance | Consumidor de `ContractActivated.v1` para criar cobranca da locacao. |
+| Finance | Consumidores de `ContractActivated.v1` (primeira fatura) e `ContractClosed.v1` (fatura final); pagamento simulado e inadimplência por vencimento. |
 | Support | Abertura de chamado, calculo de prioridade e reconciliacao de elegibilidade. |
 | Workflow | Processos de retirada, atendimento, devolucao e tarefas operacionais. |
 | Integration | Correlacao, IDs legados, idempotencia, outbox, inbox, auditoria e falhas. |
@@ -89,6 +89,71 @@ Regras verificadas em `tests/test_contracts.py`:
   maiúsculas e valor com duas casas decimais;
 - o encerramento grava data e motivo, encerra a reserva vinculada, publica
   `ContractClosed.v1` e é auditado.
+
+### Financeiro
+
+| Operação | Papéis |
+|---|---|
+| Listar e consultar faturas | finance, operations, admin |
+| Verificar vencimento e registrar inadimplência | finance, operations, admin |
+| Registrar pagamento simulado, cancelar fatura e listar pagamentos | finance, admin |
+
+Regras verificadas em `tests/test_finance.py`:
+
+- estados e transições da fatura centralizados em `src/archcorp/finance/domain.py`;
+  `PAID` e `CANCELLED` são finais; pagamento parcial em fatura inadimplente mantém
+  `OVERDUE` até a quitação;
+- primeira fatura (`INITIAL`) e fatura final (`FINAL`) são únicas por contrato e
+  por `eventId` de origem; o vencimento é a data UTC do evento mais 10 dias
+  (premissa a validar: prazo e data de referência; ver ADR-003);
+- a fatura final cobra os ciclos iniciados entre `startsOn` e `endsOn` (premissa a
+  validar) menos o total já faturado, inclusive faturas canceladas (cancelamento é
+  definitivo); sem valor restante, apenas audita e grava um marcador por `eventId`,
+  de modo que a reentrega fora da inbox também não repete efeito;
+- pagamento: `Idempotency-Key` opcional, valor positivo com duas casas, moeda igual
+  à da fatura (`422 VALIDATION_ERROR`), sem sobrepagamento (`409 CONFLICT`); fatura
+  quitada mantém o `409 CONFLICT` da v1 (com `detail` "Fatura já quitada") e fatura
+  cancelada recebe `409 INVALID_STATE`; a referência não vai para auditoria nem log;
+- mudanças não aditivas aceitas no ADR-003: valor com mais de duas casas, antes
+  aceito e arredondado na gravação, agora recebe `422`; fatura em aberto com
+  pagamento parcial passa de `OPEN` a `PARTIALLY_PAID`;
+- o motivo do cancelamento (até 200 caracteres) vai para a auditoria e não deve
+  conter dado pessoal, bancário ou sensível;
+- valores monetários saem como `number` (float) na v1 por compatibilidade; a regra
+  de decimal com moeda explícita vale internamente (`Decimal`) e a troca na API é
+  dívida para a v2;
+- inadimplência: fatura com saldo e data UTC posterior a `dueDate`; o comando de
+  verificação a registra com data e auditoria, sem repetir marcações.
+### Atendimento
+
+| Operação | Papéis |
+|---|---|
+| Abrir chamado | support, admin |
+| Listar e consultar chamados; consultar histórico | support, operations, admin |
+| Atribuir, reatribuir e resolver chamado | support, admin |
+| Reconciliar chamado pendente (individual ou em lote) | support, operations, admin |
+
+Regras verificadas em `tests/test_t15_atendimento.py` (T15):
+
+- estados e transições centralizados em `src/archcorp/support/domain.py`:
+  `PENDING_ENTITLEMENT` → `OPEN` ou `REJECTED_ENTITLEMENT`; `OPEN` → `RESOLVED`;
+  `RESOLVED` e `REJECTED_ENTITLEMENT` são finais (sem reabertura nem pausa de SLA,
+  que o plano não pede); reconciliação inválida retorna `409 INVALID_STATE`,
+  resolução e atribuição inválidas preservam `409 CONFLICT`;
+- Support consulta Contracts somente por `ContractEntitlementPort`
+  (`contracts/public.py`); indisponibilidade (configuração, `ContractsUnavailableError`,
+  `TimeoutError` ou `ConnectionError`) abre o chamado em `PENDING_ENTITLEMENT`;
+- prioridade pela categoria (`OUTAGE`/`SECURITY` → `HIGH`); prazo = abertura + SLA
+  do contrato, com relógio injetado em `TicketService`; `slaStatus` calculado na
+  leitura e fixado na resolução;
+- `Idempotency-Key` obrigatória na abertura, com impressão digital de todo o
+  pedido; resolução e reconciliação têm chave opcional: mesma chave recupera
+  resposta persistida com `Idempotency-Replayed: true`; sem chave preservam conflito;
+- descrição e responsável mantêm validações de tipo/tamanho da v1, sem regex
+  de rejeição de conteúdo; descrição não entra em eventos, auditoria nem logs;
+  erros 422 não ecoam input/ctx nem mensagens interpoladas (ADR-004);
+- histórico próprio (`support_ticket_history`) com ação, estados, responsável
+  anterior e novo, papel do ator (nunca o token), estado de SLA e `correlationId`.
 
 ## Fluxos Tecnicos
 

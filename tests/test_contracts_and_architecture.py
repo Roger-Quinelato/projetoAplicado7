@@ -103,7 +103,7 @@ def test_modulos_de_negocio_nao_importam_models_de_outro_contexto():
 
 
 def test_composicao_da_aplicacao_nao_le_modelos_dos_contextos():
-    contexts = {"crm", "contracts", "finance", "support", "workflow"}
+    contexts = {"crm", "contracts", "finance", "support", "workflow", "integration"}
     tree = ast.parse(Path("src/archcorp/main.py").read_text(encoding="utf-8"))
     violations = [
         f"main.py:{node.lineno}:{node.module}"
@@ -113,6 +113,34 @@ def test_composicao_da_aplicacao_nao_le_modelos_dos_contextos():
         and node.module.split(".")[1] in contexts
     ]
     assert violations == []
+
+
+def test_negocios_usam_apenas_fachada_publica_da_integracao():
+    violations = []
+    for context in ("crm", "contracts", "finance", "support", "workflow"):
+        for path in Path("src/archcorp", context).rglob("*.py"):
+            for node in ast.walk(ast.parse(path.read_text())):
+                if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith("archcorp.integration."):
+                    if node.module != "archcorp.integration.public":
+                        violations.append(f"{path}:{node.lineno}:{node.module}")
+    assert violations == []
+
+
+def test_dominios_nao_dependem_de_infraestrutura_ou_http():
+    for path in Path("src/archcorp").glob("*/domain.py"):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.ImportFrom) and node.module:
+                assert node.module.split(".")[0] not in {"sqlalchemy", "fastapi", "pydantic"}, path
+                assert not any(part in node.module for part in (".models", ".routes", ".service", ".infrastructure")), path
+
+
+def test_imports_publicos_de_schemas_permanecem_compativeis():
+    from archcorp import schemas
+    from archcorp.contracts.schemas import ContractDraftCreate
+    from archcorp.support.schemas import TicketCreate
+
+    assert schemas.ContractDraftCreate is ContractDraftCreate
+    assert schemas.TicketCreate is TicketCreate
 
 
 def test_asyncapi_define_envelope_e_eventos_atuais():

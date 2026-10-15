@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from archcorp.infrastructure.db import count_rows
-from archcorp.integration.service import audit
+from archcorp.integration.public import audit
 from archcorp.workflow.models import ProcessInstance, ProcessTask
 
 

@@ -253,6 +253,91 @@ PYTHONPATH=src python -m pytest -q tests/test_f1_cliente_reserva_contrato.py -p 
    O primeiro despacho deve processar um evento e o segundo deve processar zero.
    As duas diferenças finais devem valer `1`: uma cobrança e uma preparação de retirada.
 
+## Financeiro: pagamento parcial, inadimplência e quitação (T12)
+
+Use o contrato ativado em F2. O pagamento é simulado: não há PSP, conciliação
+bancária, nota fiscal nem cobrança real. O vencimento é a data UTC do evento de
+ativação mais 10 dias (premissa a validar), e o protótipo não tem agendador: a inadimplência é registrada
+pelo comando `overdue-check`.
+
+1. Para simular a passagem do tempo sem esperar o vencimento, reinicie só a API
+   com a data de referência futura habilitada (simulação local; não use no modo
+   público):
+
+   ```powershell
+   docker compose stop api
+   docker compose run --rm --service-ports `
+     -e FINANCE_ALLOW_FUTURE_AS_OF=true api
+   ```
+
+   Fora do Docker: `FINANCE_ALLOW_FUTURE_AS_OF=true PYTHONPATH=src uvicorn archcorp.main:app`.
+   Sem essa variável, `asOf` futuro recebe `422 BUSINESS_RULE_VIOLATION`; com a
+   data atual o comando funciona sempre. A API recusa iniciar com essa variável
+   e `PUBLIC_DEMO=true`.
+
+2. Consulte a fatura e registre um pagamento parcial com `Idempotency-Key`:
+
+   ```powershell
+   $invoice = (Invoke-RestMethod `
+     -Uri "$baseUrl/api/v1/finance/invoices?contractId=$contractId" -Headers $headers) |
+     Where-Object kind -eq "INITIAL"
+   $invoice                      # status OPEN, balance 2500, delinquent False
+
+   $headers["Idempotency-Key"] = "pay-$([guid]::NewGuid())"
+   $paymentBody = @{ amount = 1000.00; currency = "BRL"; reference = "SIM-$([guid]::NewGuid().ToString().Substring(0,8))" } | ConvertTo-Json
+   $partial = Invoke-WebRequest -Method Post `
+     -Uri "$baseUrl/api/v1/finance/invoices/$($invoice.invoiceId)/payments" `
+     -Headers $headers -Body $paymentBody
+   ($partial.Content | ConvertFrom-Json).invoice   # PARTIALLY_PAID, balance 1500
+   $replay = Invoke-WebRequest -Method Post `
+     -Uri "$baseUrl/api/v1/finance/invoices/$($invoice.invoiceId)/payments" `
+     -Headers $headers -Body $paymentBody
+   $replay.Headers["Idempotency-Replayed"]          # true; nenhum pagamento novo
+   $headers.Remove("Idempotency-Key")
+   ```
+
+3. Verifique o vencimento no próprio dia e no dia seguinte:
+
+   ```powershell
+   $due = [datetime]::Parse($invoice.dueDate)
+   $onDue = @{ asOf = $due.ToString("yyyy-MM-dd") } | ConvertTo-Json
+   $afterDue = @{ asOf = $due.AddDays(1).ToString("yyyy-MM-dd") } | ConvertTo-Json
+   Invoke-RestMethod -Method Post -Uri "$baseUrl/api/v1/finance/invoices/overdue-check" `
+     -Headers $headers -Body $onDue      # markedOverdue vazio: só vence depois do dia
+   Invoke-RestMethod -Method Post -Uri "$baseUrl/api/v1/finance/invoices/overdue-check" `
+     -Headers $headers -Body $afterDue   # markedOverdue contém a fatura
+   Invoke-RestMethod -Method Post -Uri "$baseUrl/api/v1/finance/invoices/overdue-check" `
+     -Headers $headers -Body $afterDue   # repetição: markedOverdue vazio, alreadyOverdue 1
+   Invoke-RestMethod -Uri "$baseUrl/api/v1/finance/invoices/$($invoice.invoiceId)" -Headers $headers
+   ```
+
+   A fatura deve aparecer com `status: OVERDUE`, `delinquent: True`,
+   `overdueSince` em UTC e `balance: 1500`.
+
+4. Pague o restante e confirme a quitação:
+
+   ```powershell
+   $rest = @{ amount = 1500.00; currency = "BRL"; reference = "SIM-$([guid]::NewGuid().ToString().Substring(0,8))" } | ConvertTo-Json
+   (Invoke-RestMethod -Method Post `
+     -Uri "$baseUrl/api/v1/finance/invoices/$($invoice.invoiceId)/payments" `
+     -Headers $headers -Body $rest).invoice
+   ```
+
+   Esperado: `status: PAID`, `balance: 0`, `delinquent: False` e `overdueSince`
+   mantido como histórico. Novo pagamento recebe `409 CONFLICT`; valor acima
+   do saldo, `409 CONFLICT`; moeda diferente, `422 VALIDATION_ERROR`.
+
+5. (Opcional) Encerre o contrato com `endsOn` posterior, despache a outbox e
+   consulte de novo as faturas do contrato: surge uma fatura `FINAL` com
+   `sourceEventId` igual ao `eventId` do encerramento (por exemplo, início em
+   01/10/2026, fim em 08/01/2027 e R$ 2.500 mensais: 4 ciclos iniciados − 2.500
+   já faturados = R$ 7.500). Repetir o despacho não cria outra.
+
+6. A trilha `GET /api/v1/operations/$correlationId` mostra
+   `finance.record_simulated_payment`, `finance.mark_invoice_overdue`,
+   `finance.evaluate_overdue` e `finance.create_final_invoice`. Restaure a API
+   normal com `Ctrl+C` e `docker compose up -d api`.
+
 ## F3: abrir chamado com SLA
 
 1. Registre o estado anterior, abra o chamado e capture o `ticketId`:
@@ -278,7 +363,8 @@ PYTHONPATH=src python -m pytest -q tests/test_f1_cliente_reserva_contrato.py -p 
    $ticket
    ```
 
-   Verifique `status: OPEN`, `priority: HIGH`, `slaHours: 8` e um `dueAt` em UTC.
+   Verifique `status: OPEN`, `priority: HIGH`, `slaHours: 8`, `openedAt` e `dueAt`
+   em UTC (`dueAt` = `openedAt` + 8 h) e `slaStatus: WITHIN`.
 
 2. Repita a abertura com o mesmo corpo e a mesma chave:
 
@@ -309,6 +395,31 @@ PYTHONPATH=src python -m pytest -q tests/test_f1_cliente_reserva_contrato.py -p 
 
    O despacho deve processar um evento. As diferenças devem valer `1`: um chamado
    e um processo de resolução.
+
+4. Atribua, reatribua e resolva duas vezes (T15):
+
+   ```powershell
+   $headers.Remove("Idempotency-Key")
+   foreach ($owner in "Equipe de assistência 24h", "Equipe de pátio") {
+     Invoke-RestMethod -Method Post `
+       -Uri "$baseUrl/api/v1/support/tickets/$ticketId/assign" `
+       -Headers $headers -ContentType "application/json" `
+       -Body (@{ owner = $owner } | ConvertTo-Json)
+   }
+   $resolved = Invoke-WebRequest -Method Post `
+     -Uri "$baseUrl/api/v1/support/tickets/$ticketId/resolve" -Headers $headers
+   $resolvedAgain = Invoke-WebRequest -Method Post `
+     -Uri "$baseUrl/api/v1/support/tickets/$ticketId/resolve" -Headers $headers
+   ($resolved.Content | ConvertFrom-Json).slaStatus
+   $resolvedAgain.Headers["Idempotency-Replayed"]
+   Invoke-RestMethod -Uri "$baseUrl/api/v1/support/tickets/$ticketId/history" -Headers $headers
+   ```
+
+   A primeira resolução mostra `slaStatus: MET`; a segunda devolve
+   `Idempotency-Replayed: true` sem novo `TicketResolved.v1`. O histórico lista
+   `OPENED`, `ASSIGNED`, `REASSIGNED` (com `previousOwner`) e `RESOLVED`, cada um com
+   `actorRole` e `correlationId`. Um novo despacho processa um evento e conclui o
+   processo de resolução em Workflow.
 
 ## Demonstrar indisponibilidade e reconciliação
 
@@ -368,8 +479,29 @@ execução. Use um contêiner temporário da API com a configuração documentad
    $reconciled
    ```
 
-   O chamado deve mudar para `OPEN`, receber `slaHours: 8` e um novo `dueAt`. O
-   protótipo não recalcula o prazo do processo de Workflow criado anteriormente.
+   O chamado deve mudar para `OPEN`, receber `slaHours: 8` e `dueAt` igual a
+   `openedAt` + 8 h (o tempo de indisponibilidade não estende o SLA). Repetir o
+   comando devolve o mesmo corpo com `Idempotency-Replayed: true`. Se Contracts
+   ainda estiver fora, a resposta é `503 SERVICE_UNAVAILABLE` e o chamado continua
+   pendente. Após um novo despacho, Workflow ajusta o prazo do processo de
+   resolução para o `dueAt` reconciliado (ou cancela o processo, se a elegibilidade
+   for rejeitada).
+
+5. Para vários chamados pendentes, use a reconciliação em lote:
+
+   ```powershell
+   Invoke-RestMethod -Method Post `
+     -Uri "$baseUrl/api/v1/support/tickets/reconcile-pending" -Headers $headers
+   ```
+
+   A resposta informa `confirmed`, `rejected`, `remaining` e
+   `contractsAvailable`. Repetir a operação não altera chamados já reconciliados.
+
+Em 14/10/2026 a mesma sequência (abertura, SLA, atribuição/reatribuição,
+resolução idempotente, chamados pendentes, `503`, reconciliação individual e em
+lote, com reinício do servidor entre as fases) foi executada contra `uvicorn`
+local por um cliente HTTP em Python; os comandos PowerShell acima não foram
+executados nesse ambiente. Ver `docs/EVIDENCIAS_VALIDACAO.md`, seção T15.
 
 ## Demonstrar falha permanente
 
@@ -405,11 +537,18 @@ Financeiro, Atendimento e Workflow; cada aviso de sucesso ou erro exibe o
    O contrato aparece como "Rascunho" para o mesmo cliente, sem recadastro.
 2. **F2.** Em Contratos, use **Ativar**. Em Financeiro (ou Visão geral/Workflow),
    use **Despachar eventos pendentes**: surge a fatura "Em aberto" e, em Workflow,
-   a "Preparação de retirada". Selecione a fatura e registre o pagamento simulado.
+   a "Preparação de retirada". Selecione a fatura e registre um pagamento simulado
+   parcial: a fatura passa a "Parcialmente paga". No cartão **Verificar vencimento
+   e registrar inadimplência**, informe uma data posterior ao vencimento (requer
+   `FINANCE_ALLOW_FUTURE_AS_OF=true` na API) e verifique: a coluna Inadimplência
+   mostra "Registrada em …". Pague o saldo restante: a fatura fica "Paga".
 3. **F3.** Em Contratos, use **Abrir chamado** no contrato ativo. Em Atendimento,
    use **Consultar elegibilidade e SLA**, abra o chamado, despache os eventos,
-   atribua um responsável e resolva. Um novo despacho conclui o processo de
-   resolução em Workflow.
+   atribua (e, se quiser, reatribua) um responsável e resolva. A coluna **SLA**
+   mostra "No prazo", "Vencido", "Cumprido", "SLA pendente" ou "Sem SLA", e
+   **Histórico** lista abertura, atribuições, reconciliação e resolução. Um novo
+   despacho conclui o processo de resolução em Workflow. Chamados com elegibilidade
+   pendente podem ser reconciliados um a um ou por **Reconciliar pendentes**.
 4. **Erros legíveis.** Registre uma reserva com fim anterior ao início (`422`
    com a regra violada) ou um contato com telefone fora do E.164 (`422` com o
    campo). Saia e entre com `demo-support` para ver `403` ao cadastrar cliente.
@@ -417,8 +556,8 @@ Financeiro, Atendimento e Workflow; cada aviso de sucesso ou erro exibe o
 5. **Trilha.** Copie o `correlationId` de um aviso e consulte-o em Visão geral,
    no cartão "Trilha por correlação".
 
-Os comandos com repetição segura (reserva, rascunhos, ativação, encerramento e
-abertura de chamado) enviam `Idempotency-Key`. A interface só reaproveita a chave
+Os comandos com repetição segura (reserva, rascunhos, ativação, encerramento,
+abertura de chamado e pagamento simulado) enviam `Idempotency-Key`. A interface só reaproveita a chave
 quando a nova tentativa da mesma ação envia exatamente o mesmo corpo (por exemplo,
 após uma falha de rede ambígua); se o usuário corrigir algum campo, uma chave nova
 é gerada, evitando `409 IDEMPOTENCY_CONFLICT`. A chave é descartada após sucesso e

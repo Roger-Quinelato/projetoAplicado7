@@ -49,7 +49,7 @@ const STATUS_LABELS: Record<string, [string, 'good' | 'bad' | 'warn' | 'neutral'
   OPEN: ['Em aberto', 'warn'], WON: ['Ganha', 'good'], LOST: ['Perdida', 'bad'],
   REQUESTED: ['Solicitada', 'warn'], DRAFTED: ['Com rascunho', 'neutral'], DRAFT: ['Rascunho', 'neutral'],
   ACTIVE: ['Ativo', 'good'], CLOSED: ['Encerrado', 'neutral'], CANCELLED: ['Cancelado', 'bad'],
-  PAID: ['Paga', 'good'], OVERDUE: ['Vencida', 'bad'],
+  PAID: ['Paga', 'good'], OVERDUE: ['Vencida', 'bad'], PARTIALLY_PAID: ['Parcialmente paga', 'warn'],
   PENDING_ENTITLEMENT: ['Elegibilidade pendente', 'warn'], REJECTED_ENTITLEMENT: ['Sem elegibilidade', 'bad'],
   RESOLVED: ['Resolvido', 'good'], IN_PROGRESS: ['Em andamento', 'warn'], DONE: ['Concluída', 'good'],
   STARTED: ['Iniciado', 'warn'], COMPLETED: ['Concluído', 'good'], HIGH: ['Alta', 'bad'], NORMAL: ['Normal', 'neutral'],
