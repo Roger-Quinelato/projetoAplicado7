@@ -216,11 +216,19 @@ Erros 422 preservam `detail` e `errors` como listas idênticas, com `type`, `loc
 e `msg`. Por exceção de segurança, não retornam `input`, `ctx` ou mensagens que
 possam interpolar dados da entrada; `msg` é genérica, exceto campo obrigatório.
 O código `VALIDATION_ERROR`, status e correlação permanecem iguais. Clientes não
-devem depender do eco de dados rejeitados.
+devem depender do eco de dados rejeitados. A interface (`describeIssue` em
+`web/src/api.ts`) monta o texto pelo `type` e pelo campo em `loc`, sem limites
+inventados quando `ctx` não vem; o caso de e-mail é identificado pelo campo.
 
 Cada evento da outbox usa uma transação: todos os consumidores internos e inbox
-são confirmados juntos. Em falha, os efeitos parciais são desfeitos e a tentativa
-é registrada numa transação válida; os próximos eventos continuam. Ao atingir
+são confirmados juntos. Consumidores e cópia no broker rodam num SAVEPOINT dentro
+da transação que bloqueou o evento (`FOR UPDATE SKIP LOCKED`). Em falha, o
+SAVEPOINT desfaz os efeitos parciais e a tentativa é registrada na mesma
+transação, sem liberar o bloqueio; os próximos eventos continuam. Só uma falha no
+commit final usa transação nova e relê o evento antes de contar a tentativa.
+No SQLite, `infrastructure/db.py` faz o pysqlite emitir `BEGIN` explícito, para
+que o SAVEPOINT não vire a transação externa. Métrica de falha e log são emitidos
+após o commit da tentativa. Ao atingir
 `retry_limit`, o evento fica `FAILED`. Reprocessamento preserva inbox e restrições
 de negócio. Logs registram somente tipo da exceção, ID e correlação, sem SQL,
 parâmetros, traceback ou mensagem da exceção. A cópia opcional no RabbitMQ continua

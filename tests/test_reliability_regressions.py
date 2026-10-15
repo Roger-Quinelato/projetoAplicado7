@@ -1,12 +1,60 @@
 """Regressões da estabilização v1, sempre com dados sintéticos."""
 import logging
 
-from sqlalchemy import select
+from sqlalchemy import event, select
 
 from archcorp.config import settings
 from archcorp.infrastructure.db import SessionLocal
 from archcorp.integration.models import AuditLog, InboxEvent, OutboxEvent
 from archcorp.integration.service import EventDispatcher, audit
+
+
+def test_savepoint_apos_somente_leitura_nao_confirma_transacao_externa():
+    # pysqlite adia o BEGIN: sem o ajuste em infrastructure/db.py, o SAVEPOINT
+    # vira a transação externa e o RELEASE confirma o registro.
+    with SessionLocal() as session:
+        session.scalars(select(OutboxEvent)).all()
+        with session.begin_nested():
+            audit(session, "synthetic", "test", "savepoint", "success")
+        session.rollback()
+        assert session.scalars(select(AuditLog)).all() == []
+
+
+def test_falha_de_consumidor_registra_tentativa_sem_liberar_bloqueio():
+    """Entre a falha e o registro da tentativa não pode haver fim de transação.
+
+    Um rollback completo nesse ponto libera o FOR UPDATE SKIP LOCKED e permite
+    que outro despachante dispute o mesmo evento antes do novo bloqueio.
+    """
+    steps = []
+
+    def broken(session, event_envelope):
+        audit(session, event_envelope["correlationId"], "test", "broken", "success")
+        session.flush()
+        steps.append("failure")
+        raise RuntimeError("falha sintética")
+
+    def on_transaction_end(_session, transaction):
+        if transaction.parent is None and steps:
+            steps.append("end")
+
+    def on_update(_mapper, _connection, target):
+        steps.append(f"attempt:{target.attempts}")
+
+    dispatcher = EventDispatcher({"Broken.v1": [("broken", broken)]})
+    with SessionLocal() as session:
+        session.add(OutboxEvent(event_type="Broken.v1", producer="test", payload={}, correlation_id="synthetic"))
+        session.commit()
+        event.listen(session, "after_transaction_end", on_transaction_end)
+        event.listen(OutboxEvent, "before_update", on_update)
+        try:
+            assert dispatcher.dispatch_pending(session) == {"processed": 0, "failed": 1}
+        finally:
+            event.remove(OutboxEvent, "before_update", on_update)
+            event.remove(session, "after_transaction_end", on_transaction_end)
+        assert steps[:3] == ["failure", "attempt:1", "end"]
+        assert session.scalars(select(AuditLog)).all() == []
+        assert session.scalars(select(InboxEvent)).all() == []
 
 
 def test_outbox_recupera_sessao_apos_erro_sql_e_continua(caplog):

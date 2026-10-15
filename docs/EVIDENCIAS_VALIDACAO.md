@@ -103,3 +103,19 @@ Os códigos v1 caracterizados são `CONFLICT` na resolução repetida sem chave 
 `INVALID_STATE` na reconciliação repetida sem chave. Nenhum deploy foi executado.
 
 Após a correção: `PYTHONPATH=src python -m pytest -q tests -p no:cacheprovider`: **78 passed** em SQLite. PostgreSQL ainda não executado nesta etapa.
+
+### Correções da revisão na camada #35 (2026-10-15)
+
+- Despachante da outbox: consumidores e broker em SAVEPOINT; a tentativa é
+  registrada na transação que mantém o bloqueio do evento. Ajuste do pysqlite
+  (`BEGIN` explícito) em `infrastructure/db.py`.
+- `tests/test_reliability_regressions.py`: dois casos novos (SAVEPOINT após só
+  leitura não confirma a transação externa; nenhuma fronteira de transação entre
+  a falha do consumidor e o registro da tentativa). Ambos falharam antes da correção.
+- Interface: `describeIssue` deixa de exibir `?`, `0` ou texto vazio sem `ctx` e
+  identifica e-mail pelo campo. `web/tests/api.test.ts` (4 casos, `node:test`):
+  3 falharam antes da correção. Passo `npm test` adicionado ao job `application`.
+- Local (Python 3.13, Node 22): `PYTHONPATH=src python -m pytest -q tests -p no:cacheprovider`:
+  **80 passed** em SQLite; `cd web && npm test`: 4 passed; `npm run build`: sem erro.
+- Não verificado nesta etapa: PostgreSQL (o job e os testes de concorrência entram
+  na camada #37) e disputa real entre dois despachantes.
