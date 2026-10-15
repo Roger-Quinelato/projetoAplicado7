@@ -1,11 +1,11 @@
 # Estado verificado da implementação
 
-Data: 27/09/2026, atualizado em 29/09/2026 com a sprint Q3 (T06–T09) e em 14/10/2026 com a interface navegável (T10). Este registro separa o que o código local executa, o que a documentação projeta e o que ainda depende de validação externa. A execução no Render/Supabase não foi verificada nesta data.
+Data: 27/09/2026, atualizado em 29/09/2026 com a sprint Q3 (T06–T09) e em 14/10/2026 com a interface navegável (T10) e a demonstração verificável do F1 (T11). Este registro separa o que o código local executa, o que a documentação projeta e o que ainda depende de validação externa. A execução no Render/Supabase não foi verificada nesta data.
 
 | Área | Existe no repositório | Limite verificado |
 |---|---|---|
 | CRM | Clientes (criação, consulta com filtros e paginação, alteração e inativação), contatos (CRUD) e oportunidades com transições `OPEN` para `WON`/`LOST`; validação, auditoria e matriz de papéis testadas | Dados sintéticos; sem CRM externo; remoção física de cliente não é oferecida |
-| Reservas/contratos | Reserva idempotente com cancelamento, rascunho a partir da reserva na mesma transação, ativação idempotente com revalidação do cliente, encerramento idempotente com `ContractClosed.v1` e máquina de estados única | Sem disponibilidade real de frota, assinatura ou preço externo; Finance não consome `ContractClosed.v1` (faturamento final em T12) |
+| Reservas/contratos | Reserva idempotente com cancelamento, rascunho a partir da reserva na mesma transação (a mesma `Idempotency-Key` em outra reserva ou já usada no rascunho direto retorna `409`; F1 demonstrado por `scripts/demo_f1.py` em 14/10/2026), ativação idempotente com revalidação do cliente, encerramento idempotente com `ContractClosed.v1` e máquina de estados única | Sem disponibilidade real de frota, assinatura ou preço externo; `CustomerReader` sem timeout nem retentativa automática (falha do CRM vira `500` sem efeito parcial, verificada só por simulador em teste); Finance não consome `ContractClosed.v1` (faturamento final em T12) |
 | Financeiro | Primeira fatura por evento, pagamento simulado, saldo e vencimento | Sem PSP, conciliação bancária, nota fiscal ou cobrança real |
 | Atendimento | Abertura, SLA, atribuição, resolução e reconciliação de elegibilidade | Sem central de atendimento externa |
 | Workflow | Processo e tarefa por evento, proprietário, prazo e transições | Sem motor BPM externo |
