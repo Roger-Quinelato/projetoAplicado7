@@ -5,6 +5,7 @@
 - Decisores: equipe do Projeto Aplicado
 - Tarefa: T07 (ARCH7-7) - dados sintéticos, identificadores globais, migração aditiva e contrato de erro
 - Relaciona-se com: [ADR-001](ADR-001-integracao-empresa-de-servicos.md)
+- Emendado em 14/10/2026 pelo [ADR-003](ADR-003-financeiro-fatura-final-e-excecao-aditiva.md) (exceção no item de verificação).
 
 ## Contexto
 
@@ -50,7 +51,9 @@ imediato.
 - um banco criado antes das migrações é carimbado e atualizado sem erro;
 - nenhum `upgrade` contém `drop_table`, `drop_column`, `alter_column` ou
   `rename_table`; desde 14/10/2026 também `drop_constraint`, `drop_index` e
-  `op.execute` com `UPDATE`/`DELETE`, salvo exceção registrada.
+  qualquer `.execute(...)` com `UPDATE`, `DELETE`, `DROP`, `ALTER`, `RENAME` ou
+  `TRUNCATE` (argumento não literal é recusado), salvo exceção registrada por
+  operação e contagem.
 
 Para criar uma migração nova, altere o modelo e execute:
 

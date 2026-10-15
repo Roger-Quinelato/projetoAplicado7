@@ -15,7 +15,9 @@ Compatibilidade (ADR-002; exceção registrada no ADR-003):
   novo ciclo de vida usa para o mesmo fato.
 
 O downgrade recria a unicidade por contrato. Se existir fatura `FINAL`, ele para antes de
-qualquer alteração com erro explícito; faturas financeiras não são apagadas automaticamente. `PARTIALLY_PAID` e `OVERDUE` voltam a
+qualquer alteração com erro explícito; faturas financeiras não são apagadas automaticamente.
+A verificação usa a conexão ativa e não roda em modo offline (`--sql`): nesse modo, o SQL
+gerado falharia na recriação da unicidade se houver faturas `FINAL`. `PARTIALLY_PAID` e `OVERDUE` voltam a
 `OPEN`; `CANCELLED` não tem equivalente na revisão anterior e permanece como está.
 """
 from alembic import context, op

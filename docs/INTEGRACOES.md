@@ -151,7 +151,7 @@ ou F3 entre as três integrações avaliadas.
 | Informação | Contrato, cliente, vigência (`startsOn`, `endsOn`) e cobrança (`amount`, `currency`, `cycle`) do payload público; nenhum dado interno de Contracts |
 | Comunicação | Evento assíncrono para a fatura final; REST síncrono para pagamento simulado, verificação de vencimento e cancelamento |
 | APIs | `POST /api/v1/finance/invoices/{id}/payments` (`Idempotency-Key` opcional), `POST /api/v1/finance/invoices/overdue-check`, `POST /api/v1/finance/invoices/{id}/cancel`, `GET /api/v1/finance/invoices?contractId=` |
-| Erros | `404` fatura inexistente; `409 CONFLICT` sobrepagamento, referência reutilizada ou fatura quitada (códigos da v1); `409 INVALID_STATE` fatura cancelada ou cancelamento inválido (caminhos novos); `409 IDEMPOTENCY_CONFLICT`; `422 VALIDATION_ERROR` entrada inválida ou moeda diferente (código da v1); `422 BUSINESS_RULE_VIOLATION` data de referência futura sem simulação |
+| Erros | `404` fatura inexistente; `409 CONFLICT` sobrepagamento, referência reutilizada ou fatura quitada (códigos da v1; o `detail` da fatura quitada passou a "Fatura já quitada"); `409 INVALID_STATE` fatura cancelada ou cancelamento inválido (caminhos novos); `409 IDEMPOTENCY_CONFLICT`; `422 VALIDATION_ERROR` entrada inválida, inclusive valor com mais de duas casas (antes aceito e arredondado; mudança não aditiva aceita no ADR-003), ou moeda diferente (código da v1); `422 BUSINESS_RULE_VIOLATION` data de referência futura sem simulação |
 
 A fatura final cobra os ciclos iniciados entre `startsOn` e `endsOn` menos o que já
 foi faturado ao contrato, inclusive faturas canceladas, cujo cancelamento é
@@ -170,8 +170,9 @@ por fatura com o `correlationId` da requisição. Repetir o comando não marca d
 novo. Na leitura, uma fatura vencida ainda não registrada já aparece como
 `OVERDUE`, com `delinquent: false`. Nenhum evento de inadimplência é publicado,
 porque nenhum contexto o consome. O pagamento é simulado: não há PSP, conciliação
-bancária, nota fiscal nem cobrança real. Os valores monetários da v1 seguem como
-`number`; a representação decimal em string é dívida para a v2.
+bancária, nota fiscal nem cobrança real. Uma fatura em aberto com pagamento parcial, antes
+`OPEN`, passa a `PARTIALLY_PAID` (mudança não aditiva aceita no ADR-003). Os valores
+monetários da v1 seguem como `number`; a representação decimal em string é dívida para a v2.
 
 ## Formato e interoperabilidade
 

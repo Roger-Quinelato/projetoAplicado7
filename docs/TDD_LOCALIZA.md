@@ -112,8 +112,11 @@ Regras verificadas em `tests/test_finance.py`:
   de modo que a reentrega fora da inbox também não repete efeito;
 - pagamento: `Idempotency-Key` opcional, valor positivo com duas casas, moeda igual
   à da fatura (`422 VALIDATION_ERROR`), sem sobrepagamento (`409 CONFLICT`); fatura
-  quitada mantém o `409 CONFLICT` da v1 e fatura cancelada recebe `409 INVALID_STATE`;
-  a referência não vai para auditoria nem log;
+  quitada mantém o `409 CONFLICT` da v1 (com `detail` "Fatura já quitada") e fatura
+  cancelada recebe `409 INVALID_STATE`; a referência não vai para auditoria nem log;
+- mudanças não aditivas aceitas no ADR-003: valor com mais de duas casas, antes
+  aceito e arredondado na gravação, agora recebe `422`; fatura em aberto com
+  pagamento parcial passa de `OPEN` a `PARTIALLY_PAID`;
 - o motivo do cancelamento (até 200 caracteres) vai para a auditoria e não deve
   conter dado pessoal, bancário ou sensível;
 - valores monetários saem como `number` (float) na v1 por compatibilidade; a regra

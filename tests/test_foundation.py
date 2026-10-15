@@ -1,5 +1,7 @@
+import ast
 import importlib.util
 import re
+from collections import Counter
 from io import StringIO
 from pathlib import Path
 
@@ -128,20 +130,40 @@ def test_migracoes_geram_sql_valido_para_postgresql():
     assert "ALTER TABLE crm_customers ADD COLUMN active BOOLEAN DEFAULT true NOT NULL" in sql
 
 
-# Exceções aprovadas à regra aditiva do ADR-002. Cada entrada exige ADR e data; a lista é conferida nos
-# dois sentidos: operação nova sem exceção falha, e exceção que deixou de existir também falha.
+# Exceções aprovadas à regra aditiva do ADR-002, por operação e contagem exata. Cada entrada exige ADR e
+# data; a comparação é de igualdade: operação nova, contagem maior ou exceção que deixou de ocorrer falham.
 MIGRATION_EXCEPTIONS = {
-    # 14/10/2026 · ADR-003 · T12: troca uq_invoice_contract -> uq_invoice_contract_kind e reclassifica
-    # faturas OPEN com pagamento para PARTIALLY_PAID.
-    "0004_finance_lifecycle.py": {"drop_constraint", "op.execute UPDATE"},
+    # 14/10/2026 · ADR-003 · T12: troca uq_invoice_contract -> uq_invoice_contract_kind (1 drop_constraint)
+    # e reclassifica faturas OPEN com pagamento para PARTIALLY_PAID (1 UPDATE literal).
+    "0004_finance_lifecycle.py": Counter({"drop_constraint": 1, "execute UPDATE": 1}),
 }
+DESTRUCTIVE_CALLS = {"drop_table", "drop_column", "alter_column", "rename_table", "drop_constraint", "drop_index"}
+DESTRUCTIVE_SQL = ("UPDATE", "DELETE", "DROP", "ALTER", "RENAME", "TRUNCATE")
 
 
-def destructive_operations(upgrade: str) -> set[str]:
-    found = {term for term in ("drop_table", "drop_column", "alter_column(", "rename_table", "drop_constraint", "drop_index") if term in upgrade}
-    for match in re.finditer(r"op\.execute\(", upgrade):
-        statement = upgrade[match.end():match.end() + 400]
-        found |= {f"op.execute {verb}" for verb in ("UPDATE", "DELETE") if re.search(rf"\b{verb}\b", statement, re.IGNORECASE)}
+def destructive_operations(source: str) -> Counter:
+    """Conta operações destrutivas na função `upgrade`, analisando a AST (não o texto).
+
+    Qualquer chamada `.execute(...)` (op, batch_op, conexão) precisa receber uma string literal, para que o
+    SQL possa ser inspecionado; argumento não literal (f-string, `sa.text`, variável) conta como
+    `execute non-literal`, que não tem exceção possível sem novo ADR.
+    """
+    tree = ast.parse(source)
+    upgrade = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "upgrade")
+    found: Counter = Counter()
+    for node in ast.walk(upgrade):
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
+            continue
+        if node.func.attr in DESTRUCTIVE_CALLS:
+            found[node.func.attr] += 1
+        elif node.func.attr == "execute":
+            argument = node.args[0] if node.args else None
+            if not (isinstance(argument, ast.Constant) and isinstance(argument.value, str)):
+                found["execute non-literal"] += 1
+                continue
+            for verb in DESTRUCTIVE_SQL:
+                if re.search(rf"\b{verb}\b", argument.value, re.IGNORECASE):
+                    found[f"execute {verb}"] += 1
     return found
 
 
@@ -150,17 +172,26 @@ def test_migracoes_sao_aditivas():
     files = {file.name: file for file in versions.glob("*.py")}
     assert set(MIGRATION_EXCEPTIONS) <= set(files)
     for name, file in files.items():
-        upgrade = file.read_text(encoding="utf-8").split("def downgrade", 1)[0]
-        found = destructive_operations(upgrade)
-        allowed = MIGRATION_EXCEPTIONS.get(name, set())
-        assert found <= allowed, f"{name} contém operação destrutiva no upgrade sem exceção registrada: {found - allowed}"
-        assert allowed <= found, f"{name}: exceção registrada que não ocorre mais: {allowed - found}"
+        found = destructive_operations(file.read_text(encoding="utf-8"))
+        allowed = MIGRATION_EXCEPTIONS.get(name, Counter())
+        assert found == allowed, f"{name}: operações destrutivas no upgrade {dict(found)} diferem das exceções registradas {dict(allowed)}"
 
 
 def test_guarda_aditiva_detecta_operacoes_destrutivas():
-    assert destructive_operations("batch_op.drop_index('ix')\nop.execute(\n  \"DELETE FROM t\")") == {"drop_index", "op.execute DELETE"}
-    assert destructive_operations("op.execute('update t set a = 1')") == {"op.execute UPDATE"}
-    assert destructive_operations("op.execute('CREATE INDEX ix ON t (a)')\nbatch_op.add_column(x)") == set()
+    def ops(body: str) -> dict:
+        return dict(destructive_operations("def upgrade():\n" + "\n".join("    " + line for line in body.splitlines()) + "\n\ndef downgrade():\n    op.drop_table('t')\n"))
+
+    assert ops("batch_op.drop_index('ix')\nop.execute(\n  'DELETE FROM t')") == {"drop_index": 1, "execute DELETE": 1}
+    assert ops("op.execute('update t set a = 1')\nop.execute('UPDATE u SET b = 2')") == {"execute UPDATE": 2}
+    assert ops("op.execute('drop table t')") == {"execute DROP": 1}
+    assert ops("op.execute('ALTER TABLE t RENAME TO u')") == {"execute ALTER": 1, "execute RENAME": 1}
+    assert ops("op.execute('TRUNCATE t')") == {"execute TRUNCATE": 1}
+    assert ops("op.get_bind().execute('DELETE FROM t')") == {"execute DELETE": 1}
+    assert ops("op.execute(sa.text('DELETE FROM t'))") == {"execute non-literal": 1}
+    assert ops("op.execute(f'DELETE FROM {name}')") == {"execute non-literal": 1}
+    assert ops("op.execute(statement)") == {"execute non-literal": 1}
+    assert ops("op.drop_constraint('a')\nop.drop_constraint('b')") == {"drop_constraint": 2}
+    assert ops("op.execute('CREATE INDEX ix ON t (a)')\nbatch_op.add_column(x)") == {}
 
 
 def test_carga_sintetica_e_idempotente(client):
