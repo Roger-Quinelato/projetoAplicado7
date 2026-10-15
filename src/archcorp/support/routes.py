@@ -1,15 +1,20 @@
-from datetime import datetime
-from typing import Annotated, Literal
+from fastapi import APIRouter, Depends, Header, Response
 from uuid import UUID
-
-from fastapi import APIRouter, Depends, Header, Query, Response
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from sqlalchemy.orm import Session
-
 from archcorp.infrastructure.db import get_session
 from archcorp.observability import correlation_id_var
-from archcorp.schemas import EXAMPLE_CORRELATION_ID, EXAMPLE_PENDING_TICKET_RESPONSE, EXAMPLE_TICKET_RESPONSE
 from archcorp.security import Principal, require_roles
+from archcorp.api_examples import IDEMPOTENCY_KEY_MAX_LENGTH
+from archcorp.api_docs import CORRELATION_REQUEST_PARAMETER, TICKET_RESPONSES, RECONCILIATION_RESPONSES
+from archcorp.support.schemas import TicketCreate, TicketResponse
+
+from datetime import datetime
+from typing import Annotated, Literal
+
+from fastapi import Query
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+
+from archcorp.schemas import EXAMPLE_CORRELATION_ID, EXAMPLE_PENDING_TICKET_RESPONSE, EXAMPLE_TICKET_RESPONSE
 from archcorp.support.service import PENDING_BATCH_MAX, TicketService
 
 
@@ -72,7 +77,6 @@ class AssignmentInput(BaseModel):
     model_config = ConfigDict(json_schema_extra={"examples": [{"owner": "Equipe de assistência"}]})
 
     owner: Owner = Field(description="Equipe ou função responsável; sem e-mail, telefone ou documento.")
-
 
 
 class TicketDetailResponse(BaseModel):
@@ -207,6 +211,49 @@ def resolve_ticket(
 ) -> dict:
     """Resolve chamado aberto; a mesma Idempotency-Key recupera a resposta original. Sem chave, preserva os conflitos v1."""
     result, replay = service.resolve(session, str(ticket_id), correlation_id_var.get(), acting_role(principal), idempotency_key)
+    response.headers["Idempotency-Replayed"] = str(replay).lower()
+    return result
+
+
+@router.post(
+    "/tickets",
+    status_code=201,
+    response_model=TicketResponse,
+    responses=TICKET_RESPONSES,
+    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
+)
+def open_ticket(
+    body: TicketCreate,
+    response: Response,
+    idempotency_key: str = Header(
+        alias="Idempotency-Key", max_length=IDEMPOTENCY_KEY_MAX_LENGTH, examples=["demo-ticket-001"]
+    ),
+    principal: Principal = Depends(require_roles("support", "admin")),
+    session: Session = Depends(get_session),
+    service: TicketService = Depends(ticket_service),
+) -> dict:
+    ticket_data = body.model_dump(mode="json")
+    result, replay = service.open(session, ticket_data, idempotency_key, correlation_id_var.get(), acting_role(principal))
+    response.headers["Idempotency-Replayed"] = str(replay).lower()
+    return result
+
+
+@router.post(
+    "/tickets/{ticket_id}/reconcile",
+    response_model=TicketResponse,
+    responses=RECONCILIATION_RESPONSES,
+    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
+)
+def reconcile_ticket(
+    ticket_id: UUID,
+    response: Response,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key", max_length=100),
+    principal: Principal = Depends(require_roles("support", "operations", "admin")),
+    session: Session = Depends(get_session),
+    service: TicketService = Depends(ticket_service),
+) -> dict:
+    """Reconcilia pendência; replay persistido exige a mesma Idempotency-Key. Sem chave, preserva os conflitos v1."""
+    result, replay = service.reconcile(session, str(ticket_id), correlation_id_var.get(), acting_role(principal), idempotency_key)
     response.headers["Idempotency-Replayed"] = str(replay).lower()
     return result
 

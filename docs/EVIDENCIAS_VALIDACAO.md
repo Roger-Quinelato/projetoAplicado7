@@ -225,3 +225,25 @@ replay foram alinhados ao comportamento. Suíte local após o ajuste: **179 pass
 - Local (PostgreSQL 16, Python 3.13), após integrar as correções do #35:
   `TEST_DATABASE_URL=... PYTHONPATH=src python -m pytest -q tests -p no:cacheprovider`:
   **191 passed** em PostgreSQL; em SQLite, 183 passed e 8 skipped (exigem PostgreSQL).
+
+## Refatoração estrutural posterior à estabilização (2026-10-15)
+
+Rotas de Contracts, Support e Integration saíram de main.py; schemas pertencem
+a seus módulos e imports antigos continuam disponíveis por fachada. Negócios
+usam integration.public, sem importar seus modelos/serviço internos. ADR-005
+registra a decisão e a avaliação limitada do PR29, que não foi integrado.
+O OpenAPI produzido após a extração foi comparado integralmente com o conjunto
+de suporte corrigido e é idêntico. Não há mudança de API/evento nesta extração.
+
+A proteção de compatibilidade usa fixture separado da main 5e344e2 e duas
+exceções exatas do ADR-003; seu teste negativo detecta restrição nova na descrição,
+rota removida e cabeçalho obrigatório. Fronteiras, domínio puro e identidade dos
+imports legados têm testes específicos. A CI PostgreSQL executa a mesma suíte.
+
+Suíte estrutural final local: **184 passed, 6 skipped** (PostgreSQL ausente local),
+OpenAPI conferido, `ruff --select F,E9` e `git diff --check` aprovados. A guarda de
+migração mantém também o objeto exato da restrição removida e o UPDATE exato da
+exceção ADR-003, além da contagem. CI do suporte final `2cadab6` passou em
+https://github.com/Roger-Quinelato/projetoAplicado7/actions/runs/38713887061.
+A execução da CI da extração será conferida no SHA publicado; deploy público
+permanece pendente.

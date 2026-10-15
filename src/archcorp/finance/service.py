@@ -28,7 +28,7 @@ from archcorp.finance.domain import (
     utc_today,
 )
 from archcorp.finance.models import Invoice, Payment
-from archcorp.integration.service import IdempotencyStore, audit
+from archcorp.integration.public import IdempotencyStore, audit
 from archcorp.observability import logger
 
 

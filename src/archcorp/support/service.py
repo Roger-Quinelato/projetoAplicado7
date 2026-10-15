@@ -14,13 +14,11 @@ from archcorp.contracts.public import ContractEntitlementPort, ContractsUnavaila
 from archcorp.exceptions import (
     BusinessRuleError,
     ConflictError,
-    IdempotencyConflictError,
     InvalidStateError,
     NotFoundError,
     ServiceUnavailableError,
 )
-from archcorp.integration.models import IdempotencyRecord
-from archcorp.integration.service import IdempotencyStore, audit, enqueue
+from archcorp.integration.public import IdempotencyStore, audit, enqueue
 from archcorp.observability import logger
 from archcorp.support import domain
 from archcorp.support.domain import HistoryAction, TicketStatus
@@ -85,16 +83,10 @@ class TicketService:
 
     @staticmethod
     def _replay(session: Session, key: str, request: dict) -> dict | None:
-        stored = session.get(IdempotencyRecord, {"key": key, "operation": OPEN_OPERATION})
-        if not stored:
-            return None
-        if stored.request_hash:
-            conflict = stored.request_hash != IdempotencyStore.fingerprint(request)
-        else:
-            conflict = any(stored.response.get(field) != request[field] for field in LEGACY_COMPARED_FIELDS)
-        if conflict:
-            raise IdempotencyConflictError("Idempotency-Key já utilizada com outro chamado")
-        return stored.response
+        return IdempotencyStore.replay(
+            session, key, OPEN_OPERATION, request, "Idempotency-Key já utilizada com outro chamado",
+            legacy_fields=LEGACY_COMPARED_FIELDS,
+        )
 
     def _entitlement(self, contract_id: str, customer_id: str, service_code: str, session: Session) -> dict | None:
         """Consulta Contracts pela porta pública; devolve None quando Contracts está indisponível."""

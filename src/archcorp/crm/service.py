@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from archcorp.crm.models import Contact, Customer, Opportunity
 from archcorp.crm.public import CustomerData
 from archcorp.exceptions import ConflictError, InvalidStateError, NotFoundError
-from archcorp.integration.service import LegacyIdService, audit, enqueue
+from archcorp.integration.public import LegacyIdService, audit, enqueue
 
 
 LEGACY_SOURCE = "CRM"

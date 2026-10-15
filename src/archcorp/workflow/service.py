@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from archcorp.integration.service import audit
+from archcorp.integration.public import audit
 from archcorp.workflow.models import ProcessInstance, ProcessTask
 
 
