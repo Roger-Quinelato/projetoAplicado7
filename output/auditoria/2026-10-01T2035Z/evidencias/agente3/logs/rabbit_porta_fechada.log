@@ -1,0 +1,8 @@
+despacho 1: http=200 corpo={'processed': 0, 'failed': 1} dur=0.06s evento=('PENDING', 1, '') faturas=1 processos=1
+despacho 2: http=200 corpo={'processed': 0, 'failed': 1} dur=0.02s evento=('PENDING', 2, '') faturas=1 processos=1
+despacho 3: http=200 corpo={'processed': 0, 'failed': 1} dur=0.02s evento=('FAILED', 3, '') faturas=1 processos=1
+despacho 4: http=200 corpo={'processed': 0, 'failed': 0} dur=0.01s evento=('FAILED', 3, '') faturas=1 processos=1
+falhas: [('ContractActivated.v1', 3, '')]
+reprocess: 200 {'eventId': '334c704f-3c94-473d-809f-6208ceab9b6a', 'status': 'PENDING'}
+despacho após reprocess: {'processed': 0, 'failed': 1}
+faturas após reprocess: 1

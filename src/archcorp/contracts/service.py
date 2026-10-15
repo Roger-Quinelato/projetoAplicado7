@@ -1,37 +1,43 @@
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import func, select, update
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from archcorp.contracts.domain import ContractStatus, ReservationStatus, ensure_contract_transition, ensure_reservation_transition
 from archcorp.contracts.models import Contract, Reservation
 from archcorp.crm.public import CustomerData, CustomerReader
 from archcorp.exceptions import BusinessRuleError, ConflictError, InvalidStateError, NotFoundError
+from archcorp.infrastructure.db import count_rows, get_or_raise
 from archcorp.integration.public import IdempotencyStore, audit, enqueue
 
 
 def money(value) -> str:
+    """Normaliza um valor monetário para texto com duas casas decimais."""
     return str(Decimal(str(value)).quantize(Decimal("0.01")))
 
 
 class ContractService:
     def __init__(self, customers: CustomerReader):
+        """Recebe a porta de leitura de clientes do CRM."""
         self.customers = customers
 
     def eligible_customer(self, session: Session, customer_id: str) -> CustomerData:
+        """Lê o cliente pelo CRM e exige que ele possa originar contrato."""
         customer = self.customers.get(session, customer_id)
-        if not customer or not customer.active or not customer.eligible or not customer.consent_service:
+        if not customer or not customer.can_contract:
             raise BusinessRuleError("Cliente inexistente ou inelegível")
         return customer
 
     def create_draft(self, session: Session, data: dict, idempotency_key: str, correlation_id: str) -> tuple[dict, bool]:
+        """Cria o rascunho de contrato de forma idempotente e confirma a transação."""
         response, replay = self._draft(session, data, idempotency_key, correlation_id)
         session.commit()
         return response, replay
 
     def _draft(self, session: Session, data: dict, idempotency_key: str, correlation_id: str,
                reservation_id: str | None = None) -> tuple[dict, bool]:
+        """Cria o rascunho sem confirmar a transação; reutiliza a resposta de uma Idempotency-Key já usada."""
         request = {
             "customerId": data["customerId"], "serviceCode": data["serviceCode"], "startsOn": str(data["startsOn"]),
             "endsOn": str(data["endsOn"]) if data.get("endsOn") else None,
@@ -63,11 +69,12 @@ class ContractService:
         return response, False
 
     def activate(self, session: Session, contract_id: str, idempotency_key: str, correlation_id: str) -> tuple[dict, bool]:
+        """Ativa o contrato em rascunho, ativa a reserva vinculada e grava ContractActivated.v1 na outbox, de forma idempotente."""
         operation = f"activate_contract:{contract_id}"
         stored = IdempotencyStore.previous(session, operation, idempotency_key)
         if stored is not None:
             return stored, True
-        contract = self._require(session, contract_id)
+        contract = self.require(session, contract_id)
         if contract.status == ContractStatus.ACTIVE:
             previous = IdempotencyStore.previous(session, operation)
             if previous is not None:
@@ -90,13 +97,14 @@ class ContractService:
         return response, False
 
     def close(self, session: Session, contract_id: str, data: dict, idempotency_key: str | None, correlation_id: str) -> tuple[dict, bool]:
+        """Encerra o contrato ativo e a reserva vinculada e grava ContractClosed.v1 na outbox, de forma idempotente."""
         operation = f"close_contract:{contract_id}"
         request = {"endsOn": str(data["endsOn"]) if data.get("endsOn") else None, "reason": data.get("reason")}
         if idempotency_key:
             stored = IdempotencyStore.replay(session, idempotency_key, operation, request, "Idempotency-Key já utilizada com outro encerramento")
             if stored is not None:
                 return stored, True
-        contract = self._require(session, contract_id)
+        contract = self.require(session, contract_id)
         if contract.status == ContractStatus.CLOSED and idempotency_key:
             previous = IdempotencyStore.previous(session, operation)
             if previous is not None:
@@ -112,8 +120,8 @@ class ContractService:
         if reservation:
             ensure_reservation_transition(reservation.status, ReservationStatus.CLOSED)
             reservation.status = ReservationStatus.CLOSED
-        payload = {**self.to_dict(contract), "closeReason": contract.close_reason}
-        event = enqueue(session, "ContractClosed.v1", "contracts", payload, correlation_id)
+        contract_data = self.to_dict(contract)
+        event = enqueue(session, "ContractClosed.v1", "contracts", {**contract_data, "closeReason": contract.close_reason}, correlation_id)
         session.flush()
         response = {**self.to_dict(contract), "eventId": event.event_id}
         if idempotency_key:
@@ -125,31 +133,34 @@ class ContractService:
         return response, False
 
     def entitlement(self, session: Session, contract_id: str, customer_id: str, service_code: str) -> dict:
+        """Informa se há contrato ativo para cliente e serviço e devolve o SLA em horas."""
         contract = session.scalar(select(Contract).where(Contract.contract_id == contract_id, Contract.customer_id == customer_id, Contract.service_code == service_code, Contract.status == ContractStatus.ACTIVE))
         return {"eligible": bool(contract), "slaHours": contract.sla_hours if contract else None}
 
     @staticmethod
     def count(session: Session) -> int:
-        return session.scalar(select(func.count()).select_from(Contract)) or 0
+        """Conta os contratos gravados."""
+        return count_rows(session, Contract)
 
     @staticmethod
-    def _require(session: Session, contract_id: str) -> Contract:
-        contract = session.get(Contract, contract_id)
-        if not contract:
-            raise NotFoundError("Contrato não encontrado")
-        return contract
+    def require(session: Session, contract_id: str) -> Contract:
+        """Devolve o contrato ou levanta NotFoundError."""
+        return get_or_raise(session, Contract, contract_id, "Contrato não encontrado")
 
     @staticmethod
     def _reservation_of(session: Session, contract_id: str) -> Reservation | None:
+        """Devolve a reserva vinculada ao contrato, se houver."""
         return session.scalar(select(Reservation).where(Reservation.contract_id == contract_id))
 
     @staticmethod
     def apply_customer_update(session: Session, event: dict) -> None:
+        """Consumidor de CustomerUpdated.v1: atualiza a cópia de nome e e-mail do cliente nos contratos."""
         payload = event["payload"]
         session.execute(update(Contract).where(Contract.customer_id == payload["customerId"]).values(customer_name=payload["name"], customer_email=payload["email"]))
 
     @staticmethod
     def to_dict(contract: Contract) -> dict:
+        """Serializa o contrato no formato da API e dos eventos."""
         return {
             "contractId": contract.contract_id, "customerId": contract.customer_id,
             "serviceCode": contract.service_code, "startsOn": contract.starts_on.isoformat(),
@@ -161,9 +172,11 @@ class ContractService:
 
 class ReservationService:
     def __init__(self, contracts: ContractService):
+        """Recebe o ContractService usado para gerar rascunhos."""
         self.contracts = contracts
 
     def create(self, session: Session, data: dict, idempotency_key: str | None, correlation_id: str) -> tuple[dict, bool]:
+        """Registra reserva para cliente elegível; com Idempotency-Key, reutiliza a resposta anterior."""
         request = {**data, "startsOn": str(data["startsOn"]), "endsOn": str(data["endsOn"]), "amount": money(data["amount"])}
         if idempotency_key:
             stored = IdempotencyStore.replay(session, idempotency_key, "create_reservation", request, "Idempotency-Key já utilizada com outra reserva")
@@ -172,7 +185,7 @@ class ReservationService:
         customer = self.contracts.customers.get(session, data["customerId"])
         if not customer:
             raise NotFoundError("Cliente não encontrado")
-        if not customer.active or not customer.eligible or not customer.consent_service:
+        if not customer.can_contract:
             raise BusinessRuleError("Cliente inelegível ou sem consentimento")
         reservation = Reservation(
             customer_id=data["customerId"], vehicle_group=data["vehicleGroup"], protection_code=data["protectionCode"],
@@ -189,9 +202,10 @@ class ReservationService:
         return response, False
 
     def draft(self, session: Session, reservation_id: str, idempotency_key: str, correlation_id: str) -> tuple[dict, bool]:
-        reservation = self._require(session, reservation_id)
+        """Gera ou devolve o rascunho de contrato vinculado à reserva."""
+        reservation = self.require(session, reservation_id)
         if reservation.contract_id:
-            contract = session.get(Contract, reservation.contract_id)
+            contract = ContractService.require(session, reservation.contract_id)
             return {"reservationId": reservation.reservation_id, "contract": ContractService.to_dict(contract)}, True
         ensure_reservation_transition(reservation.status, ReservationStatus.DRAFTED)
         data = {"customerId": reservation.customer_id, "serviceCode": reservation.service_code,
@@ -205,12 +219,13 @@ class ReservationService:
         return {"reservationId": reservation.reservation_id, "contract": contract}, replay
 
     def cancel(self, session: Session, reservation_id: str, correlation_id: str) -> dict:
-        reservation = self._require(session, reservation_id)
+        """Cancela a reserva e o rascunho vinculado; cancelar de novo devolve o mesmo estado."""
+        reservation = self.require(session, reservation_id)
         if reservation.status == ReservationStatus.CANCELLED:
             return self.to_dict(reservation)
         ensure_reservation_transition(reservation.status, ReservationStatus.CANCELLED)
         if reservation.contract_id:
-            contract = session.get(Contract, reservation.contract_id)
+            contract = ContractService.require(session, reservation.contract_id)
             ensure_contract_transition(contract.status, ContractStatus.CANCELLED)
             contract.status = ContractStatus.CANCELLED
         reservation.status = ReservationStatus.CANCELLED
@@ -219,14 +234,13 @@ class ReservationService:
         return self.to_dict(reservation)
 
     @staticmethod
-    def _require(session: Session, reservation_id: str) -> Reservation:
-        reservation = session.get(Reservation, reservation_id)
-        if not reservation:
-            raise NotFoundError("Reserva não encontrada")
-        return reservation
+    def require(session: Session, reservation_id: str) -> Reservation:
+        """Devolve a reserva ou levanta NotFoundError."""
+        return get_or_raise(session, Reservation, reservation_id, "Reserva não encontrada")
 
     @staticmethod
     def to_dict(item: Reservation) -> dict:
+        """Serializa a reserva no formato da API."""
         return {"reservationId": item.reservation_id, "customerId": item.customer_id,
                 "vehicleGroup": item.vehicle_group, "protectionCode": item.protection_code,
                 "serviceCode": item.service_code, "startsOn": item.starts_on.isoformat(),

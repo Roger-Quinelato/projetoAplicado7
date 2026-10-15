@@ -44,7 +44,8 @@ def compatibility_errors(current):
             if now is None:
                 errors.append(f"operação removida: {label}")
                 continue
-            if now.get("security") != previous.get("security"):
+            # Exceções de segurança aprovadas e justificadas no baseline (approved_security).
+            if now.get("security") != BASELINE.get("approved_security", {}).get(label, previous.get("security")):
                 errors.append(f"segurança incompatível: {label}")
             old_params = {(p["in"], p["name"]): p for p in previous.get("parameters", [])}
             params = {(p["in"], p["name"]): p for p in now.get("parameters", [])}
@@ -85,3 +86,12 @@ def test_guarda_detecta_restricao_nova_rota_removida_e_cabecalho_obrigatorio():
     assert any("TicketCreate.description" in error for error in errors)
     assert any("operação removida" in error for error in errors)
     assert any("parâmetro obrigatório novo" in error for error in errors)
+
+
+def test_guarda_detecta_seguranca_alterada_fora_das_excecoes_aprovadas():
+    altered = copy.deepcopy(app.openapi())
+    altered["paths"]["/health/live"]["get"]["security"] = [{"HTTPBearer": []}]
+    altered["paths"]["/metrics"]["get"].pop("security", None)
+    errors = compatibility_errors(altered)
+    assert "segurança incompatível: GET /health/live" in errors
+    assert "segurança incompatível: GET /metrics" in errors

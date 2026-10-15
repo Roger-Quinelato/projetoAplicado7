@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from archcorp.api_docs import COMMON_API_ERRORS
 from archcorp.contracts.routes import configure as configure_contracts, router as contracts_router
 from archcorp.contracts.service import ContractService
 from archcorp.crm.service import CustomerService
@@ -58,6 +59,7 @@ configure_integration(dispatcher)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    """Valida o segredo da demo pública, aplica as migrações e protege as tabelas antes de atender."""
     if settings.public_demo and (not settings.demo_access_token or len(settings.demo_access_token) < 24 or settings.demo_access_token.startswith("demo-")):
         raise RuntimeError("PUBLIC_DEMO exige DEMO_ACCESS_TOKEN aleatório com pelo menos 24 caracteres")
     if settings.public_demo and settings.finance_allow_future_as_of:
@@ -76,6 +78,7 @@ install_problem_openapi(app)
 
 @app.middleware("http")
 async def correlation_middleware(request: Request, call_next):
+    """Propaga X-Correlation-ID na requisição, nos logs e na resposta; 400 se não for UUID."""
     supplied = request.headers.get("X-Correlation-ID")
     try:
         correlation_id = str(UUID(supplied)) if supplied else str(uuid4())
@@ -102,6 +105,7 @@ async def correlation_middleware(request: Request, call_next):
 
 @app.get("/health/live", response_model=HealthResponse, response_model_exclude_none=True, tags=["Operação"])
 def live() -> dict:
+    """Informa que o processo está no ar."""
     return {"status": "UP"}
 
 
@@ -112,6 +116,7 @@ def live() -> dict:
     responses={503: {"description": "Banco indisponível."}},
 )
 def ready(session: Session = Depends(get_session)) -> dict:
+    """Informa se o banco responde; 503 quando indisponível."""
     try:
         session.execute(text("SELECT 1"))
         return {"status": "UP", "database": "UP"}
@@ -123,15 +128,19 @@ def ready(session: Session = Depends(get_session)) -> dict:
     "/metrics",
     response_class=PlainTextResponse,
     tags=["Operação"],
-    responses={200: {"description": "Contadores e latência no formato de texto do Prometheus.",
+    dependencies=[Depends(require_roles("operations", "admin"))],
+    responses={**COMMON_API_ERRORS,
+               200: {"description": "Contadores e latência no formato de texto do Prometheus, rotulados pelo template da rota.",
                      "content": {"text/plain": {"example": "archcorp_requests_total{operation=\"GET_/health/live\",status=\"200\"} 1\n"}}}},
 )
 def metrics() -> str:
+    """Expõe contadores e latência no formato de texto do Prometheus."""
     return render_metrics()
 
 
 @app.get("/api/v1/demo/state", response_model=DemoStateResponse, tags=["Demonstração"], dependencies=[Depends(require_roles("admin"))])
 def demo_state(session: Session = Depends(get_session)) -> dict:
+    """Resume a quantidade de registros de cada módulo."""
     return {"customers": CustomerService.count(session), "contracts": ContractService.count(session), "invoices": count_invoices(session),
             "tickets": TicketService.count(session), "processes": count_processes(session), "legacyMappings": LegacyIdService.count(session)}
 
@@ -149,10 +158,12 @@ if web_dist.is_dir():
 
     @app.get("/", include_in_schema=False)
     def web_home() -> FileResponse:
+        """Entrega a interface web compilada."""
         return FileResponse(web_dist / "index.html")
 
     @app.get("/{path:path}", include_in_schema=False)
     def web_fallback(path: str) -> FileResponse:
+        """Entrega a interface para rotas do frontend; rotas de API inexistentes devolvem 404."""
         if path.startswith(("api/", "health/", "assets/")):
             raise HTTPException(404, "Rota não encontrada")
         return FileResponse(web_dist / "index.html")

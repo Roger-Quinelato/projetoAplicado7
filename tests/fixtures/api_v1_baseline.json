@@ -5666,5 +5666,13 @@
         }
       ]
     }
+  },
+  "approved_security": {
+    "_motivo": "Correção de segurança (#40): /metrics expunha caminhos e identificadores sem autenticação; passa a exigir papel operations/admin.",
+    "GET /metrics": [
+      {
+        "HTTPBearer": []
+      }
+    ]
   }
 }

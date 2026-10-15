@@ -13,7 +13,7 @@ from archcorp.finance.models import Payment
 from archcorp.finance.service import FinanceService
 from archcorp.infrastructure.db import get_session
 from archcorp.observability import correlation_id_var
-from archcorp.schemas import IDEMPOTENCY_KEY_MAX_LENGTH
+from archcorp.schemas import EXAMPLE_CONTRACT_ID, EXAMPLE_CUSTOMER_ID, IDEMPOTENCY_KEY_MAX_LENGTH
 from archcorp.security import require_roles
 
 
@@ -40,8 +40,8 @@ def finance_service() -> FinanceService:
 
 EXAMPLE_INVOICE = {
     "invoiceId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
-    "contractId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-    "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "contractId": EXAMPLE_CONTRACT_ID,
+    "customerId": EXAMPLE_CUSTOMER_ID,
     "kind": "INITIAL",
     "amount": 2500.0,
     "currency": "BRL",
@@ -231,6 +231,7 @@ def cancel_invoice(invoice_id: UUID, body: InvoiceCancelInput, session: Session 
 
 @router.get("/payments", response_model=list[PaymentResponse], dependencies=[Depends(FINANCE_OPERATORS)])
 def list_payments(invoiceId: UUID | None = None, session: Session = Depends(get_session)) -> list[dict]:
+    """Lista pagamentos, com filtro opcional por fatura."""
     query = select(Payment).order_by(Payment.payment_id).limit(200)
     if invoiceId:
         query = query.where(Payment.invoice_id == str(invoiceId))

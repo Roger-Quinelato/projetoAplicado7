@@ -10,6 +10,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from archcorp.config import settings
+from archcorp.infrastructure.db import count_rows
 from archcorp.contracts.public import ContractEntitlementPort, ContractsUnavailableError
 from archcorp.exceptions import (
     BusinessRuleError,
@@ -273,7 +274,8 @@ class TicketService:
 
     @staticmethod
     def count(session: Session) -> int:
-        return session.scalar(select(func.count()).select_from(Ticket)) or 0
+        """Conta os chamados gravados."""
+        return count_rows(session, Ticket)
 
     # ---------- Apoio ----------
 

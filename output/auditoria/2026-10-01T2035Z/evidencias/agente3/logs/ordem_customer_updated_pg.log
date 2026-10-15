@@ -1,0 +1,10 @@
+== Caminho 1: falha transitória de banco real (lock_timeout) ==
+  despacho 1: 500 {"type":"urn:archcorp:problem:internal-error","title":"Erro   outbox=[('Nome Versao 1', 'PENDING', 0, '')]
+  despacho 2: 500 {"type":"urn:archcorp:problem:internal-error","title":"Erro   outbox=[('Nome Versao 1', 'PENDING', 0, '')]
+  despacho 3: 500 {"type":"urn:archcorp:problem:internal-error","title":"Erro   outbox=[('Nome Versao 1', 'PENDING', 0, '')]
+  após liberar lock: 200 {'processed': 1, 'failed': 0} projeção='Nome Versao 1' outbox=[('Nome Versao 1', 'PUBLISHED', 0, '')]
+== Caminho 2: falha transitória não-banco (exceção Python) ==
+  após 3 despachos: outbox=[('Nome Versao 1', 'FAILED', 3, 'Contracts indisponível (simulado)')] projeção='Nome Original'
+  despacho v2: {'processed': 1, 'failed': 0} projeção='Nome Versao 2'
+  reprocess v1: 200; despacho: {'processed': 1, 'failed': 0}
+  RESULTADO: CRM (fonte oficial)='Nome Versao 2'  projeção Contracts='Nome Versao 1'  outbox=[('Nome Versao 1', 'PUBLISHED', 0, ''), ('Nome Versao 2', 'PUBLISHED', 0, '')]

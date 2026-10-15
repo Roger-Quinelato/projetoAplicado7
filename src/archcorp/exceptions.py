@@ -12,6 +12,7 @@ class DomainError(Exception):
     code = "BAD_REQUEST"
 
     def __init__(self, detail: str, *, code: str | None = None):
+        """Guarda a mensagem legível e, se informado, substitui o código padrão."""
         super().__init__(detail)
         self.detail = detail
         if code:

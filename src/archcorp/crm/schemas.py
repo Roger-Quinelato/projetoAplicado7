@@ -1,4 +1,5 @@
 """Schemas HTTP do contexto crm."""
+from typing import ClassVar
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
@@ -27,22 +28,30 @@ class CustomerCreate(BaseModel):
     legacyId: str | None = Field(default=None, min_length=1, max_length=100)
 
 
-class CustomerUpdate(BaseModel):
+class PartialUpdate(BaseModel):
+    non_nullable: ClassVar[frozenset[str] | None] = None
+    null_message: ClassVar[str] = "Campos não aceitam null"
+
+    @model_validator(mode="after")
+    def at_least_one_value(self):
+        """Exige ao menos um campo e rejeita null nos campos que não aceitam remoção."""
+        provided = self.model_dump(exclude_unset=True)
+        if not provided:
+            raise ValueError("Informe ao menos um campo para atualizar")
+        checked = provided.keys() if self.non_nullable is None else self.non_nullable & provided.keys()
+        if any(provided[field] is None for field in checked):
+            raise ValueError(self.null_message)
+        return self
+
+
+class CustomerUpdate(PartialUpdate):
     model_config = ConfigDict(json_schema_extra={"examples": [{"name": "Cliente Frota Sintética Atualizada", "consentService": True}]})
+    null_message = "Campos do cliente não aceitam null"
 
     name: Name | None = None
     email: EmailStr | None = None
     eligible: bool | None = None
     consentService: bool | None = None
-
-    @model_validator(mode="after")
-    def at_least_one_value(self):
-        provided = self.model_dump(exclude_unset=True)
-        if not provided:
-            raise ValueError("Informe ao menos um campo para atualizar")
-        if any(value is None for value in provided.values()):
-            raise ValueError("Campos do cliente não aceitam null")
-        return self
 
 
 class CustomerResponse(BaseModel):

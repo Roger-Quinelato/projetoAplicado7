@@ -1,0 +1,9 @@
+resposta POST /drafts billing: {'amount': '19.99', 'currency': 'BRL', 'cycle': 'MONTHLY'} | POST /activate billing: {'amount': '19.99', 'currency': 'BRL', 'cycle': 'MONTHLY'} | GET /contracts/{id} billing: {'amount': 19.99, 'currency': 'BRL', 'cycle': 'MONTHLY'}
+envelope real ContractActivated.v1 amount= 19.99 erros AsyncAPI: ['19.99 is not a multiple of 0.01']
+dispatch: {'processed': 1, 'failed': 0}
+fatura: 19.99
+Traceback (most recent call last):
+  File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente2/run/../exp/e10_money.py", line 22, in <module>
+    print("OpenAPI Billing.amount:", json.dumps(gen["Billing"]["properties"]["amount"]))
+                                                ~~~^^^^^^^^^^^
+KeyError: 'Billing'
