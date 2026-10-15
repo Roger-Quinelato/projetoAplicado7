@@ -44,7 +44,7 @@ class EventDispatcher:
                     self._publish_broker(event.envelope())
             except Exception as exc:
                 self._register_failure(event)
-                session.commit()
+                self._commit_attempt(session, event_id, exc)
                 self._report_failure(event, exc)
                 failed += 1
                 continue
@@ -61,13 +61,30 @@ class EventDispatcher:
                     session.rollback()
                     continue
                 self._register_failure(event)
-                session.commit()
+                self._commit_attempt(session, event_id, exc)
                 self._report_failure(event, exc)
                 failed += 1
                 continue
             processed += 1
             COUNTERS["events_published_total"] += 1
         return {"processed": processed, "failed": failed}
+
+    @staticmethod
+    def _commit_attempt(session: Session, event_id: str, cause: Exception) -> None:
+        """Confirma a tentativa; se nem isso for possível, interrompe o lote.
+
+        Sem gravar a tentativa, o banco está indisponível ou inconsistente e os
+        próximos eventos falhariam igual. A transação é desfeita (o evento segue
+        PENDING com a contagem anterior) e a falha sobe ao chamador.
+        """
+        try:
+            session.commit()
+        except Exception as exc:
+            session.rollback()
+            logger.error("Falha ao registrar tentativa de despacho; lote interrompido",
+                         extra={"operation": "dispatch_event", "result": "attempt_not_recorded", "eventId": event_id,
+                                "errorType": f"{type(cause).__name__}/{type(exc).__name__}"})
+            raise
 
     @staticmethod
     def _register_failure(event: OutboxEvent) -> None:
@@ -91,16 +108,27 @@ class EventDispatcher:
         if not settings.rabbitmq_url:
             return
         import pika
-        connection = pika.BlockingConnection(pika.URLParameters(settings.rabbitmq_url))
+        parameters = pika.URLParameters(settings.rabbitmq_url)
+        # Sem esses limites, um broker que bloqueia publicadores (memória/disco)
+        # prende o despacho e o bloqueio da linha da outbox indefinidamente.
+        parameters.blocked_connection_timeout = settings.rabbitmq_blocked_timeout_seconds
+        parameters.socket_timeout = settings.rabbitmq_socket_timeout_seconds
+        parameters.heartbeat = settings.rabbitmq_heartbeat_seconds
+        parameters.connection_attempts = 1
+        connection = pika.BlockingConnection(parameters)
         try:
             channel = connection.channel()
             channel.exchange_declare(exchange=BROKER_EXCHANGE, exchange_type="topic", durable=True)
             # Fila durável que recebe todos os eventos: sem ela, uma mensagem sem
             # rota seria descartada pelo broker e o evento marcado PUBLISHED.
-            channel.queue_declare(queue=BROKER_QUEUE, durable=True)
+            # Cheia, recusa novas publicações (nack) em vez de descartar as antigas.
+            declared = channel.queue_declare(queue=BROKER_QUEUE, durable=True, arguments={
+                "x-max-length": settings.rabbitmq_queue_max_length, "x-overflow": "reject-publish"})
+            COUNTERS["broker_queue_messages"] = declared.method.message_count
             channel.queue_bind(queue=BROKER_QUEUE, exchange=BROKER_EXCHANGE, routing_key="#")
-            # Confirmação do broker: UnroutableError (mandatory) e NackError
-            # sobem para o despachante e contam como falha da tentativa.
+            # Confirmação do broker: UnroutableError (mandatory), NackError (fila
+            # cheia ou recusa) e ConnectionBlockedTimeout sobem para o despachante
+            # e contam como falha da tentativa.
             channel.confirm_delivery()
             channel.basic_publish(
                 exchange=BROKER_EXCHANGE,
@@ -110,7 +138,8 @@ class EventDispatcher:
                 mandatory=True,
             )
         finally:
-            connection.close()
+            if connection.is_open:
+                connection.close()
 
 
 def audit(session: Session, correlation_id: str, module: str, operation: str, result: str, entity_id: str | None = None, **details) -> None:

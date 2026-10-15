@@ -10,6 +10,7 @@ from archcorp.config import settings
 from archcorp.infrastructure.db import SessionLocal
 from archcorp.integration.models import AuditLog, InboxEvent, OutboxEvent
 from archcorp.integration.service import EventDispatcher, audit
+from archcorp.observability import COUNTERS, JsonFormatter
 
 
 def test_savepoint_apos_somente_leitura_nao_confirma_transacao_externa():
@@ -102,66 +103,85 @@ def test_outbox_recupera_sessao_apos_erro_sql_e_continua(caplog):
     assert secret not in caplog.text
 
 
-class _UnroutableError(Exception):
-    pass
+class _PublishError(Exception):
+    """Substitui UnroutableError, NackError e ConnectionBlockedTimeout do pika."""
 
 
 @pytest.fixture
 def fake_pika(monkeypatch):
-    """Substitui o pika por um dublê que registra as chamadas do canal."""
-    calls = {"published": [], "fail_with": None}
+    """Substitui o pika por um dublê que registra a ordem das chamadas."""
+    calls = {"order": [], "published": [], "fail_at": None, "parameters": None}
+
+    def step(name, **kwargs):
+        calls["order"].append(name)
+        calls[name] = kwargs
+        if calls["fail_at"] == name:
+            raise _PublishError(name)
 
     class Channel:
         def exchange_declare(self, **kwargs):
-            calls["exchange"] = kwargs
+            step("exchange_declare", **kwargs)
 
         def queue_declare(self, **kwargs):
-            calls["queue"] = kwargs
+            step("queue_declare", **kwargs)
+            return types.SimpleNamespace(method=types.SimpleNamespace(message_count=7))
 
         def queue_bind(self, **kwargs):
-            calls["bind"] = kwargs
+            step("queue_bind", **kwargs)
 
         def confirm_delivery(self):
-            calls["confirm"] = True
+            step("confirm_delivery")
 
         def basic_publish(self, **kwargs):
-            if calls["fail_with"]:
-                raise calls["fail_with"]
+            step("basic_publish", **kwargs)
             calls["published"].append(kwargs)
 
     class Connection:
-        def __init__(self, _parameters):
-            pass
+        is_open = True
+
+        def __init__(self, parameters):
+            calls["parameters"] = parameters
+            step("connect")
 
         def channel(self):
             return Channel()
 
         def close(self):
-            calls["closed"] = True
+            calls["order"].append("close")
 
-    module = types.SimpleNamespace(BlockingConnection=Connection, URLParameters=lambda url: url,
+    module = types.SimpleNamespace(BlockingConnection=Connection, URLParameters=lambda url: types.SimpleNamespace(url=url),
                                    BasicProperties=lambda **kwargs: kwargs)
     monkeypatch.setitem(sys.modules, "pika", module)
     monkeypatch.setattr(settings, "rabbitmq_url", "amqp://sintetico")
     return calls
 
 
-def test_broker_usa_confirmacao_mandatory_e_fila_declarada(fake_pika):
+def test_broker_confirma_antes_de_publicar_com_limites_e_fila_declarada(fake_pika):
     dispatcher = EventDispatcher({})
     with SessionLocal() as session:
         session.add(OutboxEvent(event_type="Healthy.v1", producer="test", payload={}, correlation_id="synthetic"))
         session.commit()
         assert dispatcher.dispatch_pending(session) == {"processed": 1, "failed": 0}
-    assert fake_pika["confirm"] is True
-    assert fake_pika["queue"] == {"queue": "archcorp.events.all", "durable": True}
-    assert fake_pika["bind"] == {"queue": "archcorp.events.all", "exchange": "archcorp.events", "routing_key": "#"}
+    assert fake_pika["order"] == ["connect", "exchange_declare", "queue_declare", "queue_bind",
+                                  "confirm_delivery", "basic_publish", "close"]
+    parameters = fake_pika["parameters"]
+    assert parameters.blocked_connection_timeout == settings.rabbitmq_blocked_timeout_seconds
+    assert parameters.socket_timeout == settings.rabbitmq_socket_timeout_seconds
+    assert parameters.heartbeat == settings.rabbitmq_heartbeat_seconds
+    assert parameters.connection_attempts == 1
+    assert fake_pika["queue_declare"] == {"queue": "archcorp.events.all", "durable": True, "arguments": {
+        "x-max-length": settings.rabbitmq_queue_max_length, "x-overflow": "reject-publish"}}
+    assert fake_pika["queue_bind"] == {"queue": "archcorp.events.all", "exchange": "archcorp.events", "routing_key": "#"}
     assert fake_pika["published"][0]["mandatory"] is True
     assert fake_pika["published"][0]["routing_key"] == "Healthy.v1"
-    assert fake_pika["closed"] is True
+    assert COUNTERS["broker_queue_messages"] == 7
 
 
-def test_mensagem_sem_rota_no_broker_nao_marca_evento_publicado(fake_pika):
-    fake_pika["fail_with"] = _UnroutableError("sem rota")
+@pytest.mark.parametrize("fail_at", ["connect", "exchange_declare", "queue_declare", "queue_bind",
+                                     "confirm_delivery", "basic_publish"])
+def test_falha_no_broker_nao_marca_publicado_e_desfaz_efeitos(fake_pika, fail_at):
+    # basic_publish cobre mensagem sem rota, nack (fila cheia) e conexão bloqueada.
+    fake_pika["fail_at"] = fail_at
 
     def effect(session, envelope):
         audit(session, envelope["correlationId"], "test", "effect", "success")
@@ -176,6 +196,41 @@ def test_mensagem_sem_rota_no_broker_nao_marca_evento_publicado(fake_pika):
         assert (stored.status, stored.attempts) == ("PENDING", 1)
         assert session.scalars(select(AuditLog)).all() == []
         assert session.scalars(select(InboxEvent)).all() == []
+    assert "basic_publish" not in fake_pika["order"] or fail_at == "basic_publish"
+    assert fake_pika["order"][-1] == "close" or fail_at == "connect"
+
+
+def test_falha_ao_gravar_tentativa_interrompe_lote_sem_efeitos(caplog, monkeypatch):
+    secret = "conteudo-sintetico-do-erro"
+
+    def broken(_session, _envelope):
+        raise RuntimeError(secret)
+
+    dispatcher = EventDispatcher({"Broken.v1": [("broken", broken)]})
+    with SessionLocal() as session:
+        first = OutboxEvent(event_type="Broken.v1", producer="test", payload={}, correlation_id="synthetic")
+        second = OutboxEvent(event_type="Healthy.v1", producer="test", payload={}, correlation_id="synthetic")
+        session.add_all([first, second])
+        session.commit()
+        first_id, second_id = first.event_id, second.event_id
+        original_commit = session.commit
+
+        def failing_commit():
+            raise RuntimeError(f"banco indisponível {secret}")
+
+        monkeypatch.setattr(session, "commit", failing_commit)
+        with caplog.at_level(logging.WARNING), pytest.raises(RuntimeError):
+            dispatcher.dispatch_pending(session)
+        monkeypatch.setattr(session, "commit", original_commit)
+        # A transação foi desfeita: a sessão continua utilizável e nada foi gravado.
+        assert session.get(OutboxEvent, first_id).attempts == 0
+        assert session.get(OutboxEvent, first_id).status == "PENDING"
+        assert session.get(OutboxEvent, second_id).status == "PENDING"
+    records = [record for record in caplog.records if getattr(record, "result", None) == "attempt_not_recorded"]
+    assert len(records) == 1
+    assert records[0].errorType == "RuntimeError/RuntimeError"
+    formatted = "".join(JsonFormatter().format(record) for record in caplog.records)
+    assert secret not in formatted
 
 
 def test_validacao_nao_ecoa_corpo_ou_contexto_sensivel(client, admin_headers):

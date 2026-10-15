@@ -9,6 +9,25 @@ permissions:
   contents: read
 
 jobs:
+  rabbitmq:
+    runs-on: ubuntu-latest
+    services:
+      rabbitmq:
+        image: rabbitmq:3.13-alpine
+        ports: ['5672:5672']
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      TEST_RABBITMQ_URL: amqp://guest:guest@localhost:5672/%2F
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Test broker confirms against real RabbitMQ
+        run: PYTHONPATH=src python -m pytest -q tests/test_rabbitmq_real.py tests/test_reliability_regressions.py -p no:cacheprovider -rs
   application:
     runs-on: ubuntu-latest
     steps:

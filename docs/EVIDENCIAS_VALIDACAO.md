@@ -122,5 +122,13 @@ Após a correção: `PYTHONPATH=src python -m pytest -q tests -p no:cacheprovide
   correção) e a mensagem sem rota mantendo o evento `PENDING` sem efeitos
   (caracterização: qualquer exceção do broker já contava como falha).
   Após a mudança: **82 passed** em SQLite.
+- Revisão operacional do broker: limites de conexão bloqueada, socket, heartbeat e
+  tentativa única; fila com `x-max-length` e `reject-publish`; métrica de
+  profundidade; falha ao gravar a tentativa desfaz a transação, registra
+  `attempt_not_recorded` e interrompe o lote. Testes com `pika` simulado: ordem
+  `connect → declare → bind → confirm_delivery → basic_publish → close` e falha em
+  cada etapa (6 casos); teste da interrupção do lote. O teste de ordem/limites e o
+  de interrupção falharam antes da mudança. Job `rabbitmq` na CI com RabbitMQ 3.13
+  real (`tests/test_rabbitmq_real.py`). Local: **88 passed, 2 skipped** em SQLite.
 - Não verificado nesta etapa: PostgreSQL (o job e os testes de concorrência entram
-  na camada #37), disputa real entre dois despachantes e RabbitMQ real.
+  na camada #37) e disputa real entre dois despachantes. RabbitMQ real só na CI.

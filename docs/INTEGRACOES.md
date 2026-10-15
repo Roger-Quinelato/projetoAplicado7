@@ -239,5 +239,32 @@ ligada à exchange com `#`; mensagem sem rota (`UnroutableError`) ou recusada
 (`NackError`) conta como falha da tentativa e o evento não vira `PUBLISHED`.
 A entrega ao broker é ao menos uma vez: uma falha depois da confirmação e antes do
 commit pode causar nova publicação do mesmo `eventId`. Consumidores externos devem
-deduplicar por `eventId`. Verificado apenas com `pika` simulado nos testes; não
-há teste automatizado contra RabbitMQ real.
+deduplicar por `eventId`.
+
+Limites da publicação (`config.py`): `rabbitmq_blocked_timeout_seconds` (10 s;
+broker que bloqueia publicadores por memória ou disco gera
+`ConnectionBlockedTimeout`), `rabbitmq_socket_timeout_seconds` (5 s), heartbeat de
+30 s e uma tentativa de conexão. Enquanto publica, o despachante segura o bloqueio
+do evento; esses limites devolvem o controle, desfazem os efeitos pelo SAVEPOINT e
+registram a tentativa.
+
+Estratégia operacional da fila `archcorp.events.all`: o protótipo não tem consumidor
+que a esvazie; ela é a cópia durável para consumidores externos futuros e para
+inspeção no console do RabbitMQ. Tem limite `x-max-length`
+(`rabbitmq_queue_max_length`, 10.000) com `x-overflow=reject-publish`: cheia, recusa
+novas publicações (nack) em vez de descartar as antigas. A recusa conta como falha da
+tentativa e, como broker e consumidores internos estão no mesmo SAVEPOINT, o evento
+inteiro fica pendente até `retry_limit` e depois `FAILED`, reprocessável após
+esvaziar a fila. A métrica `archcorp_broker_queue_messages` (profundidade lida a cada
+declaração) permite monitorar o acúmulo. Alterar o limite exige recriar a fila,
+porque o RabbitMQ recusa redeclaração com argumentos diferentes.
+
+Fronteira de continuidade: falhas de consumidor ou broker não interrompem o lote.
+Se o commit que registra a tentativa também falhar (banco indisponível), a
+transação é desfeita, o evento segue `PENDING` com a contagem anterior, o log
+`attempt_not_recorded` é emitido sem mensagem da exceção e a falha sobe ao chamador,
+interrompendo o lote.
+
+Verificação: `pika` simulado nos testes padrão (ordem das chamadas, limites e falha
+em cada etapa) e RabbitMQ 3.13 real no job `rabbitmq` da CI
+(`tests/test_rabbitmq_real.py`: publicação confirmada na fila e nack com fila cheia).
