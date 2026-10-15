@@ -48,7 +48,9 @@
   (data UTC) passa a `OVERDUE` quando a inadimplencia e registrada; so pode ser
   cancelada em aberto e sem pagamento. Pagamento nunca excede o saldo.
 - **Chamado:** pode abrir como pendente quando a elegibilidade nao estiver
-  disponivel; reconciliacao posterior confirma ou rejeita.
+  disponivel; reconciliacao posterior confirma ou rejeita. O prazo de SLA conta
+  da abertura; resolucao e rejeicao sao estados finais; atribuicoes e transicoes
+  ficam no historico do proprio chamado (T15).
 - **Processo operacional:** e unico por tipo e referencia de negocio.
 
 ## Eventos de Dominio
@@ -57,6 +59,8 @@
 - `ContractActivated.v1`: contrato de locacao foi ativado.
 - `ContractClosed.v1`: contrato de locacao foi encerrado; Finance emite a fatura final.
 - `TicketOpened.v1`: chamado de atendimento foi registrado.
+- `TicketEntitlementReconciled.v1`: elegibilidade de chamado pendente foi confirmada ou rejeitada.
+- `TicketResolved.v1`: chamado foi resolvido, com o estado de SLA fixado.
 
 ## Invariantes
 

@@ -609,6 +609,8 @@ paths:
                     priority: HIGH
                     slaHours: 8
                     dueAt: '2026-10-01T18:10:00Z'
+                    openedAt: '2026-10-01T10:10:00Z'
+                    slaStatus: WITHIN
                 pending:
                   summary: Chamado pendente por indisponibilidade de Contracts
                   value:
@@ -619,6 +621,8 @@ paths:
                     category: QUESTION
                     status: PENDING_ENTITLEMENT
                     priority: NORMAL
+                    openedAt: '2026-10-01T10:10:00Z'
+                    slaStatus: PENDING
                 replayed:
                   summary: Resposta recuperada com Idempotency-Replayed true
                   value:
@@ -631,6 +635,8 @@ paths:
                     priority: HIGH
                     slaHours: 8
                     dueAt: '2026-10-01T18:10:00Z'
+                    openedAt: '2026-10-01T10:10:00Z'
+                    slaStatus: WITHIN
           headers:
             X-Correlation-ID:
               description: UUID usado para correlacionar a requisição, os logs e os
@@ -803,6 +809,8 @@ paths:
       tags:
       - Atendimento e assistência 24h
       summary: Reconcile Ticket
+      description: Reconcilia pendência; replay persistido exige a mesma Idempotency-Key.
+        Sem chave, preserva os conflitos v1.
       operationId: reconcile_ticket_api_v1_support_tickets__ticket_id__reconcile_post
       security:
       - HTTPBearer: []
@@ -814,6 +822,15 @@ paths:
           type: string
           format: uuid
           title: Ticket Id
+      - name: Idempotency-Key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 100
+          - type: 'null'
+          title: Idempotency-Key
       - name: X-Correlation-ID
         in: header
         required: false
@@ -824,7 +841,8 @@ paths:
         example: 11111111-1111-4111-8111-111111111111
       responses:
         '200':
-          description: Chamado reconciliado com a elegibilidade atual.
+          description: Chamado reconciliado com a elegibilidade atual, ou estado atual
+            de chamado já reconciliado.
           content:
             application/json:
               schema:
@@ -842,6 +860,8 @@ paths:
                     priority: HIGH
                     slaHours: 8
                     dueAt: '2026-10-01T18:10:00Z'
+                    openedAt: '2026-10-01T10:10:00Z'
+                    slaStatus: WITHIN
                 rejected:
                   summary: Elegibilidade rejeitada
                   value:
@@ -852,6 +872,8 @@ paths:
                     category: QUESTION
                     status: REJECTED_ENTITLEMENT
                     priority: NORMAL
+                    openedAt: '2026-10-01T10:10:00Z'
+                    slaStatus: NOT_APPLICABLE
           headers:
             X-Correlation-ID:
               description: UUID usado para correlacionar a requisição, os logs e os
@@ -860,6 +882,15 @@ paths:
                 type: string
                 format: uuid
               example: 11111111-1111-4111-8111-111111111111
+            Idempotency-Replayed:
+              description: true quando o chamado já havia sido reconciliado e nenhum
+                efeito novo foi gravado.
+              schema:
+                type: string
+                enum:
+                - 'true'
+                - 'false'
+              example: 'false'
         '400':
           description: Cabeçalho de correlação inválido.
           content:
@@ -947,6 +978,20 @@ paths:
                 correlationId: 11111111-1111-4111-8111-111111111111
                 errors:
                 - *id001
+        '503':
+          description: Contracts ainda indisponível; o chamado permanece pendente.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:service-unavailable
+                title: Dependência indisponível
+                status: 503
+                detail: Contracts indisponível; o chamado permanece em PENDING_ENTITLEMENT
+                instance: /api/v1/support/tickets/dddddddd-dddd-4ddd-8ddd-dddddddddddd/reconcile
+                code: SERVICE_UNAVAILABLE
+                correlationId: 11111111-1111-4111-8111-111111111111
   /api/v1/integration/outbox/dispatch:
     post:
       tags:
@@ -4084,6 +4129,95 @@ paths:
                 correlationId: 11111111-1111-4111-8111-111111111111
                 errors:
                 - *id001
+  /api/v1/support/tickets/reconcile-pending:
+    post:
+      tags:
+      - Atendimento e assistência 24h
+      summary: Reconcile Pending
+      description: Reconcilia explicitamente os chamados em PENDING_ENTITLEMENT depois
+        que Contracts volta a responder.
+      operationId: reconcile_pending_api_v1_support_tickets_reconcile_pending_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          description: Máximo de chamados pendentes consultados nesta execução.
+          default: 100
+          title: Limit
+        description: Máximo de chamados pendentes consultados nesta execução.
+      - *id002
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PendingReconciliationResponse'
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/support/tickets/reconcile-pending
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/support/tickets/reconcile-pending
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          description: Entrada inválida.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/support/tickets/reconcile-pending
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
+        '503':
+          description: Contracts indisponível; nenhum chamado foi alterado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:service-unavailable
+                title: Dependência indisponível
+                status: 503
+                detail: Contracts indisponível; nenhum chamado foi alterado
+                instance: /api/v1/support/tickets/reconcile-pending
+                code: SERVICE_UNAVAILABLE
+                correlationId: 11111111-1111-4111-8111-111111111111
   /api/v1/support/tickets/{ticket_id}:
     get:
       tags:
@@ -4167,11 +4301,134 @@ paths:
                 correlationId: 11111111-1111-4111-8111-111111111111
                 errors:
                 - *id001
+  /api/v1/support/tickets/{ticket_id}/history:
+    get:
+      tags:
+      - Atendimento e assistência 24h
+      summary: Ticket History
+      description: Histórico de abertura, atribuições, reconciliação e resolução,
+        com papel e correlação de cada ação.
+      operationId: ticket_history_api_v1_support_tickets__ticket_id__history_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: ticket_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Ticket Id
+      - *id002
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TicketHistoryEntry'
+                title: Response Ticket History Api V1 Support Tickets  Ticket Id  History
+                  Get
+              example:
+              - occurredAt: '2026-10-01T10:10:00Z'
+                action: OPENED
+                toStatus: OPEN
+                actorRole: support
+                slaStatus: WITHIN
+                correlationId: 11111111-1111-4111-8111-111111111111
+              - occurredAt: '2026-10-01T10:20:00Z'
+                action: ASSIGNED
+                fromStatus: OPEN
+                toStatus: OPEN
+                owner: Equipe de assistência
+                actorRole: support
+                slaStatus: WITHIN
+                correlationId: 11111111-1111-4111-8111-111111111111
+              - occurredAt: '2026-10-01T11:00:00Z'
+                action: REASSIGNED
+                fromStatus: OPEN
+                toStatus: OPEN
+                owner: Equipe de pátio
+                previousOwner: Equipe de assistência
+                actorRole: admin
+                slaStatus: WITHIN
+                correlationId: 11111111-1111-4111-8111-111111111111
+              - occurredAt: '2026-10-01T12:10:00Z'
+                action: RESOLVED
+                fromStatus: OPEN
+                toStatus: RESOLVED
+                owner: Equipe de pátio
+                actorRole: support
+                slaStatus: MET
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/support/tickets/{ticket_id}/history
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/support/tickets/{ticket_id}/history
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '404':
+          description: Chamado não encontrado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:not-found
+                title: Recurso não encontrado
+                status: 404
+                detail: Chamado não encontrado
+                instance: /api/v1/support/tickets/{ticket_id}/history
+                code: NOT_FOUND
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          description: Entrada inválida.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail:
+                - *id001
+                instance: /api/v1/support/tickets/{ticket_id}/history
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+                errors:
+                - *id001
   /api/v1/support/tickets/{ticket_id}/assign:
     post:
       tags:
       - Atendimento e assistência 24h
       summary: Assign Ticket
+      description: Atribui ou reatribui o responsável; repetir o mesmo responsável
+        não altera o histórico.
       operationId: assign_ticket_api_v1_support_tickets__ticket_id__assign_post
       security:
       - HTTPBearer: []
@@ -4275,6 +4532,8 @@ paths:
       tags:
       - Atendimento e assistência 24h
       summary: Resolve Ticket
+      description: Resolve chamado aberto; a mesma Idempotency-Key recupera a resposta
+        original. Sem chave, preserva os conflitos v1.
       operationId: resolve_ticket_api_v1_support_tickets__ticket_id__resolve_post
       security:
       - HTTPBearer: []
@@ -4286,6 +4545,15 @@ paths:
           type: string
           format: uuid
           title: Ticket Id
+      - name: Idempotency-Key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 100
+          - type: 'null'
+          title: Idempotency-Key
       - *id002
       responses:
         '200':
@@ -4294,6 +4562,50 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TicketDetailResponse'
+              examples:
+                resolved:
+                  summary: Chamado resolvido dentro do SLA
+                  value:
+                    ticketId: dddddddd-dddd-4ddd-8ddd-dddddddddddd
+                    customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                    contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+                    serviceCode: RENTAL-FLEX
+                    category: OUTAGE
+                    status: RESOLVED
+                    priority: HIGH
+                    slaHours: 8
+                    dueAt: '2026-10-01T18:10:00Z'
+                    openedAt: '2026-10-01T10:10:00Z'
+                    resolvedAt: '2026-10-01T12:10:00Z'
+                    slaStatus: MET
+                    description: Serviço indisponível durante a demonstração
+                    owner: Equipe de assistência
+                replayed:
+                  summary: Chamado já resolvido; Idempotency-Replayed true
+                  value:
+                    ticketId: dddddddd-dddd-4ddd-8ddd-dddddddddddd
+                    customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                    contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+                    serviceCode: RENTAL-FLEX
+                    category: OUTAGE
+                    status: RESOLVED
+                    priority: HIGH
+                    slaHours: 8
+                    dueAt: '2026-10-01T18:10:00Z'
+                    openedAt: '2026-10-01T10:10:00Z'
+                    resolvedAt: '2026-10-01T12:10:00Z'
+                    slaStatus: MET
+                    description: Serviço indisponível durante a demonstração
+                    owner: Equipe de assistência
+          headers:
+            Idempotency-Replayed:
+              description: true quando a mesma chave recupera a resposta persistida.
+              schema:
+                type: string
+                enum:
+                - 'true'
+                - 'false'
+              example: 'false'
         '401':
           description: Token ausente ou inválido.
           content:
@@ -4779,6 +5091,7 @@ components:
           maxLength: 80
           minLength: 2
           title: Owner
+          description: Equipe ou função responsável; sem e-mail, telefone ou documento.
       type: object
       required:
       - owner
@@ -5889,6 +6202,55 @@ components:
           sourceEventId: cccccccc-cccc-4ccc-8ccc-cccccccccccc
           status: PAID
         paymentId: 12121212-1212-4121-8121-121212121212
+    PendingReconciliationResponse:
+      properties:
+        confirmed:
+          type: integer
+          title: Confirmed
+          description: Chamados que passaram a OPEN com SLA.
+        rejected:
+          type: integer
+          title: Rejected
+          description: Chamados que passaram a REJECTED_ENTITLEMENT.
+        remaining:
+          type: integer
+          title: Remaining
+          description: Chamados que continuam em PENDING_ENTITLEMENT após a execução.
+        contractsAvailable:
+          type: boolean
+          title: Contractsavailable
+          description: false quando Contracts caiu durante o lote; repita a operação
+            depois.
+        tickets:
+          items:
+            $ref: '#/components/schemas/ReconciledTicket'
+          type: array
+          title: Tickets
+      type: object
+      required:
+      - confirmed
+      - rejected
+      - remaining
+      - contractsAvailable
+      - tickets
+      title: PendingReconciliationResponse
+      examples:
+      - confirmed: 1
+        contractsAvailable: true
+        rejected: 0
+        remaining: 0
+        tickets:
+        - category: QUESTION
+          contractId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+          customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+          dueAt: '2026-10-01T18:10:00Z'
+          openedAt: '2026-10-01T10:10:00Z'
+          priority: NORMAL
+          serviceCode: RENTAL-FLEX
+          slaHours: 8
+          slaStatus: WITHIN
+          status: OPEN
+          ticketId: dddddddd-dddd-4ddd-8ddd-dddddddddddd
     ProcessResponse:
       properties:
         processId:
@@ -5936,6 +6298,84 @@ components:
         processType: ONBOARDING
         referenceId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
         state: STARTED
+    ReconciledTicket:
+      properties:
+        ticketId:
+          type: string
+          format: uuid
+          title: Ticketid
+        customerId:
+          type: string
+          format: uuid
+          title: Customerid
+        contractId:
+          type: string
+          format: uuid
+          title: Contractid
+        serviceCode:
+          type: string
+          title: Servicecode
+        category:
+          type: string
+          title: Category
+        status:
+          type: string
+          enum:
+          - OPEN
+          - REJECTED_ENTITLEMENT
+          title: Status
+        priority:
+          type: string
+          enum:
+          - NORMAL
+          - HIGH
+          title: Priority
+        slaHours:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Slahours
+        dueAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Dueat
+        openedAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Openedat
+        resolvedAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Resolvedat
+        slaStatus:
+          anyOf:
+          - type: string
+            enum:
+            - PENDING
+            - WITHIN
+            - BREACHED
+            - MET
+            - NOT_APPLICABLE
+          - type: 'null'
+          title: Slastatus
+      type: object
+      required:
+      - ticketId
+      - customerId
+      - contractId
+      - serviceCode
+      - category
+      - status
+      - priority
+      - slaHours
+      - dueAt
+      title: ReconciledTicket
     ReprocessResponse:
       properties:
         eventId:
@@ -6245,17 +6685,23 @@ components:
           title: Contractid
         serviceCode:
           type: string
+          maxLength: 80
+          minLength: 2
           title: Servicecode
         category:
           type: string
           maxLength: 80
           minLength: 2
           title: Category
+          description: OUTAGE e SECURITY recebem prioridade alta; demais categorias,
+            normal.
         description:
           type: string
           maxLength: 2000
           minLength: 3
           title: Description
+          description: Relato da ocorrência, sem documento, cartão, telefone, placa
+            ou e-mail.
       type: object
       required:
       - customerId
@@ -6323,6 +6769,31 @@ components:
           - type: string
           - type: 'null'
           title: Owner
+        openedAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Openedat
+          description: Abertura em UTC; nulo em chamado anterior à T15.
+        resolvedAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Resolvedat
+        slaStatus:
+          anyOf:
+          - type: string
+            enum:
+            - PENDING
+            - WITHIN
+            - BREACHED
+            - MET
+            - NOT_APPLICABLE
+          - type: 'null'
+          title: Slastatus
+          description: Estado de SLA calculado no instante da resposta.
       type: object
       required:
       - ticketId
@@ -6343,12 +6814,89 @@ components:
         customerId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
         description: Serviço indisponível durante a demonstração
         dueAt: '2026-10-01T18:10:00Z'
+        openedAt: '2026-10-01T10:10:00Z'
         owner: Equipe de assistência
         priority: HIGH
         serviceCode: RENTAL-FLEX
         slaHours: 8
+        slaStatus: WITHIN
         status: OPEN
         ticketId: dddddddd-dddd-4ddd-8ddd-dddddddddddd
+    TicketHistoryEntry:
+      properties:
+        occurredAt:
+          type: string
+          format: date-time
+          title: Occurredat
+        action:
+          type: string
+          enum:
+          - OPENED
+          - ASSIGNED
+          - REASSIGNED
+          - ENTITLEMENT_CONFIRMED
+          - ENTITLEMENT_REJECTED
+          - RESOLVED
+          title: Action
+        fromStatus:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Fromstatus
+        toStatus:
+          type: string
+          title: Tostatus
+        owner:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Owner
+        previousOwner:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Previousowner
+        actorRole:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Actorrole
+        slaStatus:
+          anyOf:
+          - type: string
+            enum:
+            - PENDING
+            - WITHIN
+            - BREACHED
+            - MET
+            - NOT_APPLICABLE
+          - type: 'null'
+          title: Slastatus
+        correlationId:
+          type: string
+          title: Correlationid
+      type: object
+      required:
+      - occurredAt
+      - action
+      - fromStatus
+      - toStatus
+      - owner
+      - previousOwner
+      - actorRole
+      - slaStatus
+      - correlationId
+      title: TicketHistoryEntry
+      examples:
+      - action: REASSIGNED
+        actorRole: admin
+        correlationId: 11111111-1111-4111-8111-111111111111
+        fromStatus: OPEN
+        occurredAt: '2026-10-01T11:00:00Z'
+        owner: Equipe de pátio
+        previousOwner: Equipe de assistência
+        slaStatus: WITHIN
+        toStatus: OPEN
     TicketResponse:
       properties:
         ticketId:
@@ -6375,6 +6923,7 @@ components:
           - OPEN
           - PENDING_ENTITLEMENT
           - REJECTED_ENTITLEMENT
+          - RESOLVED
           title: Status
         priority:
           type: string
@@ -6393,6 +6942,32 @@ components:
             format: date-time
           - type: 'null'
           title: Dueat
+        openedAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Openedat
+          description: Abertura em UTC; nulo em chamado anterior à T15.
+        resolvedAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Resolvedat
+        slaStatus:
+          anyOf:
+          - type: string
+            enum:
+            - PENDING
+            - WITHIN
+            - BREACHED
+            - MET
+            - NOT_APPLICABLE
+          - type: 'null'
+          title: Slastatus
+          description: 'Estado de SLA no instante da resposta: PENDING sem elegibilidade,
+            WITHIN ou BREACHED quando aberto, MET ou BREACHED quando resolvido.'
       type: object
       required:
       - ticketId

@@ -7,6 +7,8 @@ from archcorp.config import settings
 from archcorp.infrastructure.db import SessionLocal
 from archcorp.integration.models import AuditLog, InboxEvent, OutboxEvent
 from archcorp.integration.service import EventDispatcher, audit
+from archcorp.security import Principal
+from archcorp.support.routes import acting_role
 
 
 def test_outbox_recupera_sessao_apos_erro_sql_e_continua(caplog):
@@ -94,3 +96,43 @@ def test_reconcile_repetido_sem_chave_preserva_estado_invalido_v1(client, admin_
     repeated = client.post(path, headers=admin_headers)
     assert repeated.status_code == 409
     assert repeated.json()["code"] == "INVALID_STATE"
+
+
+def test_papel_auditado_e_autorizado_e_nao_o_primeiro_alfabetico():
+    assert acting_role(Principal("synthetic", {"commercial", "support"})) == "support"
+    assert acting_role(Principal("synthetic", {"finance", "operations"})) == "operations"
+
+
+def test_replay_persistido_do_suporte_nao_muda_com_relogio_ou_estado(client, admin_headers, integrated_contract, monkeypatch):
+    from archcorp.main import tickets
+
+    customer, contract = integrated_contract
+    client.post(f"/api/v1/contracts/{contract['contractId']}/activate",
+                headers={**admin_headers, "Idempotency-Key": "activate-replay"})
+    monkeypatch.setattr(settings, "contract_adapter_available", False)
+    ticket = client.post("/api/v1/support/tickets", headers={**admin_headers, "Idempotency-Key": "ticket-replay"}, json={
+        "customerId": customer["customerId"], "contractId": contract["contractId"], "serviceCode": "RENTAL-FLEX",
+        "category": "QUESTION", "description": "Protocolo SEI 12345678901 em 2026-10-15T10:00:00Z",
+    }).json()
+    monkeypatch.setattr(settings, "contract_adapter_available", True)
+    path = f"/api/v1/support/tickets/{ticket['ticketId']}"
+    headers = {**admin_headers, "Idempotency-Key": "reconcile-replay"}
+    first = client.post(path + "/reconcile", headers=headers)
+    assert first.status_code == 200
+    resolve_headers = {**admin_headers, "Idempotency-Key": "resolve-replay"}
+    resolved = client.post(path + "/resolve", headers=resolve_headers)
+    assert resolved.status_code == 200
+    replay = client.post(path + "/reconcile", headers=headers)
+    assert replay.json() == first.json()
+    assert replay.headers["Idempotency-Replayed"] == "true"
+    assert client.post(path + "/resolve", headers=resolve_headers).json() == resolved.json()
+    conflict = client.post(path + "/resolve", headers=headers)
+    assert conflict.status_code == 409 and conflict.json()["code"] == "IDEMPOTENCY_CONFLICT"
+    other = client.post("/api/v1/support/tickets", headers={**admin_headers, "Idempotency-Key": "ticket-replay-other"}, json={
+        "customerId": customer["customerId"], "contractId": contract["contractId"], "serviceCode": "RENTAL-FLEX",
+        "category": "QUESTION", "description": "Outra ocorrência sintética",
+    }).json()
+    conflict = client.post(f"/api/v1/support/tickets/{other['ticketId']}/resolve", headers=resolve_headers)
+    assert conflict.status_code == 409 and conflict.json()["code"] == "IDEMPOTENCY_CONFLICT"
+    with SessionLocal() as session:
+        assert len(session.scalars(select(OutboxEvent).where(OutboxEvent.event_type == "TicketResolved.v1")).all()) == 1

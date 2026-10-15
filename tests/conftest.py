@@ -2,11 +2,12 @@ import os
 from pathlib import Path
 
 Path("tmp").mkdir(parents=True, exist_ok=True)
-os.environ["DATABASE_URL"] = "sqlite:///./tmp/test-archcorp.db"
+os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL", "sqlite:///./tmp/test-archcorp.db")
 os.environ.pop("RABBITMQ_URL", None)
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 
 from archcorp.infrastructure.db import Base, engine
 from archcorp.main import app

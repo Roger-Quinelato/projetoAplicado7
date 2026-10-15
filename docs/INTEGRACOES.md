@@ -106,27 +106,47 @@ tentativas.
 | Informação compartilhada | Identificadores de cliente, contrato e produto de locação; categoria, estado, prioridade, SLA e prazo do chamado |
 | Objetivo | Confirmar o direito à assistência, aplicar o SLA do contrato de locação e iniciar a resolução |
 | Tipo de comunicação | Comando REST, consulta síncrona por porta pública e evento assíncrono |
-| API ou serviço utilizado | `POST /api/v1/support/tickets`, `ContractEntitlementPort`, `TicketOpened.v1`, dispatcher e rota de reconciliação |
+| API ou serviço utilizado | `POST /api/v1/support/tickets`, `ContractEntitlementPort`, `TicketOpened.v1`, dispatcher, reconciliação individual (`POST /support/tickets/{ticketId}/reconcile`) e em lote (`POST /support/tickets/reconcile-pending`), atribuição, resolução e histórico |
 | Dados enviados | Na abertura: `customerId`, `contractId`, `serviceCode`, `category` e `description`; no evento: dados do chamado sem a descrição |
-| Dados recebidos | Elegibilidade e `slaHours` de Contracts; chamado com estado, prioridade, SLA e `dueAt`; Workflow registra uma instância de resolução |
-| Tratamento de erros | `400`, `401` ou `403` para acesso/correlação; `422` com lista para validação estrutural ou com mensagem para combinação inelegível; `PENDING_ENTITLEMENT` quando o adaptador está indisponível; reconciliação posterior; idempotência na abertura |
+| Dados recebidos | Elegibilidade e `slaHours` de Contracts; chamado com estado, prioridade, SLA, `openedAt`, `dueAt` e `slaStatus`; Workflow registra uma instância de resolução |
+| Tratamento de erros | `400`, `401` ou `403` para acesso/correlação; `422` com lista para validação estrutural (inclusive descrição com documento, cartão, telefone, placa ou e-mail) ou com mensagem para combinação inelegível; `PENDING_ENTITLEMENT` quando o adaptador está desativado ou levanta indisponibilidade/timeout; `503` na reconciliação enquanto Contracts não volta; `409 INVALID_STATE` fora da máquina de estados; idempotência na abertura, na resolução e na reconciliação |
 
 Quando o adaptador está disponível, Support consulta Contracts por
 `ContractEntitlementPort`. Uma combinação ativa de contrato, cliente e produto de locação
 devolve elegibilidade e SLA. Uma combinação inelegível interrompe a abertura com
 `422`.
 
-Quando `CONTRACT_ADAPTER_AVAILABLE=false`, Support não descarta a solicitação. Ele
-cria o chamado em `PENDING_ENTITLEMENT`, sem SLA nem prazo, e grava
-`TicketOpened.v1`. O consumidor de Workflow inicia a resolução com prazo padrão de
-24 horas quando o evento ainda não contém SLA. Esse é o comportamento atual do
-protótipo.
+Quando `CONTRACT_ADAPTER_AVAILABLE=false`, ou quando o adaptador levanta
+`ContractsUnavailableError` (declarada em `contracts/public.py`), `TimeoutError` ou
+`ConnectionError`, Support não descarta a solicitação. Ele cria o chamado em
+`PENDING_ENTITLEMENT`, sem SLA nem prazo, registra um log `WARNING` com a
+correlação e grava `TicketOpened.v1`. O consumidor de Workflow inicia a resolução
+com prazo padrão de 24 horas quando o evento ainda não contém SLA. O adaptador
+interno roda no mesmo processo e não tem timeout de rede; a indisponibilidade é
+exercitada pela configuração e por simuladores nos testes.
 
-Depois que Contracts volta a responder, a rota
-`POST /api/v1/support/tickets/{ticketId}/reconcile` consulta novamente a
-elegibilidade. Uma confirmação muda o chamado para `OPEN`, preenche o SLA e
-recalcula o prazo. Uma rejeição muda o estado para `REJECTED_ENTITLEMENT`. A
-reconciliação não publica um segundo `TicketOpened.v1`.
+O prazo do chamado é `openedAt` mais o SLA do contrato ativo; a prioridade vem da
+categoria e não altera o prazo (premissa do protótipo, sem regra no enunciado). O
+relógio é injetado em `TicketService`, o que torna o cálculo determinístico nos
+testes. `slaStatus` é calculado a cada leitura e fixado na resolução (`MET` ou
+`BREACHED`); não há agendador que publique o vencimento.
+
+Depois que Contracts volta a responder, a reconciliação é explícita:
+`POST /api/v1/support/tickets/{ticketId}/reconcile` para um chamado ou
+`POST /api/v1/support/tickets/reconcile-pending` para todos os pendentes. Uma
+confirmação muda o chamado para `OPEN`, preenche o SLA e calcula o prazo a partir
+da abertura. Uma rejeição muda o estado para `REJECTED_ENTITLEMENT`. Cada
+chamado reconciliado publica um único `TicketEntitlementReconciled.v1`, ganha uma
+entrada no histórico e na auditoria; repetir a operação não produz novo efeito, e
+a atualização é condicionada ao estado lido para que execuções concorrentes não
+dupliquem o evento. Enquanto Contracts não responde, a reconciliação devolve `503`
+e o chamado continua pendente. A reconciliação não publica um segundo
+`TicketOpened.v1`.
+
+Atribuição, reatribuição e resolução ficam em Support, com histórico próprio
+(`support_ticket_history`) e auditoria. O histórico guarda o papel que autorizou a
+ação, nunca o token. A resolução repetida devolve o mesmo chamado sem publicar
+outro `TicketResolved.v1`.
 
 A descrição do chamado permanece no banco de Support. Ela não entra no evento, nos
 logs estruturados ou na resposta da API, o que reduz a exposição de conteúdo

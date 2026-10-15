@@ -3,7 +3,8 @@ from decimal import Decimal
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints, field_validator, model_validator
+
 
 
 IDEMPOTENCY_KEY_MAX_LENGTH = 100
@@ -55,6 +56,9 @@ EXAMPLE_TICKET_RESPONSE = {
     "priority": "HIGH",
     "slaHours": 8,
     "dueAt": "2026-10-01T18:10:00Z",
+    "openedAt": "2026-10-01T10:10:00Z",
+    "resolvedAt": None,
+    "slaStatus": "WITHIN",
 }
 
 EXAMPLE_PENDING_TICKET_RESPONSE = {
@@ -64,6 +68,7 @@ EXAMPLE_PENDING_TICKET_RESPONSE = {
     "priority": "NORMAL",
     "slaHours": None,
     "dueAt": None,
+    "slaStatus": "PENDING",
 }
 
 
@@ -156,9 +161,10 @@ class TicketCreate(BaseModel):
 
     customerId: UUID
     contractId: UUID
-    serviceCode: str
-    category: str = Field(min_length=2, max_length=80)
-    description: str = Field(min_length=3, max_length=2000)
+    serviceCode: str = Field(min_length=2, max_length=80)
+    category: str = Field(min_length=2, max_length=80, description="OUTAGE e SECURITY recebem prioridade alta; demais categorias, normal.")
+    description: str = Field(min_length=3, max_length=2000, description="Relato da ocorrência, sem documento, cartão, telefone, placa ou e-mail.")
+
 
 
 class ApiModel(BaseModel):
@@ -251,10 +257,14 @@ class TicketResponse(BaseModel):
     contractId: UUID
     serviceCode: str
     category: str
-    status: Literal["OPEN", "PENDING_ENTITLEMENT", "REJECTED_ENTITLEMENT"]
+    status: Literal["OPEN", "PENDING_ENTITLEMENT", "REJECTED_ENTITLEMENT", "RESOLVED"]
     priority: Literal["NORMAL", "HIGH"]
     slaHours: int | None
     dueAt: datetime | None
+    openedAt: datetime | None = Field(default=None, description="Abertura em UTC; nulo em chamado anterior à T15.")
+    resolvedAt: datetime | None = None
+    slaStatus: Literal["PENDING", "WITHIN", "BREACHED", "MET", "NOT_APPLICABLE"] | None = Field(
+        default=None, description="Estado de SLA no instante da resposta: PENDING sem elegibilidade, WITHIN ou BREACHED quando aberto, MET ou BREACHED quando resolvido.")
 
 
 class DispatchResponse(BaseModel):

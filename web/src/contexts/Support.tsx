@@ -1,10 +1,46 @@
 import { useEffect, useReducer, useState } from 'react'
-import type { Entitlement, Ticket } from '../api'
+import type { Entitlement, PendingReconciliation, SlaStatus, Ticket, TicketHistoryAction } from '../api'
 import {
   ActionForm, Card, Field, FeedbackBanner, Id, PageIntro, ResourceView, SelectField, Status, Table, TextArea, dateTime, text,
   useActions, useIdempotencyKeys, useResource, useSession,
 } from '../ui'
 import { DispatchButton } from './shared'
+
+const SLA_LABELS: Record<SlaStatus, [string, 'good' | 'bad' | 'warn' | 'neutral']> = {
+  PENDING: ['SLA pendente', 'warn'], WITHIN: ['No prazo', 'good'], BREACHED: ['Vencido', 'bad'],
+  MET: ['Cumprido', 'good'], NOT_APPLICABLE: ['Sem SLA', 'neutral'],
+}
+const HISTORY_LABELS: Record<TicketHistoryAction, string> = {
+  OPENED: 'Abertura', ASSIGNED: 'Atribuição', REASSIGNED: 'Reatribuição',
+  ENTITLEMENT_CONFIRMED: 'Elegibilidade confirmada', ENTITLEMENT_REJECTED: 'Elegibilidade rejeitada', RESOLVED: 'Resolução',
+}
+
+/** Estado de SLA calculado pela API (relógio do servidor), não pelo navegador. */
+function SlaBadge({ value }: { value: SlaStatus | null | undefined }) {
+  if (!value) return <>—</>
+  const [label, tone] = SLA_LABELS[value]
+  return <span className={`status ${tone}`} title={value}>{label}</span>
+}
+
+function TicketHistoryCard({ ticket, version, onClose }: { ticket: Ticket, version: number, onClose: () => void }) {
+  const history = useResource(a => a.ticketHistory(ticket.ticketId), [ticket.ticketId, version])
+  return <Card title={`Histórico do chamado ${ticket.ticketId.slice(0, 8)}`} roles="support, operations, admin">
+    <ResourceView resource={history} label="histórico" empty="Chamado sem histórico registrado (anterior à T15).">
+      {rows => <Table caption="Histórico do chamado" rows={rows} rowKey={r => `${r.occurredAt}-${r.action}-${r.owner ?? ''}`} columns={[
+        { key: 'when', label: 'Quando', render: r => dateTime(r.occurredAt) },
+        { key: 'action', label: 'Ação', render: r => HISTORY_LABELS[r.action] ?? r.action },
+        { key: 'status', label: 'Estado', render: r => <Status value={r.toStatus} /> },
+        { key: 'owner', label: 'Responsável', render: r => r.previousOwner ? `${r.previousOwner} → ${r.owner ?? '—'}` : (r.owner ?? '—') },
+        { key: 'sla', label: 'SLA', render: r => <SlaBadge value={r.slaStatus} /> },
+        { key: 'role', label: 'Papel', render: r => r.actorRole ?? '—' },
+        { key: 'correlation', label: 'Correlação', render: r => <Id value={r.correlationId} /> },
+      ]} />}
+    </ResourceView>
+    <button type="button" className="secondary small spaced" onClick={onClose}>Voltar</button>
+  </Card>
+}
+
+type Panel = { kind: 'assign', ticket: Ticket } | { kind: 'history', ticket: Ticket } | null
 
 const CATEGORIES = [
   { value: 'OUTAGE', label: 'Indisponibilidade ou pane (prioridade alta)' },
@@ -22,7 +58,7 @@ export default function Support({ params }: { params: URLSearchParams }) {
   const [customerId, setCustomerId] = useState('')
   const [contractId, setContractId] = useState(preselectedContract)
   const [entitlement, setEntitlement] = useState<{ contractId: string, result: Entitlement } | null>(null)
-  const [assigning, setAssigning] = useState<Ticket | null>(null)
+  const [panel, setPanel] = useState<Panel>(null)
 
   const customers = useResource(a => a.listCustomers({ active: true }), [version])
   const contracts = useResource(a => a.listContracts(), [version])
@@ -42,6 +78,12 @@ export default function Support({ params }: { params: URLSearchParams }) {
   function resetDescription(form: HTMLFormElement) {
     const description = form.elements.namedItem('description')
     if (description instanceof HTMLTextAreaElement) description.value = description.defaultValue
+  }
+
+  async function reconcilePending() {
+    const result = await run<PendingReconciliation>('Reconciliação dos chamados pendentes', () => api.reconcilePendingTickets(),
+      r => `${r.confirmed} confirmado(s), ${r.rejected} rejeitado(s), ${r.remaining} ainda pendente(s)${r.contractsAvailable ? '' : '; Contracts caiu durante o lote, repita depois'}.`)
+    if (result) refresh()
   }
 
   async function checkEntitlement() {
@@ -88,22 +130,28 @@ export default function Support({ params }: { params: URLSearchParams }) {
         </div>
       </Card>
 
-      {assigning ? <Card title={`Atribuir chamado ${assigning.ticketId.slice(0, 8)}`} roles="support, admin">
-        <ActionForm key={assigning.ticketId} submit="Atribuir" busy={busy} label="Atribuir chamado" onSubmit={async f => {
-          const result = await run('Atribuição de chamado', () => api.assignTicket(assigning.ticketId, text(f, 'owner')))
-          if (result) { setAssigning(null); refresh() }
+      {panel?.kind === 'assign' ? <Card title={`Atribuir chamado ${panel.ticket.ticketId.slice(0, 8)}`} roles="support, admin">
+        <ActionForm key={panel.ticket.ticketId} submit={panel.ticket.owner ? 'Reatribuir' : 'Atribuir'} busy={busy} label="Atribuir chamado" onSubmit={async f => {
+          const result = await run('Atribuição de chamado', () => api.assignTicket(panel.ticket.ticketId, text(f, 'owner')))
+          if (result) { setPanel(null); refresh() }
           return result !== null
         }}>
-          <Field name="owner" label="Responsável" defaultValue={assigning.owner ?? 'Equipe de assistência 24h'} />
+          <Field name="owner" label="Responsável" defaultValue={panel.ticket.owner ?? 'Equipe de assistência 24h'}
+            hint="Equipe ou função, sem e-mail ou telefone. Cada atribuição e reatribuição fica no histórico do chamado." />
         </ActionForm>
-        <button type="button" className="secondary small spaced" onClick={() => setAssigning(null)}>Voltar</button>
-      </Card> : <Card title="Atendimento e SLA" roles="despacho: operations, admin">
+        <button type="button" className="secondary small spaced" onClick={() => setPanel(null)}>Voltar</button>
+      </Card> : panel?.kind === 'history' ? <TicketHistoryCard ticket={panel.ticket} version={version} onClose={() => setPanel(null)} />
+      : <Card title="Atendimento e SLA" roles="despacho: operations, admin; reconciliação: support, operations, admin">
         <ol className="steps">
-          <li>Abra o chamado para um contrato ativo; categorias de indisponibilidade e segurança recebem prioridade alta.</li>
+          <li>Abra o chamado para um contrato ativo; categorias de indisponibilidade e segurança recebem prioridade alta. O prazo é a abertura mais o SLA do contrato.</li>
           <li>Despache a outbox para criar o processo de resolução em Workflow.</li>
-          <li>Atribua um responsável e resolva; o novo despacho conclui o processo.</li>
+          <li>Atribua ou reatribua um responsável e resolva; o novo despacho conclui o processo. A coluna SLA mostra se o chamado está no prazo, vencido ou cumprido.</li>
+          <li>Se Contracts estava indisponível, reconcilie os chamados com elegibilidade pendente quando ele voltar.</li>
         </ol>
-        <DispatchButton busy={busy} run={run} onDone={refresh} />
+        <div className="row-actions">
+          <DispatchButton busy={busy} run={run} onDone={refresh} />
+          <button type="button" className="secondary" disabled={busy} onClick={() => void reconcilePending()}>Reconciliar pendentes</button>
+        </div>
       </Card>}
     </div>
 
@@ -116,13 +164,15 @@ export default function Support({ params }: { params: URLSearchParams }) {
           { key: 'priority', label: 'Prioridade', render: r => <Status value={r.priority} /> },
           { key: 'status', label: 'Estado', render: r => <Status value={r.status} /> },
           { key: 'due', label: 'SLA até', render: r => dateTime(r.dueAt) },
+          { key: 'sla', label: 'SLA', render: r => <SlaBadge value={r.slaStatus} /> },
           { key: 'owner', label: 'Responsável', render: r => r.owner ?? '—' },
           { key: 'contract', label: 'Contrato', render: r => <Id value={r.contractId} /> },
           { key: 'actions', label: 'Ações', render: r => <div className="row-actions">
-            {(r.status === 'OPEN' || r.status === 'PENDING_ENTITLEMENT') && <button type="button" className="inline quiet" disabled={busy} onClick={() => { setAssigning(r); clear() }}>Atribuir…</button>}
-            {r.status === 'OPEN' && <button type="button" className="inline" disabled={busy} onClick={() => void run('Resolução de chamado', () => api.resolveTicket(r.ticketId)).then(x => { if (x) refresh() })}>Resolver</button>}
+            {(r.status === 'OPEN' || r.status === 'PENDING_ENTITLEMENT') && <button type="button" className="inline quiet" disabled={busy} onClick={() => { setPanel({ kind: 'assign', ticket: r }); clear() }}>{r.owner ? 'Reatribuir…' : 'Atribuir…'}</button>}
+            {r.status === 'OPEN' && <button type="button" className="inline" disabled={busy} onClick={() => void run('Resolução de chamado', () => api.resolveTicket(r.ticketId),
+              t => t.slaStatus === 'BREACHED' ? 'Resolvido após o prazo do SLA.' : t.slaStatus === 'MET' ? 'Resolvido dentro do SLA.' : '').then(x => { if (x) refresh() })}>Resolver</button>}
             {r.status === 'PENDING_ENTITLEMENT' && <button type="button" className="inline" disabled={busy} onClick={() => void run('Reconciliação de elegibilidade', () => api.reconcileTicket(r.ticketId)).then(x => { if (x) refresh() })}>Reconciliar</button>}
-            {(r.status === 'RESOLVED' || r.status === 'REJECTED_ENTITLEMENT') && '—'}
+            <button type="button" className="inline quiet" disabled={busy} onClick={() => { setPanel({ kind: 'history', ticket: r }); clear() }}>Histórico</button>
           </div> },
         ]} />}
       </ResourceView>

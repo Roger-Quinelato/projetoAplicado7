@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pytest
 from alembic import command
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import IntegrityError
 
@@ -478,5 +479,5 @@ def test_downgrade_0004_com_fatura_final_e_bloqueado_sem_alterar_dados(tmp_path)
     with engine.connect() as connection:
         revision = connection.execute(text("SELECT version_num FROM alembic_version")).scalar()
         statuses = dict(connection.execute(text("SELECT invoice_id, status FROM finance_invoices")).all())
-    assert revision == "0004_finance_lifecycle"
+    assert revision == ScriptDirectory.from_config(alembic_config()).get_current_head()
     assert statuses["i1"] == "PARTIALLY_PAID" and statuses["f1"] == "OPEN"
