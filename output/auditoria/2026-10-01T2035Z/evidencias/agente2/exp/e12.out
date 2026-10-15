@@ -1,0 +1,8 @@
+=== Atomicidade: falha apos enqueue e antes do commit na ativacao ===
+[ativar com falha injetada] POST /api/v1/contracts/a5e4e372-9faa-4dd7-b9ab-4e6719922ec1/activate -> 500 {} {"type": "urn:archcorp:problem:internal-error", "title": "Erro interno", "status": 500, "detail": "Erro interno inesperado", "instance": "/api/v1/contracts/a5e4e372-9faa-4dd7-b9ab-4e6719922ec1/activate", "code": "INTERNAL_ERROR", "correlationId": "11111111-1111-4111-8111-111111111111"}
+  status contrato: DRAFT | eventos outbox: 0
+=== Corrida: duas ativacoes concorrentes com chaves diferentes ===
+  resultados: [('RC-2', 'ok', 'b5603282-d8fc-4d87-ad55-7d7e86c8b0ed'), ('RC-1', 'ok', '36eb0ee2-b6ec-4689-9e18-c5c0038a748b')]
+  ContractActivated.v1 para o contrato: 2
+[dispatch] POST /api/v1/integration/outbox/dispatch -> 200 {} {"processed": 2, "failed": 0}
+[faturas] GET /api/v1/finance/invoices -> 200 {} [{"invoiceId": "02c83a77-3e47-491c-8958-b43ff5895b14", "contractId": "b5c8c4b0-8d6b-4b6e-9a43-7cc0df205011", "customerId": "34f9f719-55ef-4abe-9f80-81315cd56f73", "amount": 2500.0, "currency": "BRL", "dueDate": "2026-10-11", "paidAmount": 0.0, "status": "OPEN"}]

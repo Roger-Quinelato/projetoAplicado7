@@ -1,0 +1,18 @@
+=== Reprocessamento de CustomerUpdated.v1 antigo sobrescreve projecao mais nova ===
+[dispatch v2] POST /api/v1/integration/outbox/dispatch -> 200 {} {"processed": 1, "failed": 0}
+  projecao apos v2: Nome Versao 2
+[failures] GET /api/v1/integration/failures -> 200 {} [{"eventId": "daf37734-a4c9-48ca-96d8-656d03c5e590", "eventType": "CustomerUpdated.v1", "attempts": 3, "reason": "falha transitoria simulada", "correlationId": "11111111-1111-4111-8111-111111111111"}]
+[dispatch reprocessado v1] POST /api/v1/integration/outbox/dispatch -> 200 {} {"processed": 1, "failed": 0}
+  projecao em contracts apos reprocessar v1: Nome Versao 1
+[CRM (fonte oficial)] GET /api/v1/crm/customers/c11b4cd0-4c02-4859-a346-620ffb07cdd8 -> 200 {} {"customerId": "c11b4cd0-4c02-4859-a346-620ffb07cdd8", "name": "Nome Versao 2", "email": "c2ab5ba6a@example.com", "eligible": true, "consentService": true, "active": true, "legacyId": null}
+=== Envelopes reais x AsyncAPI (amount 100.10, dueAt) com FormatChecker ===
+  ContractActivated.v1 formatchecker=off amount=100.1 dueAt=None erros=[]
+  ContractActivated.v1 formatchecker=on amount=100.1 dueAt=None erros=[]
+  TicketResolved.v1 formatchecker=off amount=None dueAt=2026-10-02T04:45:41.500187 erros=[]
+  TicketResolved.v1 formatchecker=on amount=None dueAt=2026-10-02T04:45:41.500187 erros=["'2026-10-02T04:45:41.500187' is not a 'date-time'"]
+  Money.amount=100.1 multipleOf 0.01 -> erros=[]
+  Money.amount=100.1 multipleOf 0.01 -> erros=[]
+  Money.amount=0.07 multipleOf 0.01 -> erros=['0.07 is not a multiple of 0.01']
+  Money.amount=19.99 multipleOf 0.01 -> erros=['19.99 is not a multiple of 0.01']
+  Money.amount=2500.0 multipleOf 0.01 -> erros=[]
+  Money.amount=1234567.89 multipleOf 0.01 -> erros=['1234567.89 is not a multiple of 0.01']

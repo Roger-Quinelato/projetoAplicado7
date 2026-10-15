@@ -1,0 +1,25 @@
+=== Cenario A: falha parcial (finance ok, workflow levanta RuntimeError apos gravar processo) ===
+[dispatch com falha parcial] POST /api/v1/integration/outbox/dispatch -> 200 {} {"processed": 0, "failed": 1}
+  <apos falha parcial> invoices=1 processes=1 tasks=1 inbox=['finance'] outbox=[('ContractActivated.v1', 'PENDING', 1, 'falha simulada apos efeito parcial do workflow')]
+[dispatch apos corrigir] POST /api/v1/integration/outbox/dispatch -> 200 {} {"processed": 1, "failed": 0}
+  <apos correcao> invoices=1 processes=1 tasks=1 inbox=['finance', 'workflow-preparacao-retirada'] outbox=[('ContractActivated.v1', 'PUBLISHED', 1, '')]
+=== Cenario B: falha de banco (IntegrityError) dentro de um consumidor ===
+[dispatch IntegrityError #1] POST /api/v1/integration/outbox/dispatch -> 500 {} {"type": "urn:archcorp:problem:internal-error", "title": "Erro interno", "status": 500, "detail": "Erro interno inesperado", "instance": "/api/v1/integration/outbox/dispatch", "code": "INTERNAL_ERROR", "correlationId": "11111111-1111-4111-8111-111111111111"}
+[dispatch IntegrityError #2] POST /api/v1/integration/outbox/dispatch -> 500 {} {"type": "urn:archcorp:problem:internal-error", "title": "Erro interno", "status": 500, "detail": "Erro interno inesperado", "instance": "/api/v1/integration/outbox/dispatch", "code": "INTERNAL_ERROR", "correlationId": "11111111-1111-4111-8111-111111111111"}
+[dispatch IntegrityError #3] POST /api/v1/integration/outbox/dispatch -> 500 {} {"type": "urn:archcorp:problem:internal-error", "title": "Erro interno", "status": 500, "detail": "Erro interno inesperado", "instance": "/api/v1/integration/outbox/dispatch", "code": "INTERNAL_ERROR", "correlationId": "11111111-1111-4111-8111-111111111111"}
+[dispatch IntegrityError #4] POST /api/v1/integration/outbox/dispatch -> 500 {} {"type": "urn:archcorp:problem:internal-error", "title": "Erro interno", "status": 500, "detail": "Erro interno inesperado", "instance": "/api/v1/integration/outbox/dispatch", "code": "INTERNAL_ERROR", "correlationId": "11111111-1111-4111-8111-111111111111"}
+  <apos IntegrityError x4> invoices=1 processes=1 tasks=1 inbox=['finance', 'workflow-preparacao-retirada'] outbox=[('ContractActivated.v1', 'PUBLISHED', 1, ''), ('ContractActivated.v1', 'PENDING', 0, '')]
+[dispatch apos corrigir B] POST /api/v1/integration/outbox/dispatch -> 200 {} {"processed": 1, "failed": 0}
+  <apos correcao B> invoices=2 processes=2 tasks=2 inbox=['finance', 'workflow-preparacao-retirada', 'finance', 'workflow-preparacao-retirada'] outbox=[('ContractActivated.v1', 'PUBLISHED', 1, ''), ('ContractActivated.v1', 'PUBLISHED', 0, '')]
+=== Cenario C: RabbitMQ configurado e indisponivel (porta fechada) ===
+[dispatch broker indisponivel #1 (0.03s)] POST /api/v1/integration/outbox/dispatch -> 200 {} {"processed": 0, "failed": 1}
+[dispatch broker indisponivel #2 (0.01s)] POST /api/v1/integration/outbox/dispatch -> 200 {} {"processed": 0, "failed": 1}
+[dispatch broker indisponivel #3 (0.01s)] POST /api/v1/integration/outbox/dispatch -> 200 {} {"processed": 0, "failed": 1}
+  <apos 3 tentativas com broker indisponivel> invoices=3 processes=3 tasks=3 inbox=['finance', 'workflow-preparacao-retirada', 'finance', 'workflow-preparacao-retirada', 'finance', 'workflow-preparacao-retirada'] outbox=[('ContractActivated.v1', 'PUBLISHED', 1, ''), ('ContractActivated.v1', 'PUBLISHED', 0, ''), ('ContractActivated.v1', 'FAILED', 3, '')]
+[failures] GET /api/v1/integration/failures -> 200 {} [{"eventId": "0f005ae7-f3c2-44cd-b1a2-0e7da3056670", "eventType": "ContractActivated.v1", "attempts": 3, "reason": "", "correlationId": "11111111-1111-4111-8111-111111111111"}]
+[dispatch CustomerUpdated com broker indisponivel] POST /api/v1/integration/outbox/dispatch -> 200 {} {"processed": 0, "failed": 1}
+  <customerupdated com broker down> invoices=3 processes=3 tasks=3 inbox=['finance', 'workflow-preparacao-retirada', 'finance', 'workflow-preparacao-retirada', 'finance', 'workflow-preparacao-retirada', 'contracts-customer-projection'] outbox=[('ContractActivated.v1', 'PUBLISHED', 1, ''), ('ContractActivated.v1', 'PUBLISHED', 0, ''), ('ContractActivated.v1', 'FAILED', 3, ''), ('CustomerUpdated.v1', 'PENDING', 1, '')]
+[reprocess] POST /api/v1/integration/failures/0f005ae7-f3c2-44cd-b1a2-0e7da3056670/reprocess -> 200 {} {"eventId": "0f005ae7-f3c2-44cd-b1a2-0e7da3056670", "status": "PENDING"}
+[dispatch apos broker volta (sem broker)] POST /api/v1/integration/outbox/dispatch -> 200 {} {"processed": 2, "failed": 0}
+  <final C> invoices=3 processes=3 tasks=3 inbox=['finance', 'workflow-preparacao-retirada', 'finance', 'workflow-preparacao-retirada', 'finance', 'workflow-preparacao-retirada', 'contracts-customer-projection'] outbox=[('ContractActivated.v1', 'PUBLISHED', 1, ''), ('ContractActivated.v1', 'PUBLISHED', 0, ''), ('ContractActivated.v1', 'PUBLISHED', 0, ''), ('CustomerUpdated.v1', 'PUBLISHED', 1, '')]
+  auditoria reprocess: [('reprocess_event', 'scheduled', {'previousAttempts': 3})]

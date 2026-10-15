@@ -1,0 +1,12 @@
+INFO:     Started server process [4963]
+INFO:     Waiting for application startup.
+{"timestamp": "2026-10-01T20:44:09Z", "level": "INFO", "module": "alembic.runtime.migration", "operation": "__init__", "correlationId": "unknown", "result": "recorded", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-10-01T20:44:09Z", "level": "INFO", "module": "alembic.runtime.migration", "operation": "__init__", "correlationId": "unknown", "result": "recorded", "message": "Will assume transactional DDL."}
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18081 (Press CTRL+C to quit)
+{"timestamp": "2026-10-01T20:44:10Z", "level": "INFO", "module": "archcorp", "operation": "/health/live", "correlationId": "3ee1a487-dad4-43f7-abe4-0ae4a1d5f009", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:49240 - "GET /health/live HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [4963]

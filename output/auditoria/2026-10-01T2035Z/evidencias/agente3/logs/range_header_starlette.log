@@ -1,0 +1,6 @@
+ranges=10 http=206 tempo=0.038488s
+ranges=1000 http=206 tempo=0.727685s
+ranges=4000 http=206 tempo=3.677940s
+ranges=8000 http=206 tempo=7.583016s
+health/live durante requisição Range maliciosa: http=200 tempo=0.557070s
+health/live em repouso: tempo=0.005388s
