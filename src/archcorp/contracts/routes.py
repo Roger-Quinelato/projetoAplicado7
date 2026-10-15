@@ -1,19 +1,22 @@
+from fastapi import APIRouter, Depends, Header, Response
+from uuid import UUID
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+from archcorp.infrastructure.db import get_session
+from archcorp.observability import correlation_id_var
+from archcorp.security import require_roles
+from archcorp.api_docs import CORRELATION_REQUEST_PARAMETER, CONTRACT_DRAFT_RESPONSES, CONTRACT_ACTIVATION_RESPONSES, ENTITLEMENT_RESPONSES
+from archcorp.contracts.schemas import ContractDraftCreate, ContractDraftResponse, ContractActivationResponse, EntitlementResponse
+
 from datetime import date
 from decimal import Decimal
 from typing import Literal
-from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, Response
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 from archcorp.contracts.models import Contract, Reservation
 from archcorp.contracts.service import ContractService, ReservationService
-from archcorp.infrastructure.db import get_session
-from archcorp.observability import correlation_id_var
 from archcorp.schemas import EXAMPLE_CONTRACT_DRAFT_RESPONSE, EXAMPLE_CONTRACT_ID, EXAMPLE_CUSTOMER_ID, IDEMPOTENCY_KEY_MAX_LENGTH
-from archcorp.security import require_roles
 
 
 router = APIRouter(prefix="/api/v1/contracts", tags=["Reservas e contratos"])
@@ -271,3 +274,59 @@ def close_contract(
     result, replay = service.close(session, str(contract_id), data, idempotency_key, correlation_id_var.get())
     set_replay(response, replay)
     return result
+
+
+@router.post(
+    "/drafts",
+    status_code=201,
+    response_model=ContractDraftResponse,
+    dependencies=[Depends(require_roles("commercial", "contracts", "admin"))],
+    responses=CONTRACT_DRAFT_RESPONSES,
+    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
+)
+def create_contract_draft(
+    body: ContractDraftCreate,
+    response: Response,
+    idempotency_key: str = Header(
+        alias="Idempotency-Key", max_length=IDEMPOTENCY_KEY_MAX_LENGTH, examples=["demo-contract-001"]
+    ),
+    session: Session = Depends(get_session),
+    service: ContractService = Depends(contract_service),
+) -> dict:
+    draft_data = body.model_dump()
+    draft_data["customerId"] = str(draft_data["customerId"])
+    result, replay = service.create_draft(session, draft_data, idempotency_key, correlation_id_var.get())
+    response.headers["Idempotency-Replayed"] = str(replay).lower()
+    return result
+
+
+@router.post(
+    "/{contract_id}/activate",
+    response_model=ContractActivationResponse,
+    dependencies=[Depends(require_roles("contracts", "admin"))],
+    responses=CONTRACT_ACTIVATION_RESPONSES,
+    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
+)
+def activate_contract(
+    contract_id: UUID,
+    response: Response,
+    idempotency_key: str = Header(
+        alias="Idempotency-Key", max_length=IDEMPOTENCY_KEY_MAX_LENGTH, examples=["demo-activate-001"]
+    ),
+    session: Session = Depends(get_session),
+    service: ContractService = Depends(contract_service),
+) -> dict:
+    result, replay = service.activate(session, str(contract_id), idempotency_key, correlation_id_var.get())
+    response.headers["Idempotency-Replayed"] = str(replay).lower()
+    return result
+
+
+@router.get(
+    "/{contract_id}/entitlement",
+    response_model=EntitlementResponse,
+    dependencies=[Depends(require_roles("support", "admin"))],
+    responses=ENTITLEMENT_RESPONSES,
+    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
+)
+def entitlement(contract_id: UUID, customerId: UUID, serviceCode: str, session: Session = Depends(get_session), service: ContractService = Depends(contract_service)) -> dict:
+    return service.entitlement(session, str(contract_id), str(customerId), serviceCode)

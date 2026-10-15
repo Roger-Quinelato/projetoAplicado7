@@ -189,6 +189,15 @@ def test_migracoes_sao_aditivas():
         found = destructive_operations(file.read_text(encoding="utf-8"))
         allowed = MIGRATION_EXCEPTIONS.get(name, Counter())
         assert found == allowed, f"{name}: operações destrutivas no upgrade {dict(found)} diferem das exceções registradas {dict(allowed)}"
+        if name == "0004_finance_lifecycle.py":
+            upgrade = next(node for node in ast.parse(file.read_text()).body
+                           if isinstance(node, ast.FunctionDef) and node.name == "upgrade")
+            calls = [node for node in ast.walk(upgrade) if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)]
+            assert [node.args[0].value for node in calls if node.func.attr == "drop_constraint"] == ["uq_invoice_contract"]
+            assert [node.args[0].value for node in calls if node.func.attr == "execute"] == [
+                "UPDATE finance_invoices SET status = 'PARTIALLY_PAID' WHERE status = 'OPEN' AND EXISTS "
+                "(SELECT 1 FROM finance_payments WHERE finance_payments.invoice_id = finance_invoices.invoice_id)"
+            ]
 
 
 def test_guarda_aditiva_detecta_operacoes_destrutivas():
