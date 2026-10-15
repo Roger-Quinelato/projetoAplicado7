@@ -76,7 +76,8 @@ def ensure_invoice_transition(current: str, target: InvoiceStatus) -> None:
 def ensure_payable(current: str) -> None:
     status = InvoiceStatus(current)
     if status == InvoiceStatus.PAID:
-        raise InvalidStateError("Fatura já quitada")
+        # `CONFLICT`, não `INVALID_STATE`: é o código que a versão 1 já devolvia para fatura quitada.
+        raise ConflictError("Fatura já quitada")
     if status == InvoiceStatus.CANCELLED:
         raise InvalidStateError("Fatura cancelada não recebe pagamento")
 

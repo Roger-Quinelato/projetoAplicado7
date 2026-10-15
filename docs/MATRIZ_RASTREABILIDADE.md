@@ -24,7 +24,7 @@
 | DATA-01 | Dados sintéticos e migração aditiva | `docs/DADOS_SINTETICOS.md`, `scripts/seed_sintetico.py`, ADR-002 e migrações Alembic | `test_carga_sintetica_e_idempotente`, `test_migracoes_criam_esquema_sem_divergencia_dos_modelos` e `test_migracoes_sao_aditivas` | Atendido em SQLite; PostgreSQL publicado pendente |
 | CRM-01 | CRM completo: clientes, contatos e oportunidades com validação e autorização | `src/archcorp/crm/` | `tests/test_crm.py` | Atendido |
 | CTR-01 | Reservas e contratos: reserva, rascunho, ativação idempotente e encerramento | `src/archcorp/contracts/` e `ContractClosed.v1` | `tests/test_contracts.py`, `test_composicao_da_aplicacao_nao_le_modelos_dos_contextos` | Atendido; Finance consome o encerramento (FIN-01) |
-| FIN-01 | Financeiro: fatura com ciclo de vida, faturamento final, pagamento simulado e inadimplência por vencimento (T12) | `src/archcorp/finance/` (`domain.py`, `service.py`, `routes.py`), consumidores `finance` e `finance-faturamento-final`, `POST /finance/invoices/overdue-check`, `POST /finance/invoices/{id}/cancel`, migração `0004_finance_lifecycle` | `tests/test_finance.py` (transições, saldo, vencimento UTC com relógio injetado, ciclos iniciados, reentrega sem duplicar fatura, `Idempotency-Key`, validações, autorização, migração), F2 sem regressão e demonstração contra `uvicorn` em 14/10/2026 (20/20) | Atendido localmente, em revisão; sem PSP, nota fiscal, agendador ou banco real; regra de faturamento final e prazo são premissas |
+| FIN-01 | Financeiro: fatura com ciclo de vida, faturamento final, pagamento simulado e inadimplência por vencimento (T12) | `src/archcorp/finance/` (`domain.py`, `service.py`, `routes.py`), consumidores `finance` e `finance-faturamento-final`, `POST /finance/invoices/overdue-check`, `POST /finance/invoices/{id}/cancel`, migração `0004_finance_lifecycle` e ADR-003 | `tests/test_finance.py` (transições, saldo, vencimento UTC com relógio injetado, ciclos iniciados, reentrega sem duplicar fatura, `Idempotency-Key`, validações, autorização, migração e downgrade), guarda aditiva com exceção datada em `tests/test_foundation.py`, F2 sem regressão e demonstração contra `uvicorn` em 14/10/2026 (20/20) | Atendido localmente, em revisão; sem PSP, nota fiscal, agendador ou banco real; regra de faturamento final e prazo são premissas |
 | QUA-01 | Pelo menos cinco atributos de qualidade | `docs/ATRIBUTOS_QUALIDADE.md` | Matriz com nove atributos | Atendido |
 | EVO-01 | Escalabilidade, manutenção e evolução | `docs/EVOLUCAO_MANUTENCAO.md` | Revisão das perguntas do enunciado | Atendido |
 | NEG-01 | Público, problema, valor, benefícios e viabilidade | `docs/VISAO_NEGOCIO.md` | Revisão do eixo de empreendedorismo | Atendido |
@@ -46,7 +46,7 @@ Produtos, tecnologias, volumes, responsáveis e fluxos reais da organização n�
 |---|---|
 | Análise AS-IS | `docs/arquitetura/AS_IS.md` |
 | Levantamento de requisitos | `docs/PRD_LOCALIZA.md` e `docs/REQUISITOS.md` |
-| Arquitetura TO-BE e decisões | `docs/arquitetura/TO_BE.md`, `docs/TDD_LOCALIZA.md`, ADR-001 e ADR-002 |
+| Arquitetura TO-BE e decisões | `docs/arquitetura/TO_BE.md`, `docs/TDD_LOCALIZA.md`, ADR-001, ADR-002 e ADR-003 |
 | Padrões e estilos | ADR-001 e `docs/arquitetura/TO_BE.md` |
 | APIs e pelo menos três integrações | `docs/INTEGRACOES.md`, `docs/arquitetura/FLUXOS_INTEGRACAO.md`, OpenAPI e AsyncAPI |
 | Sistemas corporativos | AS-IS, TO-BE e `docs/DDD_LOCALIZA.md` |

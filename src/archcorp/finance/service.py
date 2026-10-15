@@ -40,6 +40,9 @@ def iso_utc(moment: datetime | None) -> str | None:
     return as_utc(moment).isoformat().replace("+00:00", "Z")
 
 
+FINAL_BILLING_MARKER = "finance_final_billing"
+
+
 def occurred_at(envelope: dict) -> datetime:
     return datetime.fromisoformat(envelope["occurredAt"].replace("Z", "+00:00"))
 
@@ -67,10 +70,18 @@ class FinanceService:
               contractId=payload["contractId"], eventId=envelope["eventId"], dueDate=invoice.due_date.isoformat())
 
     def handle_contract_closed(self, session: Session, envelope: dict) -> None:
-        """Faturamento final (`FINAL`) por ciclo iniciado, idempotente por `eventId` e único por contrato."""
+        """Faturamento final (`FINAL`) por ciclo iniciado, idempotente por `eventId` e único por contrato.
+
+        Todo encerramento processado deixa um marcador por `eventId` (`IdempotencyStore`), inclusive quando
+        não há valor a faturar; assim a reentrega fora da inbox não repete nem a auditoria.
+        """
         payload = envelope["payload"]
         contract_id = payload["contractId"]
-        if self._by_event(session, envelope["eventId"]) or self._invoice_of(session, contract_id, InvoiceKind.FINAL):
+        event_id = envelope["eventId"]
+        marker = {"contractId": contract_id}
+        if IdempotencyStore.replay(session, event_id, FINAL_BILLING_MARKER, marker, "eventId de encerramento já usado por outro contrato"):
+            return
+        if self._by_event(session, event_id) or self._invoice_of(session, contract_id, InvoiceKind.FINAL):
             return
         initial = self._invoice_of(session, contract_id, InvoiceKind.INITIAL)
         if initial is None:
@@ -81,13 +92,16 @@ class FinanceService:
         if billing["currency"] != initial.currency:
             raise BusinessRuleError("Moeda do encerramento diferente da primeira fatura")
         starts_on, ends_on = date.fromisoformat(payload["startsOn"]), date.fromisoformat(payload["endsOn"])
-        already = sum((money(i.amount) for i in self._invoices_of(session, contract_id) if i.status != InvoiceStatus.CANCELLED), ZERO)
+        # Inclui faturas canceladas: o cancelamento é definitivo e o encerramento não recobra seus ciclos
+        # (decisão da revisão da T12, premissa a validar com o negócio).
+        already = sum((money(i.amount) for i in self._invoices_of(session, contract_id)), ZERO)
         cycles = billed_cycles(starts_on, ends_on, billing["cycle"])
         amount = final_amount(billing["amount"], starts_on, ends_on, billing["cycle"], already)
         details = {"contractId": contract_id, "eventId": envelope["eventId"], "billedCycles": cycles,
-                   "alreadyBilled": str(already), "currency": billing["currency"]}
+                   "alreadyInvoiced": str(already), "currency": billing["currency"]}
         if amount == ZERO:
             audit(session, envelope["correlationId"], "finance", "create_final_invoice", "not_required", None, **details)
+            IdempotencyStore.save(session, event_id, FINAL_BILLING_MARKER, marker, {"result": "not_required"})
             return
         invoice = Invoice(
             contract_id=contract_id, customer_id=payload["customerId"], amount=amount, currency=billing["currency"],
@@ -98,6 +112,7 @@ class FinanceService:
         session.flush()
         audit(session, envelope["correlationId"], "finance", "create_final_invoice", "success", invoice.invoice_id,
               amount=str(amount), dueDate=invoice.due_date.isoformat(), **details)
+        IdempotencyStore.save(session, event_id, FINAL_BILLING_MARKER, marker, {"result": "invoiced", "invoiceId": invoice.invoice_id})
         logger.info("Fatura final registrada", extra={"operation": "create_final_invoice", "result": "success"})
 
     # ---------- Comandos ----------
@@ -113,7 +128,8 @@ class FinanceService:
                 return stored, True
         invoice = self._require(session, invoice_id, lock=True)
         if data["currency"] != invoice.currency:
-            raise BusinessRuleError("Moeda diferente da fatura")
+            # `VALIDATION_ERROR` com detalhe textual: código que a versão 1 já devolvia neste caso.
+            raise BusinessRuleError("Moeda diferente da fatura", code="VALIDATION_ERROR")
         prior = session.scalar(select(Payment).where(Payment.reference == data["reference"]))
         if prior:
             if prior.invoice_id != invoice.invoice_id or money(prior.amount) != amount:
@@ -147,7 +163,7 @@ class FinanceService:
         now = as_utc(self.clock())
         today = now.date()
         reference = as_of or today
-        if reference > today and not settings.finance_allow_future_as_of:
+        if reference > today and (not settings.finance_allow_future_as_of or settings.public_demo):
             raise BusinessRuleError("Data de referência futura exige FINANCE_ALLOW_FUTURE_AS_OF=true (simulação local)")
         candidates = session.scalars(select(Invoice).where(
             Invoice.status.in_([InvoiceStatus.OPEN, InvoiceStatus.PARTIALLY_PAID]), Invoice.due_date < reference,

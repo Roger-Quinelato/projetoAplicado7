@@ -75,6 +75,7 @@ Os artefatos principais estão em:
 - `docs/arquitetura/FLUXOS_INTEGRACAO.md`
 - `docs/adr/ADR-001-integracao-empresa-de-servicos.md`
 - `docs/adr/ADR-002-migracoes-aditivas.md`
+- `docs/adr/ADR-003-financeiro-fatura-final-e-excecao-aditiva.md`
 - `docs/DDD_LOCALIZA.md`
 - `docs/TDD_LOCALIZA.md`
 

@@ -315,8 +315,6 @@ export function createApi(token: string, fetcher: typeof fetch = (...args) => fe
       request<PaymentResult>('POST', `/api/v1/finance/invoices/${invoiceId}/payments`, { body, idempotencyKey }),
     checkOverdue: (asOf?: string) =>
       request<OverdueCheckResult>('POST', '/api/v1/finance/invoices/overdue-check', { body: asOf ? { asOf } : {} }),
-    cancelInvoice: (invoiceId: Uuid, reason: string) =>
-      request<Invoice>('POST', `/api/v1/finance/invoices/${invoiceId}/cancel`, { body: { reason } }),
 
     // Atendimento
     listTickets: () => get<Ticket[]>('/api/v1/support/tickets'),

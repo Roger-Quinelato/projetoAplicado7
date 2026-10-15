@@ -278,7 +278,7 @@ sequenceDiagram
     Dispatcher->>Workflow: ContractClosed.v1
     Workflow->>Workflow: Concluir preparação de retirada pendente
     Dispatcher->>Finance: ContractClosed.v1
-    Finance->>Finance: Fatura FINAL por ciclo iniciado, menos o já faturado (única por eventId e contrato)
+    Finance->>Finance: Fatura FINAL por ciclo iniciado, menos o já faturado (única por eventId e contrato; marcador se não houver valor)
 ```
 
 Repetir o encerramento com a mesma chave, ou com outra chave depois de concluído,

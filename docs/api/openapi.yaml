@@ -3865,10 +3865,20 @@ paths:
                 paid:
                   summary: Fatura quitada
                   value:
-                    type: urn:archcorp:problem:invalid-state
+                    type: urn:archcorp:problem:conflict
                     title: Conflito
                     status: 409
                     detail: Fatura já quitada
+                    instance: /api/v1/finance/invoices/ffffffff-ffff-4fff-8fff-ffffffffffff/payments
+                    code: CONFLICT
+                    correlationId: 11111111-1111-4111-8111-111111111111
+                cancelled:
+                  summary: Fatura cancelada
+                  value:
+                    type: urn:archcorp:problem:invalid-state
+                    title: Conflito
+                    status: 409
+                    detail: Fatura cancelada não recebe pagamento
                     instance: /api/v1/finance/invoices/ffffffff-ffff-4fff-8fff-ffffffffffff/payments
                     code: INVALID_STATE
                     correlationId: 11111111-1111-4111-8111-111111111111
@@ -3889,12 +3899,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
               example:
-                type: urn:archcorp:problem:business-rule-violation
+                type: urn:archcorp:problem:validation-error
                 title: Entrada inválida
                 status: 422
                 detail: Moeda diferente da fatura
                 instance: /api/v1/finance/invoices/ffffffff-ffff-4fff-8fff-ffffffffffff/payments
-                code: BUSINESS_RULE_VIOLATION
+                code: VALIDATION_ERROR
                 correlationId: 11111111-1111-4111-8111-111111111111
   /api/v1/finance/invoices/{invoice_id}/cancel:
     post:
@@ -5465,6 +5475,8 @@ components:
           maxLength: 200
           minLength: 3
           title: Reason
+          description: Gravado na auditoria; não informe dado pessoal, bancário ou
+            outro conteúdo sensível.
       type: object
       required:
       - reason

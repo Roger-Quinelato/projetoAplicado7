@@ -49,7 +49,8 @@ imediato.
   detectada pelo autogenerate do Alembic;
 - um banco criado antes das migrações é carimbado e atualizado sem erro;
 - nenhum `upgrade` contém `drop_table`, `drop_column`, `alter_column` ou
-  `rename_table`.
+  `rename_table`; desde 14/10/2026 também `drop_constraint`, `drop_index` e
+  `op.execute` com `UPDATE`/`DELETE`, salvo exceção registrada.
 
 Para criar uma migração nova, altere o modelo e execute:
 
@@ -59,6 +60,10 @@ PYTHONPATH=src alembic revision --autogenerate --rev-id 000N_descricao -m "descr
 
 Revise o arquivo gerado antes do commit; o autogenerate não substitui a revisão
 humana.
+
+Exceções aprovadas ficam em `MIGRATION_EXCEPTIONS` (`tests/test_foundation.py`), cada
+uma com data e ADR próprio. Em 14/10/2026: `0004_finance_lifecycle`, ver
+[ADR-003](ADR-003-financeiro-fatura-final-e-excecao-aditiva.md).
 
 ## Consequências
 

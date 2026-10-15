@@ -104,11 +104,21 @@ Regras verificadas em `tests/test_finance.py`:
   `PAID` e `CANCELLED` são finais; pagamento parcial em fatura inadimplente mantém
   `OVERDUE` até a quitação;
 - primeira fatura (`INITIAL`) e fatura final (`FINAL`) são únicas por contrato e
-  por `eventId` de origem; o vencimento é a data UTC do evento mais 10 dias;
+  por `eventId` de origem; o vencimento é a data UTC do evento mais 10 dias
+  (premissa a validar: prazo e data de referência; ver ADR-003);
 - a fatura final cobra os ciclos iniciados entre `startsOn` e `endsOn` (premissa a
-  validar) menos o já faturado; sem valor restante, apenas audita;
+  validar) menos o total já faturado, inclusive faturas canceladas (cancelamento é
+  definitivo); sem valor restante, apenas audita e grava um marcador por `eventId`,
+  de modo que a reentrega fora da inbox também não repete efeito;
 - pagamento: `Idempotency-Key` opcional, valor positivo com duas casas, moeda igual
-  à da fatura, sem sobrepagamento; a referência não vai para auditoria nem log;
+  à da fatura (`422 VALIDATION_ERROR`), sem sobrepagamento (`409 CONFLICT`); fatura
+  quitada mantém o `409 CONFLICT` da v1 e fatura cancelada recebe `409 INVALID_STATE`;
+  a referência não vai para auditoria nem log;
+- o motivo do cancelamento (até 200 caracteres) vai para a auditoria e não deve
+  conter dado pessoal, bancário ou sensível;
+- valores monetários saem como `number` (float) na v1 por compatibilidade; a regra
+  de decimal com moeda explícita vale internamente (`Decimal`) e a troca na API é
+  dívida para a v2;
 - inadimplência: fatura com saldo e data UTC posterior a `dueDate`; o comando de
   verificação a registra com data e auditoria, sem repetir marcações.
 

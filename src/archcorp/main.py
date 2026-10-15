@@ -354,6 +354,8 @@ dispatcher = EventDispatcher({
 async def lifespan(_: FastAPI):
     if settings.public_demo and (not settings.demo_access_token or len(settings.demo_access_token) < 24 or settings.demo_access_token.startswith("demo-")):
         raise RuntimeError("PUBLIC_DEMO exige DEMO_ACCESS_TOKEN aleatório com pelo menos 24 caracteres")
+    if settings.public_demo and settings.finance_allow_future_as_of:
+        raise RuntimeError("FINANCE_ALLOW_FUTURE_AS_OF é simulação local e não pode ser usada com PUBLIC_DEMO")
     with engine.begin() as connection:
         upgrade_to_head(connection)
         protect_public_demo_tables(connection)

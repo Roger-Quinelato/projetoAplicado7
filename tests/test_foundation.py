@@ -1,4 +1,5 @@
 import importlib.util
+import re
 from io import StringIO
 from pathlib import Path
 
@@ -127,12 +128,39 @@ def test_migracoes_geram_sql_valido_para_postgresql():
     assert "ALTER TABLE crm_customers ADD COLUMN active BOOLEAN DEFAULT true NOT NULL" in sql
 
 
+# Exceções aprovadas à regra aditiva do ADR-002. Cada entrada exige ADR e data; a lista é conferida nos
+# dois sentidos: operação nova sem exceção falha, e exceção que deixou de existir também falha.
+MIGRATION_EXCEPTIONS = {
+    # 14/10/2026 · ADR-003 · T12: troca uq_invoice_contract -> uq_invoice_contract_kind e reclassifica
+    # faturas OPEN com pagamento para PARTIALLY_PAID.
+    "0004_finance_lifecycle.py": {"drop_constraint", "op.execute UPDATE"},
+}
+
+
+def destructive_operations(upgrade: str) -> set[str]:
+    found = {term for term in ("drop_table", "drop_column", "alter_column(", "rename_table", "drop_constraint", "drop_index") if term in upgrade}
+    for match in re.finditer(r"op\.execute\(", upgrade):
+        statement = upgrade[match.end():match.end() + 400]
+        found |= {f"op.execute {verb}" for verb in ("UPDATE", "DELETE") if re.search(rf"\b{verb}\b", statement, re.IGNORECASE)}
+    return found
+
+
 def test_migracoes_sao_aditivas():
     versions = Path("src/archcorp/infrastructure/migrations/versions")
-    forbidden = ("drop_table", "drop_column", "alter_column(", "rename_table")
-    for file in versions.glob("*.py"):
+    files = {file.name: file for file in versions.glob("*.py")}
+    assert set(MIGRATION_EXCEPTIONS) <= set(files)
+    for name, file in files.items():
         upgrade = file.read_text(encoding="utf-8").split("def downgrade", 1)[0]
-        assert not any(term in upgrade for term in forbidden), f"{file.name} contém operação destrutiva no upgrade"
+        found = destructive_operations(upgrade)
+        allowed = MIGRATION_EXCEPTIONS.get(name, set())
+        assert found <= allowed, f"{name} contém operação destrutiva no upgrade sem exceção registrada: {found - allowed}"
+        assert allowed <= found, f"{name}: exceção registrada que não ocorre mais: {allowed - found}"
+
+
+def test_guarda_aditiva_detecta_operacoes_destrutivas():
+    assert destructive_operations("batch_op.drop_index('ix')\nop.execute(\n  \"DELETE FROM t\")") == {"drop_index", "op.execute DELETE"}
+    assert destructive_operations("op.execute('update t set a = 1')") == {"op.execute UPDATE"}
+    assert destructive_operations("op.execute('CREATE INDEX ix ON t (a)')\nbatch_op.add_column(x)") == set()
 
 
 def test_carga_sintetica_e_idempotente(client):

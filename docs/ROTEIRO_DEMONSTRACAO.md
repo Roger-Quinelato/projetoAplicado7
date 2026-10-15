@@ -257,7 +257,7 @@ PYTHONPATH=src python -m pytest -q tests/test_f1_cliente_reserva_contrato.py -p 
 
 Use o contrato ativado em F2. O pagamento é simulado: não há PSP, conciliação
 bancária, nota fiscal nem cobrança real. O vencimento é a data UTC do evento de
-ativação mais 10 dias, e o protótipo não tem agendador: a inadimplência é registrada
+ativação mais 10 dias (premissa a validar), e o protótipo não tem agendador: a inadimplência é registrada
 pelo comando `overdue-check`.
 
 1. Para simular a passagem do tempo sem esperar o vencimento, reinicie só a API
@@ -272,7 +272,8 @@ pelo comando `overdue-check`.
 
    Fora do Docker: `FINANCE_ALLOW_FUTURE_AS_OF=true PYTHONPATH=src uvicorn archcorp.main:app`.
    Sem essa variável, `asOf` futuro recebe `422 BUSINESS_RULE_VIOLATION`; com a
-   data atual o comando funciona sempre.
+   data atual o comando funciona sempre. A API recusa iniciar com essa variável
+   e `PUBLIC_DEMO=true`.
 
 2. Consulte a fatura e registre um pagamento parcial com `Idempotency-Key`:
 
@@ -323,8 +324,8 @@ pelo comando `overdue-check`.
    ```
 
    Esperado: `status: PAID`, `balance: 0`, `delinquent: False` e `overdueSince`
-   mantido como histórico. Novo pagamento recebe `409 INVALID_STATE`; valor acima
-   do saldo, `409 CONFLICT`; moeda diferente, `422 BUSINESS_RULE_VIOLATION`.
+   mantido como histórico. Novo pagamento recebe `409 CONFLICT`; valor acima
+   do saldo, `409 CONFLICT`; moeda diferente, `422 VALIDATION_ERROR`.
 
 5. (Opcional) Encerre o contrato com `endsOn` posterior, despache a outbox e
    consulte de novo as faturas do contrato: surge uma fatura `FINAL` com

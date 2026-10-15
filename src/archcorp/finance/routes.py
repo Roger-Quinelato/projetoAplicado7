@@ -85,6 +85,7 @@ class InvoiceResponse(BaseModel):
     contractId: UUID
     customerId: UUID
     kind: Literal["INITIAL", "FINAL"] = Field(description="INITIAL: primeira cobrança (ContractActivated.v1); FINAL: faturamento final (ContractClosed.v1).")
+    # Valores monetários como number (float) por compatibilidade com a v1; decimal em string fica para a v2.
     amount: float
     currency: str
     dueDate: date
@@ -140,7 +141,8 @@ class OverdueCheckResponse(BaseModel):
 class InvoiceCancelInput(BaseModel):
     model_config = ConfigDict(json_schema_extra={"examples": [{"reason": "Cobrança emitida em duplicidade"}]})
 
-    reason: str = Field(min_length=3, max_length=200)
+    reason: str = Field(min_length=3, max_length=200,
+                        description="Gravado na auditoria; não informe dado pessoal, bancário ou outro conteúdo sensível.")
 
 
 @router.get("/invoices", response_model=list[InvoiceResponse], dependencies=[Depends(FINANCE_READERS)])
@@ -185,13 +187,14 @@ def get_invoice(invoice_id: UUID, session: Session = Depends(get_session), servi
             "description": "Referência ou Idempotency-Key já usada com outro pagamento, valor acima do saldo, fatura quitada ou cancelada.",
             "content": problem_content(examples={
                 "overpayment": {"summary": "Valor acima do saldo", "value": problem_example(409, "Pagamento excede saldo da fatura", PAYMENT_PATH, "CONFLICT")},
-                "paid": {"summary": "Fatura quitada", "value": problem_example(409, "Fatura já quitada", PAYMENT_PATH, "INVALID_STATE")},
+                "paid": {"summary": "Fatura quitada", "value": problem_example(409, "Fatura já quitada", PAYMENT_PATH, "CONFLICT")},
+                "cancelled": {"summary": "Fatura cancelada", "value": problem_example(409, "Fatura cancelada não recebe pagamento", PAYMENT_PATH, "INVALID_STATE")},
                 "idempotency": {"summary": "Chave reutilizada", "value": problem_example(409, "Idempotency-Key já utilizada com outro pagamento", PAYMENT_PATH, "IDEMPOTENCY_CONFLICT")},
             }),
         },
         422: {
             "description": "Entrada inválida ou moeda diferente da fatura.",
-            "content": problem_content(problem_example(422, "Moeda diferente da fatura", PAYMENT_PATH, "BUSINESS_RULE_VIOLATION")),
+            "content": problem_content(problem_example(422, "Moeda diferente da fatura", PAYMENT_PATH, "VALIDATION_ERROR")),
         },
     },
     dependencies=[Depends(FINANCE_OPERATORS)])

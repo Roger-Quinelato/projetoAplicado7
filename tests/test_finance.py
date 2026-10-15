@@ -74,8 +74,9 @@ def test_estado_apos_pagamento_e_saldo():
     assert domain.status_after_payment(S.OVERDUE, amount, Decimal("1000"), Decimal("1500.00")) == S.PAID
     with pytest.raises(ConflictError, match="excede saldo"):
         domain.status_after_payment(S.PARTIALLY_PAID, amount, Decimal("1000"), Decimal("1500.01"))
-    with pytest.raises(InvalidStateError, match="quitada"):
+    with pytest.raises(ConflictError, match="quitada") as paid:
         domain.status_after_payment(S.PAID, amount, amount, Decimal("0.01"))
+    assert paid.value.code == "CONFLICT"  # código da v1 preservado (não INVALID_STATE)
     with pytest.raises(InvalidStateError, match="cancelada"):
         domain.status_after_payment(S.CANCELLED, amount, Decimal("0"), Decimal("1.00"))
     with pytest.raises(BusinessRuleError):
@@ -159,6 +160,33 @@ def test_faturamento_final_sem_valor_restante_nao_cria_fatura():
         service.handle_contract_closed(session, closed(cycle="ONCE"))
         session.commit()
         assert len(invoices(session)) == 1
+
+
+def test_encerramento_sem_valor_restante_e_idempotente_por_event_id_fora_da_inbox():
+    service = FinanceService()
+    close = closed(cycle="ONCE")
+    with SessionLocal() as session:
+        service.handle_contract_activated(session, envelope("ContractActivated.v1", {"status": "ACTIVE"}, cycle="ONCE"))
+        service.handle_contract_closed(session, close)
+        session.commit()
+        service.handle_contract_closed(session, close)  # reentrega sem passar pela inbox
+        session.commit()
+        audits = session.execute(text("SELECT result FROM integration_audit WHERE operation = 'create_final_invoice'")).scalars().all()
+        assert audits == ["not_required"]
+        assert len(invoices(session)) == 1
+
+
+def test_primeira_fatura_cancelada_nao_e_recobrada_no_encerramento():
+    service = FinanceService()
+    with SessionLocal() as session:
+        service.handle_contract_activated(session, envelope("ContractActivated.v1", {"status": "ACTIVE"}))
+        session.commit()
+        initial = invoices(session, "INITIAL")[0]
+        service.cancel(session, initial.invoice_id, "Abono negociado", "corr-cancel")
+        service.handle_contract_closed(session, closed())
+        session.commit()
+        [final] = invoices(session, "FINAL")
+        assert final.amount == Decimal("7500.00")  # 4 ciclos - 2500 da fatura cancelada (cancelamento é definitivo)
 
 
 def test_faturamento_final_sem_primeira_fatura_falha_sem_efeito():
@@ -252,7 +280,7 @@ def test_ciclo_completo_pagamento_parcial_inadimplencia_e_quitacao(client, admin
     settled = pay(client, admin_headers, invoice_id, 1000, "T12-QUITACAO", key="t12-pay-3").json()["invoice"]
     assert (settled["status"], settled["delinquent"], settled["balance"]) == ("PAID", False, 0.0)
     assert settled["overdueSince"] == delinquent["overdueSince"]
-    assert_problem(pay(client, admin_headers, invoice_id, 1, "T12-DEPOIS"), 409, "INVALID_STATE")
+    assert assert_problem(pay(client, admin_headers, invoice_id, 1, "T12-DEPOIS"), 409, "CONFLICT")["detail"] == "Fatura já quitada"
 
     trail = client.get(f"/api/v1/operations/{admin_headers['X-Correlation-ID']}", headers=admin_headers).json()
     operations = [entry["operation"] for entry in trail["audit"] if entry["module"] == "finance"]
@@ -267,7 +295,8 @@ def test_validacoes_do_pagamento_simulado(client, admin_headers, billed_contract
     for amount in (0, -10, 10.001):
         assert_problem(pay(client, admin_headers, invoice_id, amount, f"T12-INV-{amount}"), 422, "VALIDATION_ERROR")
     assert_problem(pay(client, admin_headers, invoice_id, 10, "T12-MOEDA-MIN", currency="brl"), 422, "VALIDATION_ERROR")
-    assert_problem(pay(client, admin_headers, invoice_id, 10, "T12-MOEDA", currency="USD"), 422, "BUSINESS_RULE_VIOLATION")
+    # Códigos da v1 preservados: moeda diferente continua VALIDATION_ERROR com detalhe textual.
+    assert assert_problem(pay(client, admin_headers, invoice_id, 10, "T12-MOEDA", currency="USD"), 422, "VALIDATION_ERROR")["detail"] == "Moeda diferente da fatura"
     assert_problem(pay(client, admin_headers, invoice_id, 2500.01, "T12-EXCESSO"), 409, "CONFLICT")
     assert pay(client, admin_headers, invoice_id, 100, "T12-REF").status_code == 201
     repeated = pay(client, admin_headers, invoice_id, 100, "T12-REF")
@@ -352,6 +381,27 @@ def test_encerramento_gera_fatura_final_sem_duplicar_na_reentrega(client, admin_
         assert session.query(InboxEvent).filter_by(event_id=event_id, consumer="finance-faturamento-final").count() == 1
 
 
+def test_simulacao_de_data_futura_nao_inicia_com_demo_publica(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    monkeypatch.setattr(settings, "public_demo", True)
+    monkeypatch.setattr(settings, "demo_access_token", "segredo-aleatorio-de-teste-0123456789")
+    monkeypatch.setattr(settings, "finance_allow_future_as_of", True)
+    with pytest.raises(RuntimeError, match="FINANCE_ALLOW_FUTURE_AS_OF"):
+        with TestClient(app):
+            pass
+    monkeypatch.setattr(settings, "finance_allow_future_as_of", False)
+    with TestClient(app) as started:
+        assert started.get("/health/live").status_code == 200
+
+
+def test_servico_recusa_data_futura_na_demo_publica_mesmo_com_a_flag(monkeypatch):
+    monkeypatch.setattr(settings, "public_demo", True)
+    monkeypatch.setattr(settings, "finance_allow_future_as_of", True)
+    with SessionLocal() as session, pytest.raises(BusinessRuleError):
+        FinanceService(clock=fixed("2026-10-14T12:00:00+00:00")).evaluate_overdue(session, date(2026, 10, 30), "corr")
+
+
 # ---------- Migração ----------
 
 def test_migracao_0004_preserva_faturas_antigas(tmp_path):
@@ -387,3 +437,46 @@ def test_migracao_0004_gera_sql_postgresql():
     assert "ALTER TABLE finance_invoices ADD COLUMN kind VARCHAR(20) DEFAULT 'INITIAL' NOT NULL" in sql
     assert "ADD CONSTRAINT uq_invoice_contract_kind UNIQUE (contract_id, kind)" in sql
     assert "DROP CONSTRAINT uq_invoice_contract;" in sql
+
+
+def migrated_database(tmp_path, name: str):
+    engine = create_engine(f"sqlite:///{tmp_path / name}")
+    with engine.begin() as connection:
+        command.upgrade(alembic_config(connection), "head")
+        connection.execute(text(
+            "INSERT INTO finance_invoices (invoice_id, contract_id, customer_id, amount, currency, due_date, status, kind) VALUES "
+            "('i1', 'c1', 'cu', 100, 'BRL', '2026-10-01', 'PARTIALLY_PAID', 'INITIAL'), "
+            "('i2', 'c2', 'cu', 100, 'BRL', '2026-10-01', 'OVERDUE', 'INITIAL'), "
+            "('i3', 'c3', 'cu', 100, 'BRL', '2026-10-01', 'CANCELLED', 'INITIAL'), "
+            "('i4', 'c4', 'cu', 100, 'BRL', '2026-10-01', 'PAID', 'INITIAL')"))
+    return engine
+
+
+def test_downgrade_0004_sem_fatura_final_restaura_a_0003(tmp_path):
+    engine = migrated_database(tmp_path, "downgrade.db")
+    with engine.begin() as connection:
+        command.downgrade(alembic_config(connection), "0003_contract_closing")
+    with engine.connect() as connection:
+        rows = dict(connection.execute(text("SELECT invoice_id, status FROM finance_invoices")).all())
+        columns = {column["name"] for column in inspect(connection).get_columns("finance_invoices")}
+        uniques = {constraint["name"] for constraint in inspect(connection).get_unique_constraints("finance_invoices")}
+        revision = connection.execute(text("SELECT version_num FROM alembic_version")).scalar()
+    # PARTIALLY_PAID e OVERDUE voltam a OPEN; CANCELLED não tem equivalente e permanece (documentado na migração).
+    assert rows == {"i1": "OPEN", "i2": "OPEN", "i3": "CANCELLED", "i4": "PAID"}
+    assert not {"kind", "source_event_id", "overdue_since"} & columns
+    assert uniques == {"uq_invoice_contract"}
+    assert revision == "0003_contract_closing"
+
+
+def test_downgrade_0004_com_fatura_final_e_bloqueado_sem_alterar_dados(tmp_path):
+    engine = migrated_database(tmp_path, "downgrade-final.db")
+    with engine.begin() as connection:
+        connection.execute(text("INSERT INTO finance_invoices (invoice_id, contract_id, customer_id, amount, currency, due_date, status, kind) "
+                                "VALUES ('f1', 'c1', 'cu', 50, 'BRL', '2026-11-01', 'OPEN', 'FINAL')"))
+    with pytest.raises(RuntimeError, match="1 fatura\\(s\\) FINAL"), engine.begin() as connection:
+        command.downgrade(alembic_config(connection), "0003_contract_closing")
+    with engine.connect() as connection:
+        revision = connection.execute(text("SELECT version_num FROM alembic_version")).scalar()
+        statuses = dict(connection.execute(text("SELECT invoice_id, status FROM finance_invoices")).all())
+    assert revision == "0004_finance_lifecycle"
+    assert statuses["i1"] == "PARTIALLY_PAID" and statuses["f1"] == "OPEN"

@@ -4,21 +4,21 @@ Revision ID: 0004_finance_lifecycle
 Revises: 0003_contract_closing
 Create Date: 2026-10-14 12:00:00
 
-Compatibilidade (ADR-002):
+Compatibilidade (ADR-002; exceção registrada no ADR-003):
 - colunas novas são anuláveis ou têm valor padrão; faturas existentes recebem `kind = INITIAL`;
 - a unicidade "uma fatura por contrato" (`uq_invoice_contract`) passa a ser "uma fatura por
   contrato e tipo" (`uq_invoice_contract_kind`). A restrição antiga é substituída, não removida
   sem substituta: a nova é mais ampla, os dados atuais a cumprem e nenhum leitor da versão 1
-  depende da antiga. É o único ponto não puramente aditivo e está registrado em
-  docs/ESTADO_IMPLEMENTACAO.md para revisão;
+  depende da antiga. Não há caminho puramente aditivo: a unicidade antiga impede a fatura FINAL.
+  Exceção à regra aditiva registrada no ADR-003;
 - faturas antigas `OPEN` com pagamento registrado passam a `PARTIALLY_PAID`, o estado que o
   novo ciclo de vida usa para o mesmo fato.
 
-O downgrade recria a unicidade por contrato e por isso falha se existir fatura `FINAL`;
-faturas financeiras não são apagadas automaticamente. `PARTIALLY_PAID` e `OVERDUE` voltam a
+O downgrade recria a unicidade por contrato. Se existir fatura `FINAL`, ele para antes de
+qualquer alteração com erro explícito; faturas financeiras não são apagadas automaticamente. `PARTIALLY_PAID` e `OVERDUE` voltam a
 `OPEN`; `CANCELLED` não tem equivalente na revisão anterior e permanece como está.
 """
-from alembic import op
+from alembic import context, op
 import sqlalchemy as sa
 
 
@@ -44,6 +44,10 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    if not context.is_offline_mode():
+        finals = op.get_bind().execute(sa.text("SELECT COUNT(*) FROM finance_invoices WHERE kind <> 'INITIAL'")).scalar()
+        if finals:
+            raise RuntimeError(f"Downgrade da 0004 bloqueado: {finals} fatura(s) FINAL; a unicidade por contrato da 0003 não as comporta")
     op.execute("UPDATE finance_invoices SET status = 'OPEN' WHERE status IN ('PARTIALLY_PAID', 'OVERDUE')")
     with op.batch_alter_table('finance_invoices', schema=None) as batch_op:
         batch_op.create_unique_constraint('uq_invoice_contract', ['contract_id'])

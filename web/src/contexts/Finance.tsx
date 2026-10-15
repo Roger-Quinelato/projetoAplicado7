@@ -54,9 +54,9 @@ export default function Finance() {
       <Card title="Como a fatura nasce" roles="despacho: operations, admin">
         <ol className="steps">
           <li>Ative um contrato em Reservas e contratos.</li>
-          <li>Despache a outbox: o consumidor financeiro cria a primeira fatura com vencimento em 10 dias.</li>
+          <li>Despache a outbox: o consumidor financeiro cria a primeira fatura com vencimento na data UTC do evento mais 10 dias (prazo é premissa a validar).</li>
           <li>Registre um pagamento parcial ou total; a fatura passa a “Parcialmente paga” e a “Paga” quando o saldo zera.</li>
-          <li>Encerre o contrato e despache: a fatura final cobra os ciclos iniciados ainda não faturados.</li>
+          <li>Encerre o contrato e despache: a fatura final cobra os ciclos iniciados ainda não faturados (regra é premissa a validar).</li>
         </ol>
         <DispatchButton busy={busy} run={run} onDone={refresh} />
       </Card>
