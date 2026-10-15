@@ -46,7 +46,7 @@ Cada linha é uma **tarefa** (tipo), salvo os agrupamentos Q1–Q7, que serão *
 | T07 | S5 | Definir dados sintéticos, identificadores globais, migração aditiva e contrato de erro | Alta | Em andamento | T05 |
 | T08 | S6 | Completar CRM: clientes, contatos e oportunidades, validação e autorização | Alta | Em andamento | T06,T07 |
 | T09 | S6 | Completar reservas/contratos: reserva, rascunho, ativação idempotente e encerramento | Alta | Em andamento | T06,T07 |
-| T10 | S7 | Entregar frontend navegável nos cinco contextos, com estados e feedback de erros | Alta | Em andamento | T08,T09 |
+| T10 | S7 | Entregar frontend navegável nos cinco contextos, com estados e feedback de erros | Alta | Em revisão | T08,T09 |
 | T11 | S7 | Demonstrar F1 cliente → reserva → contrato sem recadastro | Alta | Em andamento | T08,T09,T10 |
 | T12 | S8 | Completar financeiro: fatura, pagamento simulado e inadimplência por vencimento | Alta | Em andamento | T09 |
 | T13 | S8 | Demonstrar F2 ativação → cobrança + preparação; reentrega sem duplicação | Alta | Em andamento | T09,T12 |

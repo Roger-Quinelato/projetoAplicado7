@@ -329,6 +329,40 @@ evento em `GET /api/v1/integration/failures` e o retorno ao estado `PENDING` por
 Cada chamada ao dispatcher representa uma tentativa. O protótipo não implementa
 agendamento, atraso exponencial ou jitter.
 
+## Executar os fluxos pela interface
+
+A interface em `http://localhost:8000/` cobre F1, F2 e F3 sem terminal. Informe
+`demo-admin` na tela de acesso (no modo público, a credencial configurada no
+provedor). A navegação lateral leva a Visão geral, CRM, Reservas e contratos,
+Financeiro, Atendimento e Workflow; cada aviso de sucesso ou erro exibe o
+`correlationId` da requisição.
+
+1. **F1.** Em CRM, cadastre um cliente fictício. Na linha do cliente, use
+   **Nova reserva**: a tela Reservas e contratos abre com o mesmo cliente
+   selecionado. Registre a reserva e, na tabela Reservas, use **Gerar rascunho**.
+   O contrato aparece como "Rascunho" para o mesmo cliente, sem recadastro.
+2. **F2.** Em Contratos, use **Ativar**. Em Financeiro (ou Visão geral/Workflow),
+   use **Despachar eventos pendentes**: surge a fatura "Em aberto" e, em Workflow,
+   a "Preparação de retirada". Selecione a fatura e registre o pagamento simulado.
+3. **F3.** Em Contratos, use **Abrir chamado** no contrato ativo. Em Atendimento,
+   use **Consultar elegibilidade e SLA**, abra o chamado, despache os eventos,
+   atribua um responsável e resolva. Um novo despacho conclui o processo de
+   resolução em Workflow.
+4. **Erros legíveis.** Registre uma reserva com fim anterior ao início (`422`
+   com a regra violada) ou um contato com telefone fora do E.164 (`422` com o
+   campo). Saia e entre com `demo-support` para ver `403` ao cadastrar cliente.
+   Uma credencial inexistente mostra `401` na tela de acesso.
+5. **Trilha.** Copie o `correlationId` de um aviso e consulte-o em Visão geral,
+   no cartão "Trilha por correlação".
+
+Os comandos com repetição segura (reserva, rascunhos, ativação, encerramento e
+abertura de chamado) enviam `Idempotency-Key`. A interface só reaproveita a chave
+quando a nova tentativa da mesma ação envia exatamente o mesmo corpo (por exemplo,
+após uma falha de rede ambígua); se o usuário corrigir algum campo, uma chave nova
+é gerada, evitando `409 IDEMPOTENCY_CONFLICT`. A chave é descartada após sucesso e
+após receber `409 IDEMPOTENCY_CONFLICT`. Quando a API indica
+`Idempotency-Replayed: true`, o aviso informa a repetição idempotente.
+
 ## Mostrar observabilidade e segurança
 
 1. Consulte a correlação usada na sessão:
