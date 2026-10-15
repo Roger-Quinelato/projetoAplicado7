@@ -14,6 +14,7 @@ LATENCY_SUM: dict[str, float] = defaultdict(float)
 
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
+        """Formata o registro de log como JSON com correlationId, operação e resultado."""
         return json.dumps({
             "timestamp": self.formatTime(record, "%Y-%m-%dT%H:%M:%SZ"),
             "level": record.levelname,
@@ -32,6 +33,7 @@ logger = logging.getLogger("archcorp")
 
 
 async def metrics_middleware(request: Request, call_next):
+    """Conta requisições por operação e status e acumula a latência."""
     started = time.perf_counter()
     response: Response = await call_next(request)
     operation = f"{request.method}_{request.url.path}"
@@ -41,6 +43,7 @@ async def metrics_middleware(request: Request, call_next):
 
 
 def render_metrics() -> str:
+    """Renderiza os contadores no formato de texto do Prometheus."""
     lines = ["# HELP archcorp_requests_total Total de requisições", "# TYPE archcorp_requests_total counter"]
     lines.extend(f"archcorp_{key} {value}" for key, value in sorted(COUNTERS.items()))
     lines.extend(f'archcorp_request_latency_seconds_sum{{operation="{key}"}} {value:.6f}' for key, value in sorted(LATENCY_SUM.items()))

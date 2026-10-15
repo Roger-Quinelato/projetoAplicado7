@@ -1,9 +1,11 @@
 from collections.abc import Generator
+from typing import TypeVar
 
-from sqlalchemy import Connection, create_engine, text
+from sqlalchemy import Connection, create_engine, func, select, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from archcorp.config import settings
+from archcorp.exceptions import NotFoundError
 
 
 class Base(DeclarativeBase):
@@ -29,6 +31,23 @@ def protect_public_demo_tables(connection: Connection) -> None:
             connection.exec_driver_sql(f"REVOKE ALL PRIVILEGES ON TABLE {identifier} FROM {preparer.quote(role)}")
 
 
+ModelT = TypeVar("ModelT", bound=Base)
+
+
+def get_or_raise(session: Session, model: type[ModelT], entity_id: str, message: str) -> ModelT:
+    """Devolve a entidade pela chave primária ou levanta NotFoundError com a mensagem informada."""
+    entity = session.get(model, entity_id)
+    if entity is None:
+        raise NotFoundError(message)
+    return entity
+
+
+def count_rows(session: Session, model: type[Base]) -> int:
+    """Conta as linhas da tabela do modelo."""
+    return session.scalar(select(func.count()).select_from(model))
+
+
 def get_session() -> Generator[Session, None, None]:
+    """Dependência FastAPI que abre uma sessão por requisição e a fecha ao final."""
     with SessionLocal() as session:
         yield session

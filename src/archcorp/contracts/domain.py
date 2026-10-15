@@ -40,10 +40,12 @@ CONTRACT_MESSAGES = {
 
 
 def ensure_contract_transition(current: str, target: ContractStatus) -> None:
+    """Garante que o contrato pode ir do estado atual para `target`; senão levanta InvalidStateError."""
     if target not in CONTRACT_TRANSITIONS[ContractStatus(current)]:
         raise InvalidStateError(CONTRACT_MESSAGES.get(target, f"Contrato {current} não pode ir para {target}"))
 
 
 def ensure_reservation_transition(current: str, target: ReservationStatus) -> None:
+    """Garante que a reserva pode ir do estado atual para `target`; senão levanta InvalidStateError."""
     if target not in RESERVATION_TRANSITIONS[ReservationStatus(current)]:
         raise InvalidStateError(f"Reserva {current} não pode ir para {target}")
