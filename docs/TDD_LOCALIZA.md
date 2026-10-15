@@ -124,6 +124,36 @@ Regras verificadas em `tests/test_finance.py`:
   dívida para a v2;
 - inadimplência: fatura com saldo e data UTC posterior a `dueDate`; o comando de
   verificação a registra com data e auditoria, sem repetir marcações.
+### Atendimento
+
+| Operação | Papéis |
+|---|---|
+| Abrir chamado | support, admin |
+| Listar e consultar chamados; consultar histórico | support, operations, admin |
+| Atribuir, reatribuir e resolver chamado | support, admin |
+| Reconciliar chamado pendente (individual ou em lote) | support, operations, admin |
+
+Regras verificadas em `tests/test_t15_atendimento.py` (T15):
+
+- estados e transições centralizados em `src/archcorp/support/domain.py`:
+  `PENDING_ENTITLEMENT` → `OPEN` ou `REJECTED_ENTITLEMENT`; `OPEN` → `RESOLVED`;
+  `RESOLVED` e `REJECTED_ENTITLEMENT` são finais (sem reabertura nem pausa de SLA,
+  que o plano não pede); reconciliação inválida retorna `409 INVALID_STATE`,
+  resolução e atribuição inválidas preservam `409 CONFLICT`;
+- Support consulta Contracts somente por `ContractEntitlementPort`
+  (`contracts/public.py`); indisponibilidade (configuração, `ContractsUnavailableError`,
+  `TimeoutError` ou `ConnectionError`) abre o chamado em `PENDING_ENTITLEMENT`;
+- prioridade pela categoria (`OUTAGE`/`SECURITY` → `HIGH`); prazo = abertura + SLA
+  do contrato, com relógio injetado em `TicketService`; `slaStatus` calculado na
+  leitura e fixado na resolução;
+- `Idempotency-Key` obrigatória na abertura, com impressão digital de todo o
+  pedido; resolução e reconciliação têm chave opcional: mesma chave recupera
+  resposta persistida com `Idempotency-Replayed: true`; sem chave preservam conflito;
+- descrição e responsável mantêm validações de tipo/tamanho da v1, sem regex
+  de rejeição de conteúdo; descrição não entra em eventos, auditoria nem logs;
+  erros 422 não ecoam input/ctx nem mensagens interpoladas (ADR-004);
+- histórico próprio (`support_ticket_history`) com ação, estados, responsável
+  anterior e novo, papel do ator (nunca o token), estado de SLA e `correlationId`.
 
 ## Fluxos Tecnicos
 

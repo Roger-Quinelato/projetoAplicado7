@@ -363,7 +363,8 @@ pelo comando `overdue-check`.
    $ticket
    ```
 
-   Verifique `status: OPEN`, `priority: HIGH`, `slaHours: 8` e um `dueAt` em UTC.
+   Verifique `status: OPEN`, `priority: HIGH`, `slaHours: 8`, `openedAt` e `dueAt`
+   em UTC (`dueAt` = `openedAt` + 8 h) e `slaStatus: WITHIN`.
 
 2. Repita a abertura com o mesmo corpo e a mesma chave:
 
@@ -394,6 +395,31 @@ pelo comando `overdue-check`.
 
    O despacho deve processar um evento. As diferenças devem valer `1`: um chamado
    e um processo de resolução.
+
+4. Atribua, reatribua e resolva duas vezes (T15):
+
+   ```powershell
+   $headers.Remove("Idempotency-Key")
+   foreach ($owner in "Equipe de assistência 24h", "Equipe de pátio") {
+     Invoke-RestMethod -Method Post `
+       -Uri "$baseUrl/api/v1/support/tickets/$ticketId/assign" `
+       -Headers $headers -ContentType "application/json" `
+       -Body (@{ owner = $owner } | ConvertTo-Json)
+   }
+   $resolved = Invoke-WebRequest -Method Post `
+     -Uri "$baseUrl/api/v1/support/tickets/$ticketId/resolve" -Headers $headers
+   $resolvedAgain = Invoke-WebRequest -Method Post `
+     -Uri "$baseUrl/api/v1/support/tickets/$ticketId/resolve" -Headers $headers
+   ($resolved.Content | ConvertFrom-Json).slaStatus
+   $resolvedAgain.Headers["Idempotency-Replayed"]
+   Invoke-RestMethod -Uri "$baseUrl/api/v1/support/tickets/$ticketId/history" -Headers $headers
+   ```
+
+   A primeira resolução mostra `slaStatus: MET`; a segunda devolve
+   `Idempotency-Replayed: true` sem novo `TicketResolved.v1`. O histórico lista
+   `OPENED`, `ASSIGNED`, `REASSIGNED` (com `previousOwner`) e `RESOLVED`, cada um com
+   `actorRole` e `correlationId`. Um novo despacho processa um evento e conclui o
+   processo de resolução em Workflow.
 
 ## Demonstrar indisponibilidade e reconciliação
 
@@ -453,8 +479,29 @@ execução. Use um contêiner temporário da API com a configuração documentad
    $reconciled
    ```
 
-   O chamado deve mudar para `OPEN`, receber `slaHours: 8` e um novo `dueAt`. O
-   protótipo não recalcula o prazo do processo de Workflow criado anteriormente.
+   O chamado deve mudar para `OPEN`, receber `slaHours: 8` e `dueAt` igual a
+   `openedAt` + 8 h (o tempo de indisponibilidade não estende o SLA). Repetir o
+   comando devolve o mesmo corpo com `Idempotency-Replayed: true`. Se Contracts
+   ainda estiver fora, a resposta é `503 SERVICE_UNAVAILABLE` e o chamado continua
+   pendente. Após um novo despacho, Workflow ajusta o prazo do processo de
+   resolução para o `dueAt` reconciliado (ou cancela o processo, se a elegibilidade
+   for rejeitada).
+
+5. Para vários chamados pendentes, use a reconciliação em lote:
+
+   ```powershell
+   Invoke-RestMethod -Method Post `
+     -Uri "$baseUrl/api/v1/support/tickets/reconcile-pending" -Headers $headers
+   ```
+
+   A resposta informa `confirmed`, `rejected`, `remaining` e
+   `contractsAvailable`. Repetir a operação não altera chamados já reconciliados.
+
+Em 14/10/2026 a mesma sequência (abertura, SLA, atribuição/reatribuição,
+resolução idempotente, chamados pendentes, `503`, reconciliação individual e em
+lote, com reinício do servidor entre as fases) foi executada contra `uvicorn`
+local por um cliente HTTP em Python; os comandos PowerShell acima não foram
+executados nesse ambiente. Ver `docs/EVIDENCIAS_VALIDACAO.md`, seção T15.
 
 ## Demonstrar falha permanente
 
@@ -497,8 +544,11 @@ Financeiro, Atendimento e Workflow; cada aviso de sucesso ou erro exibe o
    mostra "Registrada em …". Pague o saldo restante: a fatura fica "Paga".
 3. **F3.** Em Contratos, use **Abrir chamado** no contrato ativo. Em Atendimento,
    use **Consultar elegibilidade e SLA**, abra o chamado, despache os eventos,
-   atribua um responsável e resolva. Um novo despacho conclui o processo de
-   resolução em Workflow.
+   atribua (e, se quiser, reatribua) um responsável e resolva. A coluna **SLA**
+   mostra "No prazo", "Vencido", "Cumprido", "SLA pendente" ou "Sem SLA", e
+   **Histórico** lista abertura, atribuições, reconciliação e resolução. Um novo
+   despacho conclui o processo de resolução em Workflow. Chamados com elegibilidade
+   pendente podem ser reconciliados um a um ou por **Reconciliar pendentes**.
 4. **Erros legíveis.** Registre uma reserva com fim anterior ao início (`422`
    com a regra violada) ou um contato com telefone fora do E.164 (`422` com o
    campo). Saia e entre com `demo-support` para ver `403` ao cadastrar cliente.
