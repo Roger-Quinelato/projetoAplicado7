@@ -28,6 +28,7 @@ from archcorp.finance.domain import (
     utc_today,
 )
 from archcorp.finance.models import Invoice, Payment
+from archcorp.infrastructure.db import count_rows
 from archcorp.integration.service import IdempotencyStore, audit
 from archcorp.observability import logger
 
@@ -248,4 +249,5 @@ class FinanceService:
 
 
 def count_invoices(session: Session) -> int:
-    return session.scalar(select(func.count()).select_from(Invoice)) or 0
+    """Conta as faturas gravadas."""
+    return count_rows(session, Invoice)

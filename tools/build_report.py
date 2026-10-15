@@ -17,6 +17,7 @@ GRAY = "D9D9D9"
 
 
 def set_cell_fill(cell, color):
+    """Aplica cor de fundo à célula da tabela."""
     props = cell._tc.get_or_add_tcPr()
     shd = OxmlElement("w:shd")
     shd.set(qn("w:fill"), color)
@@ -24,6 +25,7 @@ def set_cell_fill(cell, color):
 
 
 def set_cell_margins(cell, top=100, start=120, bottom=100, end=120):
+    """Define as margens internas da célula em twips."""
     props = cell._tc.get_or_add_tcPr()
     margins = props.first_child_found_in("w:tcMar")
     if margins is None:
@@ -37,6 +39,7 @@ def set_cell_margins(cell, top=100, start=120, bottom=100, end=120):
 
 
 def set_borders(table):
+    """Aplica bordas simples cinza à tabela."""
     props = table._tbl.tblPr
     borders = OxmlElement("w:tblBorders")
     for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
@@ -49,6 +52,7 @@ def set_borders(table):
 
 
 def add_page_number(paragraph):
+    """Insere o campo de número de página centralizado."""
     paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
     run = paragraph.add_run("Página ")
     begin = OxmlElement("w:fldChar")
@@ -64,6 +68,7 @@ def add_page_number(paragraph):
 
 
 def para(doc, text, bold_lead=None):
+    """Adiciona parágrafo justificado, com negrito opcional no início."""
     p = doc.add_paragraph()
     p.paragraph_format.space_after = Pt(8)
     p.paragraph_format.line_spacing = 1.15
@@ -77,6 +82,7 @@ def para(doc, text, bold_lead=None):
 
 
 def bullets(doc, items):
+    """Adiciona lista com marcadores seguida de espaçamento."""
     for item in items:
         p = doc.add_paragraph()
         p.paragraph_format.left_indent = Inches(0.25)
@@ -88,6 +94,7 @@ def bullets(doc, items):
 
 
 def table(doc, headers, rows, widths=None):
+    """Adiciona tabela com cabeçalho destacado e larguras opcionais."""
     t = doc.add_table(rows=1, cols=len(headers))
     t.alignment = WD_TABLE_ALIGNMENT.CENTER
     t.autofit = True
@@ -122,6 +129,7 @@ def table(doc, headers, rows, widths=None):
 
 
 def page(doc, title, level=1):
+    """Adiciona título de seção, em nova página após o início do documento."""
     heading = doc.add_heading(title, level=level)
     if len(doc.paragraphs) > 2:
         heading.paragraph_format.page_break_before = True

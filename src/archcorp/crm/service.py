@@ -1,9 +1,12 @@
-from sqlalchemy import func, select
+from collections.abc import Sequence
+
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from archcorp.crm.models import Contact, Customer, Opportunity
 from archcorp.crm.public import CustomerData
-from archcorp.exceptions import ConflictError, InvalidStateError, NotFoundError
+from archcorp.exceptions import ConflictError, InvalidStateError
+from archcorp.infrastructure.db import count_rows, get_or_raise
 from archcorp.integration.service import LegacyIdService, audit, enqueue
 
 
@@ -12,8 +15,18 @@ MAX_PAGE_SIZE = 200
 OPPORTUNITY_FINAL_STATES = {"WON", "LOST"}
 
 
+def apply_changes(entity, data: dict, fields: dict[str, str]) -> list[str]:
+    """Copia para a entidade os campos de `data` que mudaram e devolve os nomes alterados."""
+    changed = [source for source, target in fields.items()
+               if source in data and getattr(entity, target) != data[source]]
+    for source in changed:
+        setattr(entity, fields[source], data[source])
+    return changed
+
+
 class CustomerService:
     def create(self, session: Session, data: dict, correlation_id: str) -> Customer:
+        """Cadastra cliente com e-mail único e registra o identificador legado quando informado."""
         self._ensure_unique_email(session, data["email"])
         if data.get("legacyId") and LegacyIdService.resolve(session, LEGACY_SOURCE, data["legacyId"]):
             raise ConflictError(f"Identificador legado {LEGACY_SOURCE}/{data['legacyId']} já cadastrado")
@@ -26,17 +39,13 @@ class CustomerService:
         session.commit()
         return customer
 
-    def update(self, session: Session, customer_id: str, data: dict, correlation_id: str) -> Customer | None:
-        customer = session.get(Customer, customer_id)
-        if not customer:
-            return None
+    def update(self, session: Session, customer_id: str, data: dict, correlation_id: str) -> Customer:
+        """Altera os campos informados; publica CustomerUpdated.v1 quando nome ou e-mail mudam."""
+        customer = self.require(session, customer_id)
         if data.get("email") and data["email"] != customer.email:
             self._ensure_unique_email(session, data["email"], customer.customer_id)
-        changed = []
-        for source, target in (("name", "name"), ("email", "email"), ("eligible", "eligible"), ("consentService", "consent_service")):
-            if source in data and data[source] is not None and getattr(customer, target) != data[source]:
-                setattr(customer, target, data[source])
-                changed.append(source)
+        values = {key: value for key, value in data.items() if value is not None}
+        changed = apply_changes(customer, values, {"name": "name", "email": "email", "eligible": "eligible", "consentService": "consent_service"})
         if not changed:
             return customer
         if {"name", "email"}.intersection(changed):
@@ -46,6 +55,7 @@ class CustomerService:
         return customer
 
     def deactivate(self, session: Session, customer_id: str, correlation_id: str) -> Customer:
+        """Inativa o cliente sem apagar o histórico; repetir a chamada não altera nada."""
         customer = self.require(session, customer_id)
         if customer.active:
             customer.active = False
@@ -55,6 +65,7 @@ class CustomerService:
 
     def list(self, session: Session, *, email: str | None = None, legacy_id: str | None = None, active: bool | None = None,
              limit: int = MAX_PAGE_SIZE, offset: int = 0) -> list[Customer]:
+        """Lista clientes com filtros por e-mail, identificador legado e situação, com paginação."""
         query = select(Customer).order_by(Customer.name, Customer.customer_id)
         if email:
             query = query.where(Customer.email == email)
@@ -69,28 +80,29 @@ class CustomerService:
 
     @staticmethod
     def count(session: Session) -> int:
-        return session.scalar(select(func.count()).select_from(Customer)) or 0
+        """Conta os clientes gravados."""
+        return count_rows(session, Customer)
 
     @staticmethod
-    def legacy_id(session: Session, customer_id: str) -> str | None:
-        mappings = [m for m in LegacyIdService.legacy_ids(session, customer_id) if m.source_system == LEGACY_SOURCE]
-        return mappings[0].legacy_id if mappings else None
+    def legacy_ids(session: Session, customer_ids: Sequence[str]) -> dict[str, str]:
+        """Mapeia cada cliente informado ao seu identificador legado do CRM, numa única consulta."""
+        return LegacyIdService.legacy_ids_by_global_id(session, customer_ids, LEGACY_SOURCE)
 
     @staticmethod
     def require(session: Session, customer_id: str) -> Customer:
-        customer = session.get(Customer, customer_id)
-        if not customer:
-            raise NotFoundError("Cliente não encontrado")
-        return customer
+        """Devolve o cliente ou levanta NotFoundError."""
+        return get_or_raise(session, Customer, customer_id, "Cliente não encontrado")
 
     @staticmethod
     def _ensure_unique_email(session: Session, email: str, current_id: str | None = None) -> None:
+        """Levanta ConflictError se outro cliente já usa o e-mail."""
         existing = session.scalar(select(Customer).where(Customer.email == email))
         if existing and existing.customer_id != current_id:
             raise ConflictError("E-mail já cadastrado no CRM")
 
     def get(self, session: Session, customer_id: str) -> CustomerData | None:
-        customer = session.scalar(select(Customer).where(Customer.customer_id == customer_id))
+        """Implementa CustomerReader: devolve os dados públicos do cliente ou None."""
+        customer = session.get(Customer, customer_id)
         if not customer:
             return None
         return CustomerData(customer.customer_id, customer.name, customer.email, customer.eligible, customer.consent_service, customer.active)
@@ -98,6 +110,7 @@ class CustomerService:
 
 class ContactService:
     def create(self, session: Session, data: dict, correlation_id: str) -> Contact:
+        """Cadastra contato com e-mail único por cliente."""
         CustomerService.require(session, data["customerId"])
         self._ensure_unique_email(session, data["customerId"], data["email"])
         contact = Contact(customer_id=data["customerId"], name=data["name"], email=data["email"], phone=data.get("phone"))
@@ -108,30 +121,29 @@ class ContactService:
         return contact
 
     def get(self, session: Session, contact_id: str) -> Contact:
-        contact = session.get(Contact, contact_id)
-        if not contact:
-            raise NotFoundError("Contato não encontrado")
-        return contact
+        """Devolve o contato ou levanta NotFoundError."""
+        return get_or_raise(session, Contact, contact_id, "Contato não encontrado")
 
     def list(self, session: Session, customer_id: str | None = None) -> list[Contact]:
+        """Lista contatos, com filtro opcional por cliente."""
         query = select(Contact).order_by(Contact.name, Contact.contact_id).limit(MAX_PAGE_SIZE)
         if customer_id:
             query = query.where(Contact.customer_id == customer_id)
         return list(session.scalars(query))
 
     def update(self, session: Session, contact_id: str, data: dict, correlation_id: str) -> Contact:
+        """Altera os campos informados do contato e registra auditoria quando algo muda."""
         contact = self.get(session, contact_id)
         if data.get("email") and data["email"] != contact.email:
             self._ensure_unique_email(session, contact.customer_id, data["email"], contact.contact_id)
-        changed = [field for field in ("name", "email", "phone") if field in data and getattr(contact, field) != data[field]]
-        for field in changed:
-            setattr(contact, field, data[field])
+        changed = apply_changes(contact, data, {"name": "name", "email": "email", "phone": "phone"})
         if changed:
             audit(session, correlation_id, "crm", "update_contact", "success", contact.contact_id, fields=changed)
             session.commit()
         return contact
 
     def delete(self, session: Session, contact_id: str, correlation_id: str) -> None:
+        """Remove o contato e registra auditoria."""
         contact = self.get(session, contact_id)
         session.delete(contact)
         audit(session, correlation_id, "crm", "delete_contact", "success", contact_id, customerId=contact.customer_id)
@@ -139,6 +151,7 @@ class ContactService:
 
     @staticmethod
     def _ensure_unique_email(session: Session, customer_id: str, email: str, current_id: str | None = None) -> None:
+        """Levanta ConflictError se outro contato do cliente já usa o e-mail."""
         existing = session.scalar(select(Contact).where(Contact.customer_id == customer_id, Contact.email == email))
         if existing and existing.contact_id != current_id:
             raise ConflictError("Contato com este e-mail já cadastrado para o cliente")
@@ -146,6 +159,7 @@ class ContactService:
 
 class OpportunityService:
     def create(self, session: Session, data: dict, correlation_id: str) -> Opportunity:
+        """Cria oportunidade em aberto para cliente existente."""
         CustomerService.require(session, data["customerId"])
         opportunity = Opportunity(customer_id=data["customerId"], title=data["title"], notes=data.get("notes"))
         session.add(opportunity)
@@ -155,12 +169,11 @@ class OpportunityService:
         return opportunity
 
     def get(self, session: Session, opportunity_id: str) -> Opportunity:
-        opportunity = session.get(Opportunity, opportunity_id)
-        if not opportunity:
-            raise NotFoundError("Oportunidade não encontrada")
-        return opportunity
+        """Devolve a oportunidade ou levanta NotFoundError."""
+        return get_or_raise(session, Opportunity, opportunity_id, "Oportunidade não encontrada")
 
     def list(self, session: Session, customer_id: str | None = None, status: str | None = None) -> list[Opportunity]:
+        """Lista oportunidades, com filtros por cliente e estado."""
         query = select(Opportunity).order_by(Opportunity.title, Opportunity.opportunity_id).limit(MAX_PAGE_SIZE)
         if customer_id:
             query = query.where(Opportunity.customer_id == customer_id)
@@ -169,6 +182,7 @@ class OpportunityService:
         return list(session.scalars(query))
 
     def update(self, session: Session, opportunity_id: str, data: dict, correlation_id: str) -> Opportunity:
+        """Altera estado, título ou notas; WON e LOST são finais e não aceitam edição."""
         opportunity = self.get(session, opportunity_id)
         new_status = data.get("status")
         if new_status and new_status != opportunity.status:
@@ -176,9 +190,7 @@ class OpportunityService:
                 raise InvalidStateError(f"Oportunidade {opportunity.status} não pode mudar para {new_status}")
         elif opportunity.status in OPPORTUNITY_FINAL_STATES and ({"title", "notes"} & data.keys()):
             raise InvalidStateError(f"Oportunidade {opportunity.status} não pode ser editada")
-        changed = [field for field in ("status", "title", "notes") if field in data and getattr(opportunity, field) != data[field]]
-        for field in changed:
-            setattr(opportunity, field, data[field])
+        changed = apply_changes(opportunity, data, {"status": "status", "title": "title", "notes": "notes"})
         if changed:
             audit(session, correlation_id, "crm", "update_opportunity", "success", opportunity.opportunity_id, fields=changed, status=opportunity.status)
             session.commit()

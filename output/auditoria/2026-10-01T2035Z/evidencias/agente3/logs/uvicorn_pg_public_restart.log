@@ -1,0 +1,14 @@
+INFO:     Started server process [4780]
+INFO:     Waiting for application startup.
+{"timestamp": "2026-10-01T20:43:44Z", "level": "INFO", "module": "alembic.runtime.migration", "operation": "__init__", "correlationId": "unknown", "result": "recorded", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-10-01T20:43:44Z", "level": "INFO", "module": "alembic.runtime.migration", "operation": "__init__", "correlationId": "unknown", "result": "recorded", "message": "Will assume transactional DDL."}
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18081 (Press CTRL+C to quit)
+{"timestamp": "2026-10-01T20:43:45Z", "level": "INFO", "module": "archcorp", "operation": "/health/live", "correlationId": "ed7c198e-d7ba-49ec-8cb4-eda974a96f25", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:47122 - "GET /health/live HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:43:45Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/customers", "correlationId": "39e03c9f-47f7-415f-9f6e-59fdfb5cae48", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:47124 - "GET /api/v1/crm/customers?email=persist@example.com HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [4780]

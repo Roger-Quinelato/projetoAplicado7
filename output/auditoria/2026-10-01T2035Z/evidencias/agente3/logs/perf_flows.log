@@ -1,0 +1,7 @@
+[2026-10-01T20:48:04Z sqlite] F1(cliente+rascunho) p95=39.5ms F2(ativar+despachar) p95=42.9ms F3(chamado+despachar) p95=38.7ms n=100
+[2026-10-01T20:48:15Z postgresql] Traceback (most recent call last):
+[2026-10-01T20:48:15Z postgresql]   File "/tmp/claude-0/-home-user-projetoAplicado7/ec00d59b-c354-5d1f-b4d6-080b88ac1d06/scratchpad/agente3/perf_flows.py", line 12, in <module>
+[2026-10-01T20:48:15Z postgresql]     cid=c.post("/api/v1/crm/customers",headers=H,json={"name":"Perf","email":f"p{i}-{uuid.uuid4().hex[:6]}@example.com"}).json()["customerId"]
+[2026-10-01T20:48:15Z postgresql]         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+[2026-10-01T20:48:15Z postgresql] KeyError: 'customerId'
+[2026-10-01T20:48:24Z postgresql] F1(cliente+rascunho) p95=43.7ms F2(ativar+despachar) p95=50.7ms F3(chamado+despachar) p95=45.3ms n=100

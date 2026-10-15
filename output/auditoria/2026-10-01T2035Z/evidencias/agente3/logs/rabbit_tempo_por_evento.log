@@ -1,0 +1,3 @@
+porta fechada: 0.02s por evento -> AMQPConnectionError str(exc)=''
+host 10.255.255.1 (sem rota/descartado): 10.01s por evento -> AMQPConnectionError str(exc)=''
+TCP aceito sem handshake AMQP: 15.01s por evento -> AMQPConnectorStackTimeout str(exc)="Timeout during AMQP handshake'127.0.0.1'/(<AddressFamily.AF_INET: 2>, <SocketKind.SOCK_STREAM: 1>, 6, '', ('127.0.0.1', 59829)); ssl=False"

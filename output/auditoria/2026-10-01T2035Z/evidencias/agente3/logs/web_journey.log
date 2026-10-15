@@ -1,0 +1,37 @@
+01 título='ArchCorp | Operações integradas' gate_visível=True
+AXE[gate] violações=3
+   - color-contrast (serious) nós=2: Elements must meet minimum color contrast ratio thresholds ex=['span', 'small']
+   - landmark-one-main (moderate) nós=1: Document should have one main landmark ex=['html']
+   - region (moderate) nós=6: All page content should be contained by landmarks ex=['.mark', '.eyebrow']
+02 token errado -> aviso='Falha ao carregar: Token ausente ou inválido'; ainda no gate=True
+02b token inválido persistido em sessionStorage=True
+03 token demo-support -> aviso='Falha ao carregar: Papel sem permissão para esta operação'; gate=True
+04 painel carregado com demo-admin
+AXE[painel-visao-geral] violações=1
+   - color-contrast (serious) nós=8: Elements must meet minimum color contrast ratio thresholds ex=['.eyebrow', '.stat:nth-child(1) > span']
+05 criar cliente -> aviso='Cliente cadastrado concluído. ×'; na tabela=True
+AXE[crm] violações=1
+   - color-contrast (serious) nós=14: Elements must meet minimum color contrast ratio thresholds ex=['.eyebrow', 'section:nth-child(1) > form > label:nth-child(1) > .label']
+06 e-mail duplicado -> aviso='Não foi possível concluir: E-mail já cadastrado no CRM ×'; campo nome preservado após erro=''
+07 reserva (duplo clique no submit) -> aviso='Reserva registrada concluído. ×'; reservas no banco=1
+08 gerar contrato (duplo clique) -> aviso='Contrato gerado concluído. ×'; contratos=1
+09 ativar (duplo clique) -> aviso='Contrato ativado concluído. ×'; contrato=ACTIVE; eventos ContractActivated=2
+10 despacho -> aviso='Despacho de eventos concluído. ×'
+11 financeiro -> faturas do contrato no banco=1; linhas na tabela=1
+AXE[financeiro] violações=1
+   - color-contrast (serious) nós=10: Elements must meet minimum color contrast ratio thresholds ex=['.eyebrow', 'label:nth-child(1) > .label']
+12 workflow -> processos do contrato=1; tabela processos=1
+13 chamado com descrição curta -> aviso='Não foi possível concluir: String should have at least 3 characters ×'
+AXE[atendimento] violações=1
+   - color-contrast (serious) nós=9: Elements must meet minimum color contrast ratio thresholds ex=['.eyebrow', 'section:nth-child(1) > form > label:nth-child(1) > .label']
+14 viewport 390px -> scrollWidth/innerWidth=[390, 390]
+REQ mutáveis (método, caminho, Idempotency-Key presente):
+   POST /api/v1/crm/customers key=não
+   POST /api/v1/crm/customers key=não
+   POST /api/v1/contracts/reservations key=sim 11de4d87
+   POST /api/v1/contracts/reservations/498c04ab-7f6e-4703-bd7d-21d199c9a116/draft key=sim 4a653e99
+   POST /api/v1/contracts/a5406b86-fc3e-470d-9f75-874e0a6a1cd3/activate key=sim 341d4391
+   POST /api/v1/contracts/a5406b86-fc3e-470d-9f75-874e0a6a1cd3/activate key=sim 4b076cd4
+   POST /api/v1/integration/outbox/dispatch key=não
+   POST /api/v1/support/tickets key=sim e1873fd2
+CONSOLE: ['error: Failed to load resource: net::ERR_CERT_AUTHORITY_INVALID', "warning: Couldn't load preload assets:  ProgressEvent", 'error: Failed to load resource: net::ERR_CERT_AUTHORITY_INVALID', 'error: Failed to load resource: the server responded with a status of 401 (Unauthorized)', 'error: Failed to load resource: the server responded with a status of 401 (Unauthorized)', 'error: Failed to load resource: the server responded with a status of 401 (Unauthorized)', 'error: Failed to load resource: the server responded with a status of 401 (Unauthorized)', 'error: Failed to load resource: the server responded with a status of 401 (Unauthorized)']
