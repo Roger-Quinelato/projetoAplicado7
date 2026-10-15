@@ -207,3 +207,21 @@ commit da tentativa. Testes adicionais verificam falha de commit sem contagem
 antecipada e preservação do evento anterior já confirmado. Exemplos 422 e de
 replay foram alinhados ao comportamento. Suíte local após o ajuste: **179 passed,
 6 skipped**; PostgreSQL novamente coberto pela CI do SHA final.
+
+### Concorrência real da outbox em PostgreSQL (camada #37, 2026-10-15)
+
+- `tests/test_postgresql_concurrency.py`, dois casos novos com dois despachantes em
+  conexões separadas:
+  - enquanto o consumidor de A falha segurando o `FOR UPDATE`, o despachante B
+    pula o evento (`processed 0, failed 0`); ao final `attempts == 1`, o consumidor
+    rodou uma vez e nenhum efeito ou inbox ficou gravado;
+  - com consumidor que sempre falha, dois despachantes em laço levam o evento a
+    `FAILED` com `attempts == retry_limit`, igual ao número de execuções, e nunca
+    há execução simultânea do mesmo evento.
+- Limite: os dois casos também passam com o despachante anterior (`ff0094a`); eles
+  provam exclusão mútua e contagem em PostgreSQL real, não a janela entre rollback e
+  novo bloqueio. A demonstração determinística dessa janela continua sendo o teste de
+  sequência em SQLite da camada #35.
+- Local (PostgreSQL 16, Python 3.13), após integrar as correções do #35:
+  `TEST_DATABASE_URL=... PYTHONPATH=src python -m pytest -q tests -p no:cacheprovider`:
+  **191 passed** em PostgreSQL; em SQLite, 183 passed e 8 skipped (exigem PostgreSQL).
