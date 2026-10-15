@@ -161,3 +161,115 @@ Preservados o bloqueio de downgrade com FINAL antes de alterações, os códigos
 financeiros existentes, a proibição de data futura no modo público e o marcador
 idempotente da fatura final sem saldo. Prazo de dez dias e cálculo por ciclo iniciado
 continuam premissas; valores float na saída são dívida para futura API v2.
+## Atendimento completo em 14 de outubro de 2026 (T15)
+
+Ambiente: contêiner Linux, Python 3.13.16, Node 22.22.0, SQLite local e API servida por `PYTHONPATH=src uvicorn archcorp.main:app --port 8001` com banco próprio (`DATABASE_URL=sqlite:///./tmp/demo-t15.db`) e tokens locais. Dados sintéticos; nenhum sistema da Localiza, central de atendimento ou ITSM foi acessado.
+
+- Suíte Python: **122 testes aprovados** com `PYTHONPATH=src python3 -m pytest -q tests -p no:cacheprovider` (74 anteriores, sem alteração de asserções, + 48 casos em `tests/test_t15_atendimento.py`), um aviso de depreciação Starlette/AnyIO já conhecido.
+- Contratos: `PYTHONPATH=src python3 tools/export_openapi.py --check` aprovado após regenerar o OpenAPI. Mudanças aditivas na v1: campos opcionais `openedAt`, `resolvedAt` e `slaStatus` nas respostas de chamado; `RESOLVED` no enum de `TicketResponse`; rotas novas `GET /api/v1/support/tickets/{ticketId}/history` e `POST /api/v1/support/tickets/reconcile-pending`; `503` documentado na reconciliação; cabeçalho `Idempotency-Replayed` na resolução e na reconciliação. O AsyncAPI ganhou os mesmos três campos opcionais nos payloads de chamado e um exemplo de `TicketOpened.v1` pendente; exemplos e envelopes gravados validaram contra os schemas.
+- Endurecimentos de entrada (não aditivos, por privacidade e consistência com Contracts): `serviceCode` com 2 a 80 caracteres; descrição e responsável rejeitam documento, cartão, telefone (11 dígitos ou mais), placa e e-mail com `422`; resolução e atribuição fora da máquina de estados passam a responder `409 INVALID_STATE` (antes `409 CONFLICT`); resolução repetida passa de `409` para `200` idempotente.
+- Migração aditiva `0004_support_sla_history`: cria `support_ticket_history` e as colunas anuláveis `opened_at`, `reconciled_at` e `resolved_at`. Sem divergência entre modelos e migrações; teste dedicado aplica `0003` → `head` com um chamado existente e confirma que ele permanece legível (`openedAt` nulo). O fixture de testes passou a remover `alembic_version` junto com as tabelas, porque um banco de teste local carimbado em `0003` falhava ao receber a migração nova.
+- Casos novos: máquina de estados completa (todas as combinações), prioridade, prazo e `slaStatus` com relógio injetado (`WITHIN` no instante do prazo, `BREACHED` um segundo depois, `MET`/`BREACHED` fixados na resolução); serviço com porta falsa de Contracts (elegível, `ContractsUnavailableError`, `TimeoutError`, `ConnectionError`); idempotência da abertura (mesmo corpo, outro relato com `409`, registro anterior à T15 sem impressão digital, chave não consumida em `422`); seis violações de fronteira com `422` sem chamado; log `WARNING` com correlação e sem descrição; atribuição, repetição sem efeito e reatribuição com histórico, auditoria e papel (nunca o token); resolução idempotente com um único `TicketResolved.v1`; reconciliação com `503` sem efeito, prazo contado da abertura após 3 h de indisponibilidade, repetição sem novo evento, rejeição com cancelamento do processo em Workflow; lote com `503`, confirmação/rejeição, repetição vazia e interrupção no meio do lote preservando o que foi confirmado; reentrega de `TicketOpened.v1` e `TicketResolved.v1` sem duplicar processo nem inbox; envelopes dos três eventos de chamado contra o AsyncAPI; matriz 401/403 nas oito rotas de atendimento.
+- Demonstração real (roteiro Python com `httpx`, mantido fora do Git) em três fases com reinício do servidor: **32/32 checagens aprovadas** (fase A 15/15 com Contracts disponível; fase B 4/4 com `CONTRACT_ADAPTER_AVAILABLE=false`; fase C 13/13 com Contracts de volta). Cobriu abertura `OPEN`/`HIGH`/8 h com `dueAt` = `openedAt` + 8 h, repetição idempotente, `409 IDEMPOTENCY_CONFLICT`, `422` para descrição com CPF, `403` (finance, operations) e `401`; atribuição, repetição e reatribuição; resolução `MET` e repetição idempotente com um único evento despachado; processo de resolução `COMPLETED`; histórico `OPENED, ASSIGNED, REASSIGNED, RESOLVED`; trilha por `correlationId` com Support e o consumidor de Workflow; três chamados pendentes, `503` individual e em lote; após reinício, chamado ainda pendente, reconciliação individual com prazo contado da abertura, repetição com `Idempotency-Replayed: true`, lote com 1 confirmado e 1 rejeitado, lote repetido vazio, prazo ajustado em Workflow e processo cancelado para o rejeitado, `409 INVALID_STATE` ao resolver o rejeitado.
+- Logs da API nas três fases: nenhuma ocorrência de token, cabeçalho `Authorization`, descrição de chamado ou do CPF enviado; a indisponibilidade aparece como `WARNING` com `operation: support_entitlement`, `result: unavailable` e o `correlationId`.
+- Interface: `cd web && npm ci && npm run build` concluídos (`tsc -b` estrito e Vite). Atendimento ganhou coluna SLA, histórico por chamado, rótulo de reatribuição e botão **Reconciliar pendentes**. Não houve roteiro de navegador nesta execução.
+- Diagramas: os seis blocos Mermaid de `docs/arquitetura/FLUXOS_INTEGRACAO.md`, inclusive o novo ciclo de vida do chamado, renderizaram sem erro com Mermaid CLI.
+- Observado e fora do escopo: o processo `TICKET_RESOLUTION` de Workflow recebe prazo pela hora do despacho e expõe `dueAt` sem sufixo `Z`; `GET /api/v1/operations/{correlationId}` devolve `occurredAt` da auditoria sem fuso; o carimbo dos logs JSON usa hora local com sufixo `Z`. Registrado para T16/T17.
+- Não verificado: interface no navegador, PostgreSQL real, URL HTTPS pública, timeout de rede de um Contracts externo (adaptador no mesmo processo) e qualquer integração com central de atendimento ou sistemas da Localiza.
+
+## Estabilização integrada do atendimento (2026-10-15)
+
+T15 original `6683b83`, integrada sobre T12 validada. Corrigidas as expectativas
+da T15 que contrariavam o contrato v1 aprovado: sem chave há conflito; rejeições
+por regex da descrição/responsável foram retiradas (ADR-004). Casos novos verificam
+replay persistido após mudança de estado, chave cruzada entre recursos/comandos,
+e papel autorizado. A migração de convergência preserva dados a partir da 0003 e
+de cada 0004 publicada, mantém uma head e bloqueia downgrade com FINAL.
+
+Execução local: **178 passed, 6 skipped** (SQLite; skips são exclusivamente
+PostgreSQL). `npm ci --prefix web` e `npm run build --prefix web` aprovados. CI
+PostgreSQL 16 configurada, mas execução ainda não confirmada nesta evidência.
+Sem Docker, deploy ou acesso a sistemas reais.
+
+### Conferência posterior do baseline v1 (2026-10-15)
+
+A CI do SHA `15c9a4e` passou, incluindo PostgreSQL 16 (migrações e concorrência),
+frontend e Docker: https://github.com/Roger-Quinelato/projetoAplicado7/actions/runs/38670396112.
+Comparação com main `5e344e2` identificou limites novos de serviceCode e regex
+nova na moeda: foram retirados para preservar a fronteira v1. TicketResponse
+mantém enum de abertura/reconciliação; TicketDetailResponse continua incluindo
+RESOLVED. Após ajustes: **177 passed, 6 skipped** em SQLite; CI será repetida no
+SHA final. A retirada de dois casos de rejeição de serviceCode foi compensada
+pela manutenção do teste de tamanho da descrição; elegibilidade não mudou.
+
+Na auto-revisão final, a métrica de falhas passou a incrementar somente após o
+commit da tentativa. Testes adicionais verificam falha de commit sem contagem
+antecipada e preservação do evento anterior já confirmado. Exemplos 422 e de
+replay foram alinhados ao comportamento. Suíte local após o ajuste: **179 passed,
+6 skipped**; PostgreSQL novamente coberto pela CI do SHA final.
+
+### Concorrência real da outbox em PostgreSQL (camada #37, 2026-10-15)
+
+- `tests/test_postgresql_concurrency.py`, dois casos novos com dois despachantes em
+  conexões separadas:
+  - enquanto o consumidor de A falha segurando o `FOR UPDATE`, o despachante B
+    pula o evento (`processed 0, failed 0`); ao final `attempts == 1`, o consumidor
+    rodou uma vez e nenhum efeito ou inbox ficou gravado;
+  - com consumidor que sempre falha, dois despachantes em laço levam o evento a
+    `FAILED` com `attempts == retry_limit`, igual ao número de execuções, e nunca
+    há execução simultânea do mesmo evento.
+- Limite: os dois casos também passam com o despachante anterior (`ff0094a`); eles
+  provam exclusão mútua e contagem em PostgreSQL real, não a janela entre rollback e
+  novo bloqueio. A demonstração determinística dessa janela continua sendo o teste de
+  sequência em SQLite da camada #35.
+- Local (PostgreSQL 16, Python 3.13), após integrar as correções do #35:
+  `TEST_DATABASE_URL=... PYTHONPATH=src python -m pytest -q tests -p no:cacheprovider`:
+  **191 passed** em PostgreSQL; em SQLite, 183 passed e 8 skipped (exigem PostgreSQL).
+
+## Refatoração estrutural posterior à estabilização (2026-10-15)
+
+Rotas de Contracts, Support e Integration saíram de main.py; schemas pertencem
+a seus módulos e imports antigos continuam disponíveis por fachada. Negócios
+usam integration.public, sem importar seus modelos/serviço internos. ADR-005
+registra a decisão e a avaliação limitada do PR29, que não foi integrado.
+O OpenAPI produzido após a extração foi comparado integralmente com o conjunto
+de suporte corrigido e é idêntico. Não há mudança de API/evento nesta extração.
+
+A proteção de compatibilidade usa fixture separado da main 5e344e2 e duas
+exceções exatas do ADR-003; seu teste negativo detecta restrição nova na descrição,
+rota removida e cabeçalho obrigatório. Fronteiras, domínio puro e identidade dos
+imports legados têm testes específicos. A CI PostgreSQL executa a mesma suíte.
+
+Suíte estrutural final local: **184 passed, 6 skipped** (PostgreSQL ausente local),
+OpenAPI conferido, `ruff --select F,E9` e `git diff --check` aprovados. A guarda de
+migração mantém também o objeto exato da restrição removida e o UPDATE exato da
+exceção ADR-003, além da contagem. CI do suporte final `2cadab6` passou em
+https://github.com/Roger-Quinelato/projetoAplicado7/actions/runs/38713887061.
+A execução da CI da extração será conferida no SHA publicado; deploy público
+permanece pendente.
+
+## Endurecimento de segurança sobre a main (2026-10-15)
+
+Origem: auditoria de código, configuração e logs do CI. Dados sintéticos; nenhum
+ataque de carga ou teste no deploy público.
+
+- Dependências: FastAPI 0.143.2 e Starlette 1.8.0 (antes 0.116.1/0.47.3, com
+  CVE-2025-62727 e avisos posteriores corrigidos até a 1.3.1); `pip-audit -r
+  requirements.txt` sem vulnerabilidades conhecidas. Vite 7.3.7
+  (GHSA-rq7h-c2jc-7f22) e `source-map-js` 1.2.2 (GHSA-68fv-2mgg-jv7q, o aviso
+  "high" do `npm ci`); `npm audit` sem vulnerabilidades. Lockfile gerado com npm 11.
+  O OpenAPI exportado não mudou com a atualização do FastAPI.
+- Métricas: rótulo pelo template da rota, método fora da lista conhecida vira
+  `OTHER`, escape de rótulos e `/metrics` com `operations`/`admin`.
+  `tests/test_security_hardening.py`: 2.000 URLs sintéticas criam no máximo as
+  séries dos templates; saída válida com aspas e método desconhecido; 401/403/200.
+- Compose: API e console do RabbitMQ publicados em `127.0.0.1`. Servidor Vite de
+  desenvolvimento sem `--host 0.0.0.0`.
+- Erros 422 sem `input`/`ctx` e com `msg` genérica, igual ao #35, e `describeIssue`
+  ajustado na interface (`web/tests/api.test.ts`), para a main não esperar a pilha.
+- CI: passos `pip-audit` e `npm audit --audit-level=moderate` reprovam a execução.
+- Local (Python 3.13, Node 22): **79 passed** em SQLite; `npm test` 4 passed;
+  `npm run build` sem erro.
+- Limites mantidos: credencial pública compartilhada com todos os papéis, contêiner
+  como root e ausência de limitação de taxa. Não verificado: deploy público e
+  configurações reais do provedor.

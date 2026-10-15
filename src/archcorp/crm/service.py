@@ -7,7 +7,7 @@ from archcorp.crm.models import Contact, Customer, Opportunity
 from archcorp.crm.public import CustomerData
 from archcorp.exceptions import ConflictError, InvalidStateError
 from archcorp.infrastructure.db import count_rows, get_or_raise
-from archcorp.integration.service import LegacyIdService, audit, enqueue
+from archcorp.integration.public import LegacyIdService, audit, enqueue
 
 
 LEGACY_SOURCE = "CRM"

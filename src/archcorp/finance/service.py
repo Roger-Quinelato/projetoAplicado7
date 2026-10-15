@@ -29,7 +29,7 @@ from archcorp.finance.domain import (
 )
 from archcorp.finance.models import Invoice, Payment
 from archcorp.infrastructure.db import count_rows
-from archcorp.integration.service import IdempotencyStore, audit
+from archcorp.integration.public import IdempotencyStore, audit
 from archcorp.observability import logger
 
 

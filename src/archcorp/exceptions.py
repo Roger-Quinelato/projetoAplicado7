@@ -40,3 +40,10 @@ class InvalidStateError(ConflictError):
 class BusinessRuleError(DomainError):
     status_code = 422
     code = "BUSINESS_RULE_VIOLATION"
+
+
+class ServiceUnavailableError(DomainError):
+    """Dependência de outro contexto indisponível; nenhum efeito foi gravado."""
+
+    status_code = 503
+    code = "SERVICE_UNAVAILABLE"

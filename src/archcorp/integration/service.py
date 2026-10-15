@@ -23,7 +23,6 @@ class EventDispatcher:
         self.handlers = handlers
 
     def dispatch_pending(self, session: Session) -> dict:
-        """Entrega os eventos pendentes aos consumidores sem repetir os já registrados na inbox; falhas contam tentativas até FAILED."""
         event_ids = list(session.scalars(select(OutboxEvent.event_id).where(OutboxEvent.status == "PENDING")
                                         .order_by(OutboxEvent.occurred_at, OutboxEvent.event_id)))
         processed = failed = 0
@@ -210,20 +209,30 @@ class IdempotencyStore:
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     @classmethod
-    def replay(cls, session: Session, key: str, operation: str, request: dict, conflict_message: str) -> dict | None:
-        """Devolve a resposta guardada para a chave; levanta conflito se a requisição mudou."""
+    def replay(cls, session: Session, key: str, operation: str, request: dict, conflict_message: str,
+               *, legacy_fields: tuple[str, ...] = ()) -> dict | None:
         stored = session.get(IdempotencyRecord, {"key": key, "operation": operation})
         if not stored:
             return None
         if stored.request_hash and stored.request_hash != cls.fingerprint(request):
             raise IdempotencyConflictError(conflict_message)
+        if not stored.request_hash and any(stored.response.get(field) != request[field] for field in legacy_fields):
+            raise IdempotencyConflictError(conflict_message)
         return stored.response
 
     @staticmethod
-    def previous(session: Session, operation: str) -> dict | None:
-        """Devolve a resposta de qualquer execução anterior da operação, se houver."""
-        stored = session.scalar(select(IdempotencyRecord).where(IdempotencyRecord.operation == operation))
+    def previous(session: Session, operation: str, key: str | None = None) -> dict | None:
+        """Consulta resposta legada sem expor o modelo interno ao módulo chamador."""
+        query = select(IdempotencyRecord).where(IdempotencyRecord.operation == operation)
+        if key is not None:
+            query = query.where(IdempotencyRecord.key == key)
+        stored = session.scalar(query)
         return stored.response if stored else None
+
+    @staticmethod
+    def save_legacy(session: Session, key: str, operation: str, response: dict) -> None:
+        """Preserva registros anteriores à impressão digital, sem alterar sua semântica."""
+        session.add(IdempotencyRecord(key=key, operation=operation, response=response))
 
     @classmethod
     def save(cls, session: Session, key: str, operation: str, request: dict, response: dict) -> None:

@@ -74,7 +74,7 @@ class PaymentInput(BaseModel):
     model_config = ConfigDict(json_schema_extra={"examples": [{"amount": 2500.00, "currency": "BRL", "reference": "SIMULATED-001"}]})
 
     amount: Decimal = Field(gt=0, max_digits=14, decimal_places=2)
-    currency: str = Field(min_length=3, max_length=3, pattern="^[A-Z]{3}$")
+    currency: str = Field(min_length=3, max_length=3)
     reference: str = Field(min_length=3, max_length=100)
 
 
