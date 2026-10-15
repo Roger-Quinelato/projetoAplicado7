@@ -91,3 +91,15 @@ Ambiente: contêiner Linux, Python 3.13.16, Node 22, SQLite local novo e API ser
 - `cd web && npm run build`: concluído sem erro (frontend não alterado).
 - Pendência registrada em `CRONOGRAMA_EXECUCAO.md`: timeout e retentativa limitada do adaptador do CRM (critério de F1 ainda parcial em RF-02).
 - Não verificado: F1 na URL HTTPS pública (Render/Supabase), PostgreSQL real e timeout de rede de um CRM externo. O adaptador `CustomerReader` roda no mesmo processo, sem timeout configurado nem retentativa automática; a indisponibilidade é coberta só pelo simulador do teste. Nenhuma integração real com a Localiza.
+
+## Estabilização v1 — regressões de integração e privacidade (2026-10-15)
+
+Base: `5e344e2`. Os 74 testes existentes e duas caracterizações do atendimento
+passaram; os dois novos casos de outbox/privacidade falharam antes da correção.
+`tests/test_reliability_regressions.py` reproduz flush SQL inválido após efeito
+parcial, verifica rollback, continuidade, esgotamento, reprocessamento e reentrega,
+e impede eco de dados sintéticos nos erros de validação e logs.
+Os códigos v1 caracterizados são `CONFLICT` na resolução repetida sem chave e
+`INVALID_STATE` na reconciliação repetida sem chave. Nenhum deploy foi executado.
+
+Após a correção: `PYTHONPATH=src python -m pytest -q tests -p no:cacheprovider`: **78 passed** em SQLite. PostgreSQL ainda não executado nesta etapa.

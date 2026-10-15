@@ -209,3 +209,19 @@ Os cinco sistemas são contextos e simuladores do protótipo. Produtos, tecnolog
 interfaces, responsáveis e volumes reais da organização não constam no enunciado
 e permanecem como premissas a validar. A troca por sistemas reais deve ocorrer por
 adaptadores, preservando os contratos técnicos e as fronteiras descritas neste documento.
+
+### Estabilização v1: privacidade e recuperação da outbox
+
+Erros 422 preservam `detail` e `errors` como listas idênticas, com `type`, `loc`
+e `msg`. Por exceção de segurança, não retornam `input`, `ctx` ou mensagens que
+possam interpolar dados da entrada; `msg` é genérica, exceto campo obrigatório.
+O código `VALIDATION_ERROR`, status e correlação permanecem iguais. Clientes não
+devem depender do eco de dados rejeitados.
+
+Cada evento da outbox usa uma transação: todos os consumidores internos e inbox
+são confirmados juntos. Em falha, os efeitos parciais são desfeitos e a tentativa
+é registrada numa transação válida; os próximos eventos continuam. Ao atingir
+`retry_limit`, o evento fica `FAILED`. Reprocessamento preserva inbox e restrições
+de negócio. Logs registram somente tipo da exceção, ID e correlação, sem SQL,
+parâmetros, traceback ou mensagem da exceção. A cópia opcional no RabbitMQ continua
+com entrega ao menos uma vez: falha após publicação pode causar reentrega.

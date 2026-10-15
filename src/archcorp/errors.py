@@ -105,7 +105,11 @@ async def domain_error_handler(request: Request, exc: DomainError) -> JSONRespon
 
 
 async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-    errors = jsonable_encoder(exc.errors())
+    # input/ctx podem conter corpo completo, credenciais e descrição de chamado.
+    # Mensagens de validadores customizados também podem interpolar a entrada.
+    errors = [{"type": error["type"], "loc": list(error["loc"]),
+               "msg": "Field required" if error["type"] == "missing" else "Entrada inválida"}
+              for error in exc.errors()]
     return problem_response(request, 422, errors, errors=errors)
 
 
@@ -170,7 +174,6 @@ VALIDATION_ERROR_EXAMPLE = {
     "type": "missing",
     "loc": ["body", "name"],
     "msg": "Field required",
-    "input": {},
 }
 
 

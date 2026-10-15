@@ -19,9 +19,15 @@ class EventDispatcher:
         self.handlers = handlers
 
     def dispatch_pending(self, session: Session) -> dict:
-        events = session.scalars(select(OutboxEvent).where(OutboxEvent.status == "PENDING").order_by(OutboxEvent.occurred_at)).all()
+        event_ids = list(session.scalars(select(OutboxEvent.event_id).where(OutboxEvent.status == "PENDING")
+                                        .order_by(OutboxEvent.occurred_at, OutboxEvent.event_id)))
         processed = failed = 0
-        for event in events:
+        for event_id in event_ids:
+            event = session.scalar(select(OutboxEvent).where(OutboxEvent.event_id == event_id,
+                                   OutboxEvent.status == "PENDING").with_for_update(skip_locked=True))
+            if event is None:
+                continue
+            correlation_id = event.correlation_id
             try:
                 for consumer, handler in self.handlers.get(event.event_type, []):
                     exists = session.scalar(select(InboxEvent).where(InboxEvent.event_id == event.event_id, InboxEvent.consumer == consumer))
@@ -32,17 +38,28 @@ class EventDispatcher:
                 self._publish_broker(event.envelope())
                 event.status = "PUBLISHED"
                 event.last_error = None
+                session.commit()
                 processed += 1
                 COUNTERS["events_published_total"] += 1
             except Exception as exc:
+                # Flush/commit podem invalidar a sessão. Desfaz também efeitos de
+                # consumidores anteriores; a tentativa usa uma transação nova.
+                session.rollback()
+                event = session.scalar(select(OutboxEvent).where(OutboxEvent.event_id == event_id).with_for_update())
+                if event is None or event.status != "PENDING":
+                    session.rollback()
+                    continue
                 event.attempts += 1
-                event.last_error = str(exc)[:500]
+                event.last_error = "Falha no despacho do evento; consulte a correlação e reprocesse após corrigir a causa"
                 if event.attempts >= settings.retry_limit:
                     event.status = "FAILED"
                     COUNTERS["events_failed_total"] += 1
                 failed += 1
-                logger.exception("Falha ao despachar evento", extra={"operation": "dispatch_event", "result": "failure"})
-            session.commit()
+                session.commit()
+                # Não registrar exceção/traceback: SQLAlchemy inclui parâmetros
+                # e adaptadores podem incluir payloads ou credenciais na mensagem.
+                logger.warning("Falha ao despachar evento", extra={"operation": "dispatch_event", "result": "failure",
+                               "eventId": event_id, "correlationId": correlation_id, "errorType": type(exc).__name__})
         return {"processed": processed, "failed": failed}
 
     @staticmethod
