@@ -103,6 +103,36 @@ Os códigos v1 caracterizados são `CONFLICT` na resolução repetida sem chave 
 `INVALID_STATE` na reconciliação repetida sem chave. Nenhum deploy foi executado.
 
 Após a correção: `PYTHONPATH=src python -m pytest -q tests -p no:cacheprovider`: **78 passed** em SQLite. PostgreSQL ainda não executado nesta etapa.
+
+### Correções da revisão na camada #35 (2026-10-15)
+
+- Despachante da outbox: consumidores e broker em SAVEPOINT; a tentativa é
+  registrada na transação que mantém o bloqueio do evento. Ajuste do pysqlite
+  (`BEGIN` explícito) em `infrastructure/db.py`.
+- `tests/test_reliability_regressions.py`: dois casos novos (SAVEPOINT após só
+  leitura não confirma a transação externa; nenhuma fronteira de transação entre
+  a falha do consumidor e o registro da tentativa). Ambos falharam antes da correção.
+- Interface: `describeIssue` deixa de exibir `?`, `0` ou texto vazio sem `ctx` e
+  identifica e-mail pelo campo. `web/tests/api.test.ts` (4 casos, `node:test`):
+  3 falharam antes da correção. Passo `npm test` adicionado ao job `application`.
+- Local (Python 3.13, Node 22): `PYTHONPATH=src python -m pytest -q tests -p no:cacheprovider`:
+  **80 passed** em SQLite; `cd web && npm test`: 4 passed; `npm run build`: sem erro.
+- RabbitMQ: publisher confirms, `mandatory=True` e fila durável `archcorp.events.all`
+  (`#`). Dois testes com `pika` simulado: a configuração do canal (falhou antes da
+  correção) e a mensagem sem rota mantendo o evento `PENDING` sem efeitos
+  (caracterização: qualquer exceção do broker já contava como falha).
+  Após a mudança: **82 passed** em SQLite.
+- Revisão operacional do broker: limites de conexão bloqueada, socket, heartbeat e
+  tentativa única; fila com `x-max-length` e `reject-publish`; métrica de
+  profundidade; falha ao gravar a tentativa desfaz a transação, registra
+  `attempt_not_recorded` e interrompe o lote. Testes com `pika` simulado: ordem
+  `connect → declare → bind → confirm_delivery → basic_publish → close` e falha em
+  cada etapa (6 casos); teste da interrupção do lote. O teste de ordem/limites e o
+  de interrupção falharam antes da mudança. Job `rabbitmq` na CI com RabbitMQ 3.13
+  real (`tests/test_rabbitmq_real.py`). Local: **88 passed, 2 skipped** em SQLite.
+- Não verificado nesta etapa: PostgreSQL (o job e os testes de concorrência entram
+  na camada #37) e disputa real entre dois despachantes. RabbitMQ real só na CI.
+
 ## Financeiro em 14 de outubro de 2026 (T12)
 
 Ambiente: contêiner Linux, Python 3.13.16, Node 22.22.0, SQLite local e API servida por `PYTHONPATH=src uvicorn archcorp.main:app --port 8011` com banco SQLite novo e `FINANCE_ALLOW_FUTURE_AS_OF=true` (simulação local da data de referência). Tokens locais, dados sintéticos; nenhum sistema da Localiza, PSP ou banco real foi acessado. Resultados do commit final da branch `feat/t12-financeiro`, com as correções das duas revisões do CTO.
