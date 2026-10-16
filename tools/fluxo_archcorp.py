@@ -35,6 +35,8 @@ TERMINAIS = ("aprovada", "bloqueada", "aguardando_esclarecimento", "interrompida
 ESTADOS = ("recebida", "preparada", "implementacao", "revisao", "correcao") + TERMINAIS
 LIMITE_RODADAS = 3  # 1 implementação + até 2 correções
 LIMITE_PARECERES = 3
+# maxTurns do perfil passado por --agents não limitou a sessão nos pilotos (32 turnos); a opção da CLI limita.
+TURNOS_IMPLEMENTADOR = 30
 SEVERIDADES_ABERTAS = {"CRITICO", "BLOQUEANTE", "DEVE_CORRIGIR"}
 CAMINHOS_PROIBIDOS = (".agentes/", ".claude/settings.local.json", ".claude/perfil-archcorp.json", ".env")
 INSTRUCOES = ("AGENTS.md", "CLAUDE.md", "docs/agentes", ".agents/skills", ".claude/skills", ".claude/agents", ".codex/agents")
@@ -481,6 +483,7 @@ def chamar_codex(ex: Execucao, *, papel: str, cwd: Path, prompt: str, sandbox: s
 def chamar_claude(ex: Execucao, *, cwd: Path, prompt: str, rotulo: str) -> dict:
     agentes = ex.dir / "instrucoes" / PERFIL_IMPLEMENTADOR
     cmd = [*comando_claude(), "-p", "--output-format", "json", "--agent", "archcorp-implementer",
+           "--max-turns", str(TURNOS_IMPLEMENTADOR),
            "--json-schema", json.dumps(ler_json(SCHEMAS / "entrega.schema.json"), ensure_ascii=False),
            "--permission-mode", "acceptEdits", "--allowedTools", ",".join(FERRAMENTAS_CLAUDE),
            "--add-dir", str(ex.dir / "instrucoes")]
@@ -1235,7 +1238,8 @@ def cmd_run(args) -> int:
         escrever_atomico(ex.dir / "pedido.md", texto)
         ex.e.update({"versao": VERSAO_ESTADO, "id": ident, "criada_em": agora(), "repo": str(repo),
                      "worktrees": str(ex.wt), "limites": {"rodadas": LIMITE_RODADAS, "pareceres": LIMITE_PARECERES,
-                                                          "timeout_s": timeout_chamada(), "turnos_implementador": 30}})
+                                                          "timeout_s": timeout_chamada(),
+                                                          "turnos_implementador": TURNOS_IMPLEMENTADOR}})
         ex.mudar("recebida")
         inicializar(ex)
         avancar(ex)

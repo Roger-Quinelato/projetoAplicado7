@@ -68,6 +68,7 @@ def test_aprovacao_na_primeira_revisao(amb):
     assert "--add-dir" in revisao["args"] and "REVISÃO" in revisao["prompt"]
     implementador = amb.chamadas("claude")[0]
     assert "acceptEdits" in implementador["args"]
+    assert implementador["args"][implementador["args"].index("--max-turns") + 1] == "30"
     assert not any("bypass" in a.lower() or "dangerously" in a.lower() for a in implementador["args"])
     pasta = amb.repo / ".agentes/execucoes" / ID
     for nome in ("pr.md", "resumo.md", "tarefa-v1.md", "entrega-f1-r1.md", "parecer-f1-t1.md", "instrucoes/AGENTS.md"):

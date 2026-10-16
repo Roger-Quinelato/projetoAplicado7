@@ -106,7 +106,7 @@ são dependências deste ciclo.
 | Rodadas de implementação por fase | 1 inicial + até 2 correções |
 | Pareceres válidos por fase | no máximo 3 |
 | Tempo por chamada a agente | 30 minutos |
-| Turnos do implementador | 30 (`maxTurns` em `.claude/agents/archcorp-implementer.md`) |
+| Turnos do implementador | 30: `--max-turns` passado pelo utilitário (nos pilotos, o `maxTurns` do perfil não limitou a sessão sozinho; ele continua no perfil para uso como subagente) |
 
 Esgotado o limite com achado material aberto, a fase fica `bloqueada` e a decisão volta ao
 responsável humano: aceitar o risco, mudar o escopo ou autorizar revisão extra.
