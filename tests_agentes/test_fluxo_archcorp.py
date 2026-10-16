@@ -148,6 +148,7 @@ def test_timeout_interrompe_sem_contar_como_reprovacao(amb, monkeypatch):
     ("claude", {"json": {"versao": 1, "estado": "talvez"}}, "viola entrega.schema.json"),
     ("claude", dict(entrega(CORRIGIDO), subtype="error_max_turns"), "limite de turnos"),
     ("codex", {"codigo": 3, "stderr": "401 Unauthorized"}, "autenticação"),
+    ("codex", {"evento_erro": "You've hit your usage limit."}, "usage limit"),
 ])
 def test_saida_invalida_ou_erro_de_ambiente_interrompe(amb, papel, resposta, trecho):
     if papel == "claude":
@@ -190,6 +191,29 @@ def test_utilitario_executa_verificacoes_e_prova_vermelho_na_base(amb):
     assert not marcador.exists()
     assert "executadas pelo utilitário" in amb.chamadas("codex")[1]["prompt"]
     assert "utilitário, código da base" in (pasta / "pr.md").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("comando, esperado", [
+    # formatos reais escritos pelo preparador nos pilotos
+    ("$env:PYTHONPATH='src'; $env:TEST_DATABASE_URL='sqlite:///./tmp/test-archcorp.db'; python -m pytest tests/test_finance.py -q",
+     ({"PYTHONPATH": "src", "TEST_DATABASE_URL": "sqlite:///./tmp/test-archcorp.db"},
+      [["PY", "-m", "pytest", "tests/test_finance.py", "-q"]])),
+    ('$env:PYTHONPATH = "src"; $env:PUBLIC_DEMO = "false"; python -m pytest tests/x.py::t -q',
+     ({"PYTHONPATH": "src", "PUBLIC_DEMO": "false"}, [["PY", "-m", "pytest", "tests/x.py::t", "-q"]])),
+    ("git diff --check; git diff -- docs/ESTADO_IMPLEMENTACAO.md",
+     ({}, [["git", "diff", "--check"], ["git", "diff", "--", "docs/ESTADO_IMPLEMENTACAO.md"]])),
+    ("PYTHONPATH=src python -m pytest -q", ({"PYTHONPATH": "src"}, [["PY", "-m", "pytest", "-q"]])),
+    # recusados
+    ("$env:TEST_DATABASE_URL='postgresql://u:p@host/db'; python -m pytest", None),
+    ("$env:TEST_DATABASE_URL='sqlite:///./../fora.db'; python -m pytest", None),
+    ("$env:PATH='C:\\x'; python -m pytest", None),
+    ("git rev-parse HEAD; Get-Content src/archcorp/main.py | Select-String '/metrics'", None),
+    ("python -c \"import os\"", None),
+    ("git push origin HEAD", None),
+    ("python -m pytest $(rm -rf /)", None),
+])
+def test_preparar_verificacao(comando, esperado):
+    assert fluxo.preparar_verificacao(comando, "PY") == esperado
 
 
 def test_parecer_que_aprova_com_achado_aberto_e_invalido(amb):

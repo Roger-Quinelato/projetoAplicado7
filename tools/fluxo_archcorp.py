@@ -58,7 +58,14 @@ LISTAS_OPCIONAIS_ENTREGA = ("resposta_achados", "limitacoes", "perguntas")
 # Verificações que o próprio utilitário executa no commit entregue (fora do sandbox do revisor).
 VERIFICACOES_PERMITIDAS = (("python", "-m", "pytest"), ("python", "tools/export_openapi.py"), ("git", "diff"),
                            ("git", "status"), ("git", "log"), ("git", "show"), ("git", "rev-parse"))
-PREFIXO_PYTHONPATH = re.compile(r"""^\s*(\$env:PYTHONPATH\s*=\s*['"]?src['"]?\s*;\s*|PYTHONPATH=src\s+)""")
+ATRIBUICAO_PS = re.compile(r"""^\$env:(\w+)\s*=\s*(['"]?)([^'";$]*)\2$""")
+ATRIBUICAO_POSIX = re.compile(r"^(\w+)=(\S*)$")
+# Variáveis que um comando de verificação pode definir; banco só SQLite relativo ao worktree.
+VARIAVEIS_PERMITIDAS = {
+    "PYTHONPATH": lambda valor: valor == "src",
+    "PUBLIC_DEMO": lambda valor: valor.lower() in ("true", "false", "0", "1"),
+    "TEST_DATABASE_URL": lambda valor: valor.startswith("sqlite:///./") and ".." not in valor,
+}
 TIMEOUT_VERIFICACAO = 900
 LIMITE_TRECHO = 4000
 CREATE_NO_WINDOW = 0x08000000
@@ -448,15 +455,18 @@ def chamar_codex(ex: Execucao, *, papel: str, cwd: Path, prompt: str, sandbox: s
            *[a for d in extra_dirs for a in ("--add-dir", str(d))], *config_codex(ex), "-"]
     marca = {"papel": rotulo, "ferramenta": "codex", "inicio": agora()}
     res = executar(cmd, cwd=cwd, entrada=prompt, timeout=timeout_chamada(), env=ambiente_filho(ambiente_python(ex)))
-    sessao = next((ev.get("thread_id") for ev in map(_json_ou_vazio, res.saida.splitlines())
-                   if ev.get("type") == "thread.started"), None)
+    eventos = [ev for ev in map(_json_ou_vazio, res.saida.splitlines()) if ev]
+    sessao = next((ev.get("thread_id") for ev in eventos if ev.get("type") == "thread.started"), None)
+    # Com --json, o Codex relata falhas como eventos na saída padrão, não no stderr.
+    falhas = [json.dumps(ev.get("error") or ev.get("message") or ev, ensure_ascii=False)
+              for ev in eventos if ev.get("type") in ("error", "turn.failed")]
     ex.e.setdefault("sessoes", []).append(dict(marca, fim=agora(), id=sessao, codigo=res.codigo))
     ex.salvar()
     if res.expirou:
         raise Interrupcao(f"timeout de {timeout_chamada()} s na chamada {rotulo}")
     if res.codigo != 0:
         raise Interrupcao(f"Codex terminou com código {res.codigo} em {rotulo} (autenticação, permissão ou ambiente): "
-                          f"{trecho(res.erro).strip()}")
+                          f"{trecho(chr(10).join(falhas) or res.erro).strip()}")
     try:
         dados = extrair_json(saida.read_text(encoding="utf-8"))
     except (OSError, ValueError) as erro:
@@ -764,18 +774,43 @@ def commitar(ex: Execucao, rodada: dict) -> None:
     ex.salvar()
 
 
-def preparar_verificacao(texto: str, python: str) -> list[str] | None:
-    """Comando do registro convertido em argumentos, ou None se estiver fora da lista permitida."""
-    texto = PREFIXO_PYTHONPATH.sub("", texto.strip())
-    if re.search(r"[;&|<>`$]", texto):
+def _variavel(nome: str, valor: str, env: dict) -> bool:
+    if not VARIAVEIS_PERMITIDAS.get(nome, lambda _: False)(valor):
+        return False
+    env[nome] = valor
+    return True
+
+
+def preparar_verificacao(texto: str, python: str) -> tuple[dict, list[list[str]]] | None:
+    """Comando do registro convertido em (variáveis, sequência de argumentos), ou None fora da lista permitida.
+
+    Aceita atribuições de VARIAVEIS_PERMITIDAS (PowerShell `$env:X='v';` ou POSIX `X=v cmd`) e partes
+    separadas por `;`, cada uma na lista permitida. Pipes, redirecionamentos e `&` são recusados.
+    """
+    if re.search(r"[&|<>`]", texto):
         return None
-    try:
-        partes = shlex.split(texto)
-    except ValueError:
-        return None
-    if not any(tuple(partes[:len(p)]) == p for p in VERIFICACOES_PERMITIDAS):
-        return None
-    return [python, *partes[1:]] if partes[0] == "python" else partes
+    env, sequencia = {}, []
+    for parte in (p.strip() for p in texto.split(";")):
+        if not parte:
+            continue
+        if (atribuicao := ATRIBUICAO_PS.match(parte)):
+            if not _variavel(atribuicao.group(1), atribuicao.group(3), env):
+                return None
+            continue
+        if "$" in parte:
+            return None
+        try:
+            partes = shlex.split(parte)
+        except ValueError:
+            return None
+        while partes and (atribuicao := ATRIBUICAO_POSIX.match(partes[0])):
+            if not _variavel(atribuicao.group(1), atribuicao.group(2), env):
+                return None
+            partes = partes[1:]
+        if not any(tuple(partes[:len(p)]) == p for p in VERIFICACOES_PERMITIDAS):
+            return None
+        sequencia.append([python, *partes[1:]] if partes[0] == "python" else partes)
+    return (env, sequencia) if sequencia else None
 
 
 def executar_verificacoes(ex: Execucao, wt: Path, comandos: list[str]) -> list[dict]:
@@ -787,15 +822,22 @@ def executar_verificacoes(ex: Execucao, wt: Path, comandos: list[str]) -> list[d
         env.pop(variavel, None)  # nunca apontar testes para banco persistente
     resultados = []
     for comando in comandos:
-        argumentos = preparar_verificacao(comando, python)
-        if argumentos is None:
+        preparado = preparar_verificacao(comando, python)
+        if preparado is None:
             resultados.append({"comando": comando, "resultado": "nao_executado",
                                "saida": "fora da lista de comandos que o utilitário executa"})
             continue
-        res = executar(argumentos, cwd=wt, timeout=TIMEOUT_VERIFICACAO, env=env)
-        resultado = "expirou" if res.expirou else ("passou" if res.codigo == 0 else "falhou")
-        resultados.append({"comando": comando, "resultado": resultado,
-                           "saida": trecho((res.saida + "\n" + res.erro).strip())[-1500:]})
+        variaveis, sequencia = preparado
+        if (banco := variaveis.get("TEST_DATABASE_URL")):
+            (wt / banco.removeprefix("sqlite:///./")).parent.mkdir(parents=True, exist_ok=True)
+        resultado, saidas = "passou", []
+        for argumentos in sequencia:
+            res = executar(argumentos, cwd=wt, timeout=TIMEOUT_VERIFICACAO, env={**env, **variaveis})
+            saidas.append((res.saida + "\n" + res.erro).strip())
+            if res.expirou or res.codigo != 0:
+                resultado = "expirou" if res.expirou else "falhou"
+                break
+        resultados.append({"comando": comando, "resultado": resultado, "saida": trecho("\n".join(saidas))[-1500:]})
     return resultados
 
 
@@ -809,7 +851,8 @@ def prova_na_base(ex: Execucao, rotulo: str, base: str, head: str, comandos: lis
             git(wt, "checkout", base, "--", caminho)
         else:
             git(wt, "rm", "-q", "-f", "--", caminho)
-    testes = [c for c in comandos if (args := preparar_verificacao(c, "python")) and args[1:3] == ["-m", "pytest"]]
+    testes = [c for c in comandos if (preparado := preparar_verificacao(c, "python"))
+              and any(argumentos[1:3] == ["-m", "pytest"] for argumentos in preparado[1])]
     return executar_verificacoes(ex, wt, testes)
 
 

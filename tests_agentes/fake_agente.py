@@ -63,6 +63,10 @@ def main() -> int:
     if resposta.get("tentar_push"):
         resultado = git(cwd, "push", "origin", "HEAD:refs/heads/vazou")
         (estado / "push.txt").write_text(f"{resultado.returncode}\n{resultado.stderr}", encoding="utf-8")
+    if resposta.get("evento_erro"):  # como o Codex com --json: erro na saída padrão, stderr vazio
+        print(json.dumps({"type": "thread.started", "thread_id": f"fake-thread-{n}"}))
+        print(json.dumps({"type": "error", "message": resposta["evento_erro"]}))
+        return 1
     if resposta.get("codigo"):
         print(resposta.get("stderr", "falha simulada"), file=sys.stderr)
         return resposta["codigo"]
