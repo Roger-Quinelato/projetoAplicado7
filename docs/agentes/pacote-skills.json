@@ -10,7 +10,11 @@
     {"nome": "archcorp-fronteiras-e-dominio", "pasta": ".agents/skills", "papel": "compartilhada"},
     {"nome": "archcorp-dados-e-consistencia", "pasta": ".agents/skills", "papel": "compartilhada"},
     {"nome": "archcorp-contratos-e-migracoes", "pasta": ".agents/skills", "papel": "compartilhada"},
-    {"nome": "archcorp-seguranca", "pasta": ".agents/skills", "papel": "compartilhada"}
+    {"nome": "archcorp-seguranca", "pasta": ".agents/skills", "papel": "compartilhada"},
+    {"nome": "archcorp-implementacao", "pasta": ".claude/skills", "papel": "implementador"},
+    {"nome": "archcorp-tdd", "pasta": ".claude/skills", "papel": "implementador"},
+    {"nome": "archcorp-diagnostico", "pasta": ".claude/skills", "papel": "implementador"},
+    {"nome": "archcorp-entrega", "pasta": ".claude/skills", "papel": "implementador"}
   ],
   "skills_pessoais_permitidas": [],
   "plugins_mantidos": ["document-skills@anthropic-agent-skills"],
