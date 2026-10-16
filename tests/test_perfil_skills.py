@@ -132,6 +132,16 @@ def test_bloco_do_codex_desliga_so_as_skills_fora_da_lista(repo, home, capsys):
     assert "enabled = false" in block and "path = '" in block  # literal string TOML: barras do Windows sem escape
 
 
+def test_codex_esconde_sub_skills_aninhadas_e_skills_de_sistema(repo, home):
+    write_skill(home / ".agents/skills/dengue-df-lag-features", "sub-skill")  # aninhada em skill escondida
+    write_skill(home / ".agents/skills/research", "grounded-citations")  # aninhada em skill permitida
+    write_skill(home / ".codex/skills", "colab-slide")
+    write_skill(home / ".codex/skills/.system", "imagegen")
+    hidden = {path.parent.name for path in perfil.codex_hidden(repo, home, MANIFEST)}
+    assert {"sub-skill", "colab-slide", "imagegen", "implement", "dengue-df-lag-features"} <= hidden
+    assert not hidden & {"research", "grounded-citations", "caveman"}
+
+
 def test_valor_inline_do_codex_para_a_opcao_c(repo, home, capsys):
     assert run(repo, home, "--codex-inline") == 0
     value = capsys.readouterr().out.strip()

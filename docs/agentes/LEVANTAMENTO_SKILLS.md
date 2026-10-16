@@ -145,9 +145,11 @@ Implementado por [`tools/perfil_skills.py`](../../tools/perfil_skills.py) a part
 |---|---|---|
 | Claude Code (sessão no repositório) | `python tools/perfil_skills.py` grava `.claude/settings.local.json` (ignorado pelo Git) com `skillOverrides: "off"` para as skills pessoais fora da lista, `syncClaudeAiPlugins`/`syncClaudeAiSkills: false` e `enabledPlugins` restrito | `claude -p` perguntando as skills disponíveis: **282** fora do repositório, **19** dentro (3 do projeto, 4 de `document-skills`, 12 internas do Claude Code). Os plugins sincronizados da conta deixaram de aparecer |
 | Claude Code (worktree ou execução automática) | `claude --settings .claude/perfil-archcorp.json`, o mesmo conteúdo gerado | Arquivo gerado pelo mesmo comando; uso pelo utilitário a validar no piloto |
-| Codex (por invocação) | `codex exec -c "<saída de --codex-inline>"`, sem alterar `~/.codex/config.toml` | codex-cli 0.163.0: com `-c`, `tdd` deixou de aparecer (controle sem `-c`: aparece). Com as 118 skills desligadas, `implement`, `tdd` e `code-review` ausentes |
+| Codex (por invocação) | `codex exec -c "<saída de --codex-inline>"`, sem alterar `~/.codex/config.toml` | codex-cli 0.163.0, medido sem chamar o modelo com `codex debug prompt-input`: **119 → 15** skills no prompt (7 do projeto + 8 de plugins do Codex: `documents`, `pdf`, `presentations`, `spreadsheets`, `template-creator`, `visualize`, `computer-use`); prompt de 30,5 KB → 13,9 KB |
 
-Limitação no Windows: o valor completo tem cerca de 9,7 mil caracteres. Pelo atalho `codex.cmd`, o `cmd.exe` recusa com "Linha de comando muito longa" (limite de 8.191). Chamar `node <instalação>\node_modules\@openai\codex\bin\codex.js` diretamente funciona. O utilitário deve usar essa forma, com argumentos em lista e sem shell.
+O Codex varre `~/.agents/skills`, `~/.codex/skills` e `~/.codex/skills/.system` **recursivamente**: sub-skills (ex.: `research/grounded-citations`) e cópias aninhadas também aparecem. O gerador considera isso. Os plugins do Codex não são afetados por `skills.config`.
+
+Limitação no Windows: o valor completo tem cerca de 10,5 mil caracteres. Pelo atalho `codex.cmd`, o `cmd.exe` recusa com "Linha de comando muito longa" (limite de 8.191). Chamar `node <instalação>\node_modules\@openai\codex\bin\codex.js` diretamente funciona. O utilitário deve usar essa forma, com argumentos em lista e sem shell.
 
 Ainda não verificado: a configuração de projeto `.codex/config.toml` (o projeto *trusted* no Codex é `C:\ProjetoAplicado7`, não este clone) e o `[[skills.config]]` dentro de `.codex/agents/*.toml`.
 

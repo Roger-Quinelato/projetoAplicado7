@@ -149,10 +149,28 @@ def merge_local(existing: dict, previous: dict, profile: dict) -> dict:
     return merged
 
 
+CODEX_PERSONAL_ROOTS = (".agents/skills", ".codex/skills")
+
+
 def codex_hidden(root: Path, home: Path, manifest: dict) -> list[Path]:
-    """SKILL.md das skills pessoais do Codex fora da lista permitida."""
+    """SKILL.md pessoais que o Codex listaria, fora da lista permitida.
+
+    O Codex varre as raízes recursivamente: sub-skills (ex.: research/grounded-citations),
+    cópias aninhadas e as skills de sistema em ~/.codex/skills/.system também aparecem.
+    A permissão vale pelo nome da pasta de primeiro nível.
+    """
     allowed = allowed_names(root, manifest)
-    return [path / "SKILL.md" for name, path in skill_dirs(home / ".agents/skills").items() if name not in allowed]
+    hidden = []
+    for base in CODEX_PERSONAL_ROOTS:
+        folder = home / base
+        if not folder.is_dir():
+            continue
+        for skill in sorted(folder.rglob("SKILL.md")):
+            parts = skill.relative_to(folder).parts
+            top = parts[1] if parts[0] == ".system" and len(parts) > 2 else parts[0]
+            if top not in allowed:
+                hidden.append(skill)
+    return hidden
 
 
 def codex_block(root: Path, home: Path, manifest: dict) -> str:
