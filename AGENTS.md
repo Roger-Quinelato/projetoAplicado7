@@ -138,6 +138,10 @@ Uma correção de bug deve incluir teste que falha antes da correção. Não rem
 6. Atualize diagramas, exemplos e rastreabilidade do requisito.
 7. Registre limitações, premissas e riscos ainda abertos.
 
+### Fluxo coordenado entre agentes
+
+Quando Codex e Claude trabalham juntos neste repositório, o Codex prepara e revisa e o Claude implementa, sempre pelo ciclo descrito em [`docs/agentes/PROTOCOLO.md`](docs/agentes/PROTOCOLO.md), inclusive em tarefas pequenas. Os papéis estão em [`docs/agentes/IMPLEMENTADOR.md`](docs/agentes/IMPLEMENTADOR.md) e [`docs/agentes/REVISOR.md`](docs/agentes/REVISOR.md). Aprovação de agente é automatizada, vale só para o SHA revisado e não substitui o aceite humano; push, PR e merge ficam com o responsável humano.
+
 ## Critérios de conclusão de uma mudança
 
 Uma tarefa só está concluída quando:

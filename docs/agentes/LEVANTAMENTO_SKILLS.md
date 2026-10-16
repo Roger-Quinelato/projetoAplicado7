@@ -22,11 +22,11 @@ Data: 16/10/2026. Autor: Claude Code, a pedido do responsável pelo repositório
 
 | Camada | Arquivo | Leitor | Conteúdo |
 |---|---|---|---|
-| Documento comum | `AGENTS.md` (renomeado no PR #43) | Codex automaticamente; Claude por `@AGENTS.md` no `CLAUDE.md` | Regras SEMPRE/NUNCA, arquitetura, propriedade dos dados e o **protocolo**: papéis, estados (preparada → implementação → revisão → correção → aprovada; bloqueada), registro da tarefa, critérios de aceite, aprovação válida só para o SHA examinado |
+| Documento comum | `AGENTS.md` (renomeado no PR #43) | Codex automaticamente; Claude por `@AGENTS.md` no `CLAUDE.md` | Regras SEMPRE/NUNCA, arquitetura, propriedade dos dados e o encaminhamento ao **protocolo**, que ficou em `docs/agentes/PROTOCOLO.md`: papéis, estados, registro da tarefa, critérios de aceite, aprovação válida só para o SHA examinado |
 | Especificação do implementador | `docs/agentes/IMPLEMENTADOR.md` | Claude | Responsabilidades e limites, formato da entrega, tabela de gatilhos de skills |
 | Especificação do revisor | `docs/agentes/REVISOR.md` | Codex | Eixos da revisão, formato dos achados, critérios de reprovação, tabela de gatilhos |
 | Perfil nativo do Claude | `.claude/agents/archcorp-implementer.md` | Claude (`--agent`) | Frontmatter (`tools`, `maxTurns`, `skills:`) e instrução para seguir `IMPLEMENTADOR.md` |
-| Perfil nativo do Codex | `.codex/agents/archcorp-reviewer.toml` | Codex | `developer_instructions` curtas apontando para `REVISOR.md` e desativação das skills de implementação |
+| Perfil nativo do Codex | `.codex/agents/archcorp-coordinator-reviewer.toml` | Codex | `developer_instructions` curtas apontando para `REVISOR.md`; preparação e revisão em sessões separadas |
 | Entrada do Claude | `CLAUDE.md` | Toda sessão do Claude | Apenas encaminhamento ao `AGENTS.md`; o papel de implementador fica no perfil, para não se impor fora do fluxo |
 
 Os perfis nativos são finos: o comportamento fica descrito uma única vez, em Markdown legível.
