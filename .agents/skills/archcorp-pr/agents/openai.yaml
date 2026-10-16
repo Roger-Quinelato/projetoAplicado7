@@ -1,0 +1,4 @@
+interface:
+  display_name: "ArchCorp · Descrição de PR"
+  short_description: "Resumo visual, evidência antes/depois, perigo do merge e SHA revisado"
+  default_prompt: "Use $archcorp-pr para escrever a descrição deste PR."

@@ -116,6 +116,14 @@ def test_check_reprova_pacote_invalido(repo, home, capsys, break_repo, message):
     assert not (repo / ".claude/settings.local.json").exists()  # nada é gravado com o pacote inválido
 
 
+def test_skill_externa_do_projeto_exige_registro_no_lock(repo):
+    write_skill(repo / ".agents/skills", "humanizer", lines=30)  # sem prefixo e acima do limite
+    manifest = {**MANIFEST, "skills_externas_do_projeto": ["humanizer"]}
+    assert perfil.check(repo, manifest) == ["humanizer: skill externa sem registro em skills-lock.json (instale com npx skills add)"]
+    (repo / "skills-lock.json").write_text(json.dumps({"version": 1, "skills": {"humanizer": {"source": "blader/humanizer"}}}), encoding="utf-8")
+    assert perfil.check(repo, manifest) == []
+
+
 def test_check_reprova_skill_acima_do_limite_de_linhas(repo, home, capsys):
     (repo / ".agents/skills/archcorp-revisao").rename(repo / "tmp-old")
     write_skill(repo / ".agents/skills", "archcorp-revisao", lines=25)

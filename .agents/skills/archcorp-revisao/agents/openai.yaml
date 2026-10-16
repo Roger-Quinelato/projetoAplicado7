@@ -1,0 +1,4 @@
+interface:
+  display_name: "ArchCorp · Revisão"
+  short_description: "Alegações, Padrões × Especificação, gatilhos de regressão, parecer por SHA"
+  default_prompt: "Use $archcorp-revisao para revisar a entrega do implementador no SHA atual."
