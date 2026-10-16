@@ -26,5 +26,5 @@
   "skills_pessoais_permitidas": [],
   "plugins_mantidos": ["document-skills@anthropic-agent-skills"],
   "desligar_sincronizacao_claude_ai": true,
-  "desligar_conectores_claude_ai": false
+  "desligar_conectores_claude_ai": true
 }
