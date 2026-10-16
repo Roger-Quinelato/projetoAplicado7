@@ -17,7 +17,9 @@ essas entradas saem do settings.local.json; ajustes manuais são preservados.
 """
 import argparse
 import json
+import re
 import sys
+import tomllib
 from pathlib import Path
 
 MANIFEST = Path("docs/agentes/pacote-skills.json")
@@ -31,22 +33,48 @@ def load_manifest(root: Path) -> dict:
     return json.loads((root / MANIFEST).read_text(encoding="utf-8"))
 
 
+class FrontmatterInvalido(ValueError):
+    pass
+
+
 def frontmatter(text: str) -> dict:
-    """Extrai as chaves de primeiro nível do frontmatter YAML, inclusive blocos `>` e `|`."""
+    """Frontmatter YAML (parser real, preserva descrições multilinha); {} quando não há frontmatter."""
+    import yaml  # requirements-dev.txt
+
     lines = text.splitlines()
     if not lines or lines[0].strip() != "---":
         return {}
-    fields, key = {}, None
-    for line in lines[1:]:
-        if line.strip() == "---":
-            break
-        if line[:1] not in (" ", "\t") and ":" in line:
-            key, value = line.split(":", 1)
-            key, value = key.strip(), value.strip()
-            fields[key] = "" if value in (">", "|", ">-", "|-") else value.strip("\"'")
-        elif key and line.strip():
-            fields[key] = (fields[key] + " " + line.strip()).strip()
-    return fields
+    try:
+        end = next(i for i, line in enumerate(lines[1:], 1) if line.strip() == "---")
+    except StopIteration as error:
+        raise FrontmatterInvalido("frontmatter sem o delimitador final ---") from error
+    try:
+        data = yaml.safe_load("\n".join(lines[1:end])) or {}
+    except yaml.YAMLError as error:
+        raise FrontmatterInvalido(f"YAML inválido no frontmatter: {error}") from error
+    if not isinstance(data, dict):
+        raise FrontmatterInvalido("frontmatter não é um mapeamento YAML")
+    return data
+
+
+REFERENCIA = re.compile(r"(?<![\w.-])archcorp-[a-z0-9]+(?:-[a-z0-9]+)*")
+LINK_LOCAL = re.compile(r"\]\(([^)\s]+)\)")
+
+
+def referencias(text: str) -> set[str]:
+    """Nomes `archcorp-…` citados num texto (skills ou perfis)."""
+    return set(REFERENCIA.findall(text))
+
+
+def links_quebrados(path: Path) -> list[str]:
+    """Links Markdown relativos do arquivo que não existem no disco."""
+    broken = []
+    for target in LINK_LOCAL.findall(path.read_text(encoding="utf-8")):
+        if re.match(r"^[a-z]+:", target) or target.startswith("#"):
+            continue
+        if not (path.parent / target.split("#", 1)[0]).exists():
+            broken.append(target)
+    return broken
 
 
 def skill_dirs(folder: Path) -> dict[str, Path]:
@@ -80,7 +108,11 @@ def check(root: Path, manifest: dict) -> list[str]:
             errors.append(f"{name}: existe em mais de uma pasta do projeto ({', '.join(str(p.relative_to(root)) for p in paths)})")
         path = paths[0]
         text = (path / "SKILL.md").read_text(encoding="utf-8")
-        fields = frontmatter(text)
+        try:
+            fields = frontmatter(text)
+        except FrontmatterInvalido as error:
+            errors.append(f"{name}: {error}")
+            continue
         if fields.get("name") != name:
             errors.append(f"{name}: o campo name do frontmatter ({fields.get('name')!r}) difere do nome da pasta")
         if not fields.get("description"):
@@ -97,6 +129,67 @@ def check(root: Path, manifest: dict) -> list[str]:
         expected = root / entry["pasta"] / name / "SKILL.md"
         if not expected.is_file():
             errors.append(f"{name}: declarada no pacote, mas {expected.relative_to(root).as_posix()} não existe")
+    return errors + check_integridade(root, manifest, found)
+
+
+def check_integridade(root: Path, manifest: dict, found: dict[str, list[Path]]) -> list[str]:
+    """Guia e caminhos obrigatórios, perfis, dependências declaradas, referências e links locais."""
+    errors = []
+    for relative in manifest.get("arquivos_obrigatorios", []):
+        if not (root / relative).is_file():
+            errors.append(f"{relative}: arquivo obrigatório ausente")
+    profiles = {p["nome"]: p for p in manifest.get("perfis", [])}
+    for name, profile in profiles.items():
+        errors += check_perfil(root, name, profile["arquivo"], found)
+    known = set(found) | set(profiles)
+    external = set(manifest.get("skills_externas_do_projeto", []))
+    for entry in manifest["pacote"]:
+        name = entry["nome"]
+        for dependency in entry.get("depende_de", []):
+            if dependency not in known | external:
+                errors.append(f"{name}: dependência declarada {dependency!r} não existe no pacote")
+        if name not in found:
+            continue
+        folder = found[name][0]
+        texts = [folder / "SKILL.md", *sorted((folder / "references").glob("*.md"))]
+        cited = set().union(*(referencias(t.read_text(encoding="utf-8")) for t in texts)) - {name}
+        for missing in sorted(cited - known):
+            errors.append(f"{name}: referência a {missing!r} não resolvida (skill ou perfil inexistente)")
+        if "depende_de" in entry:
+            for undeclared in sorted((cited & set(found)) - set(entry["depende_de"])):
+                errors.append(f"{name}: cita {undeclared!r} sem declarar em depende_de")
+        for text in texts:
+            errors += [f"{name}: link local quebrado em {text.relative_to(root).as_posix()}: {link}"
+                       for link in links_quebrados(text)]
+    for relative in manifest.get("documentos_do_pacote", []):
+        document = root / relative
+        if not document.is_file():
+            continue
+        for missing in sorted(referencias(document.read_text(encoding="utf-8")) - known):
+            errors.append(f"{relative}: referência a {missing!r} não resolvida (skill ou perfil inexistente)")
+        errors += [f"{relative}: link local quebrado: {link}" for link in links_quebrados(document)]
+    return errors
+
+
+def check_perfil(root: Path, name: str, relative: str, found: dict[str, list[Path]]) -> list[str]:
+    """Perfil de agente: arquivo existe, nome confere, skills pré-carregadas existem."""
+    path = root / relative
+    if not path.is_file():
+        return [f"perfil {name}: {relative} não existe (agente inexistente)"]
+    if path.suffix == ".toml":
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+        errors = [] if data.get("developer_instructions", "").strip() else [f"perfil {name}: developer_instructions vazio"]
+    else:
+        try:
+            data = frontmatter(path.read_text(encoding="utf-8"))
+        except FrontmatterInvalido as error:
+            return [f"perfil {name}: {error}"]
+        errors = [f"perfil {name}: skill pré-carregada {skill!r} não existe no projeto"
+                  for skill in data.get("skills") or [] if skill not in found]
+        if not isinstance(data.get("maxTurns"), int):
+            errors.append(f"perfil {name}: maxTurns ausente")
+    if data.get("name") != name:
+        errors.append(f"perfil {name}: o campo name ({data.get('name')!r}) difere do declarado no manifesto")
     return errors
 
 

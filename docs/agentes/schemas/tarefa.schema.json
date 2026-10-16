@@ -1,0 +1,68 @@
+{
+  "title": "Registro da tarefa ArchCorp",
+  "description": "Saída do coordenador (archcorp-preparar-tarefa). Versão 1. Compatível com o modo strict de saída estruturada: todos os campos obrigatórios; ausência vira lista vazia ou null.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["versao", "resultado", "perguntas", "tipo", "modo", "titulo", "objetivo", "problema_e_reproducao", "escopo_permitido", "exclusoes", "criterios_aceite", "verificacoes_exigidas", "skills_compartilhadas", "adr_necessaria", "riscos", "fases"],
+  "properties": {
+    "versao": {"type": "integer", "enum": [1]},
+    "resultado": {"type": "string", "enum": ["tarefa", "esclarecimento"], "description": "esclarecimento quando objetivo ou escopo não estão claros; preencha perguntas"},
+    "perguntas": {"type": "array", "items": {"type": "string"}},
+    "tipo": {"type": ["string", "null"], "enum": ["correcao", "funcionalidade", "refatoracao", "documentacao", "verificacao", null]},
+    "modo": {"type": "string", "enum": ["simples", "padrao", "deepwork"]},
+    "titulo": {"type": "string"},
+    "objetivo": {"type": "string"},
+    "problema_e_reproducao": {"type": "string"},
+    "escopo_permitido": {"type": "array", "items": {"type": "string"}, "description": "Caminhos ou globs relativos à raiz do repositório"},
+    "exclusoes": {"type": "array", "items": {"type": "string"}},
+    "criterios_aceite": {"$ref": "#/$defs/criterios"},
+    "verificacoes_exigidas": {"$ref": "#/$defs/verificacoes"},
+    "skills_compartilhadas": {"type": "array", "items": {"type": "string"}},
+    "adr_necessaria": {"type": ["string", "null"]},
+    "riscos": {"type": "array", "items": {"type": "string"}},
+    "fases": {
+      "type": "array",
+      "description": "Só no modo deepwork: fases dependentes, em ordem",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["titulo", "objetivo", "tipo", "escopo_permitido", "exclusoes", "criterios_aceite", "verificacoes_exigidas", "skills_compartilhadas", "riscos"],
+        "properties": {
+          "titulo": {"type": "string"},
+          "objetivo": {"type": "string"},
+          "tipo": {"type": "string", "enum": ["correcao", "funcionalidade", "refatoracao", "documentacao", "verificacao"]},
+          "escopo_permitido": {"type": "array", "items": {"type": "string"}},
+          "exclusoes": {"type": "array", "items": {"type": "string"}},
+          "criterios_aceite": {"$ref": "#/$defs/criterios"},
+          "verificacoes_exigidas": {"$ref": "#/$defs/verificacoes"},
+          "skills_compartilhadas": {"type": "array", "items": {"type": "string"}},
+          "riscos": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "criterios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "texto"],
+        "properties": {"id": {"type": "string"}, "texto": {"type": "string"}}
+      }
+    },
+    "verificacoes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["comando", "proposito", "ambiente"],
+        "properties": {
+          "comando": {"type": "string"},
+          "proposito": {"type": "string"},
+          "ambiente": {"type": "string", "description": "ex.: SQLite local, PostgreSQL descartável, leitura"}
+        }
+      }
+    }
+  }
+}

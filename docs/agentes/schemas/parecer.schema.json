@@ -1,0 +1,54 @@
+{
+  "title": "Parecer do revisor ArchCorp",
+  "description": "Saída do revisor (archcorp-revisao). Versão 1. Vale só para head_revisado; aprovação automatizada não é aceite humano.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["versao", "head_revisado", "veredito", "motivo_bloqueio", "verificacoes", "achados", "alegacoes", "padroes", "especificacao"],
+  "properties": {
+    "versao": {"type": "integer", "enum": [1]},
+    "head_revisado": {"type": "string", "description": "SHA completo examinado; deve ser igual ao pedido"},
+    "veredito": {"type": "string", "enum": ["aprovado", "correcao_necessaria", "bloqueado"]},
+    "motivo_bloqueio": {"type": ["string", "null"]},
+    "verificacoes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["comando", "resultado", "observacao"],
+        "properties": {
+          "comando": {"type": "string"},
+          "resultado": {"type": "string", "enum": ["passou", "falhou", "nao_executado"]},
+          "observacao": {"type": "string"}
+        }
+      }
+    },
+    "achados": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["numero", "severidade", "caminho", "linha", "problema", "correcao_exigida", "evidencia"],
+        "properties": {
+          "numero": {"type": "integer"},
+          "severidade": {"type": "string", "enum": ["CRITICO", "BLOQUEANTE", "DEVE_CORRIGIR", "DETALHE", "INCERTO"]},
+          "caminho": {"type": ["string", "null"]},
+          "linha": {"type": ["integer", "null"]},
+          "problema": {"type": "string"},
+          "correcao_exigida": {"type": "string"},
+          "evidencia": {"type": "string"}
+        }
+      }
+    },
+    "alegacoes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["alegacao", "evidencia", "veredito"],
+        "properties": {"alegacao": {"type": "string"}, "evidencia": {"type": "string"}, "veredito": {"type": "string"}}
+      }
+    },
+    "padroes": {"type": "string"},
+    "especificacao": {"type": "string"}
+  }
+}

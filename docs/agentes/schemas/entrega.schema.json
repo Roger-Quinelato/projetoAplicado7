@@ -1,0 +1,59 @@
+{
+  "title": "Entrega do implementador ArchCorp",
+  "description": "Saída do implementador (archcorp-entrega). Versão 1. É alegação a verificar pelo revisor, não prova.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["versao", "estado", "resumo", "arquivos_alterados", "criterios", "comandos", "resposta_achados", "limitacoes", "perguntas"],
+  "properties": {
+    "versao": {"type": "integer", "enum": [1]},
+    "estado": {"type": "string", "enum": ["concluida", "parcial", "bloqueada"]},
+    "resumo": {"type": "string"},
+    "arquivos_alterados": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["caminho", "motivo"],
+        "properties": {"caminho": {"type": "string"}, "motivo": {"type": "string"}}
+      }
+    },
+    "criterios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "evidencia", "resultado"],
+        "properties": {
+          "id": {"type": "string"},
+          "evidencia": {"type": "string"},
+          "resultado": {"type": "string", "enum": ["passou", "falhou", "nao_executado", "bloqueado"]}
+        }
+      }
+    },
+    "comandos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["comando", "ambiente", "resultado"],
+        "properties": {"comando": {"type": "string"}, "ambiente": {"type": "string"}, "resultado": {"type": "string"}}
+      }
+    },
+    "resposta_achados": {
+      "type": "array",
+      "description": "Só em rodada de correção: um item por achado numerado do parecer",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["numero", "acao", "prova_ou_motivo"],
+        "properties": {
+          "numero": {"type": "integer"},
+          "acao": {"type": "string", "enum": ["corrigido", "nao_corrigido", "discordancia"]},
+          "prova_ou_motivo": {"type": "string"}
+        }
+      }
+    },
+    "limitacoes": {"type": "array", "items": {"type": "string"}},
+    "perguntas": {"type": "array", "items": {"type": "string"}, "description": "Decisões de escopo ou negócio; com estado bloqueada, a execução aguarda resposta"}
+  }
+}

@@ -150,6 +150,68 @@ def test_codex_esconde_sub_skills_aninhadas_e_skills_de_sistema(repo, home):
     assert not hidden & {"research", "grounded-citations", "caveman"}
 
 
+INTEGRIDADE = {
+    **MANIFEST,
+    "arquivos_obrigatorios": ["AGENTS.md"],
+    "perfis": [{"nome": "archcorp-implementer", "arquivo": ".claude/agents/archcorp-implementer.md"}],
+    "documentos_do_pacote": ["AGENTS.md"],
+    "pacote": [{"nome": "archcorp-revisao", "pasta": ".agents/skills", "depende_de": []}],
+}
+
+
+@pytest.fixture
+def integro(repo):
+    (repo / "AGENTS.md").write_text("Fluxo em `archcorp-revisao`.\n", encoding="utf-8")
+    (repo / ".claude/agents").mkdir(parents=True)
+    (repo / ".claude/agents/archcorp-implementer.md").write_text(
+        "---\nname: archcorp-implementer\ndescription: x\nmaxTurns: 30\nskills:\n  - archcorp-revisao\n---\ncorpo\n",
+        encoding="utf-8")
+    return repo
+
+
+def test_integridade_valida(integro):
+    assert perfil.check(integro, INTEGRIDADE) == []
+
+
+@pytest.mark.parametrize("quebrar, mensagem", [
+    (lambda root: (root / "AGENTS.md").unlink(), "AGENTS.md: arquivo obrigatório ausente"),
+    (lambda root: (root / ".claude/agents/archcorp-implementer.md").unlink(), "agente inexistente"),
+    (lambda root: (root / "AGENTS.md").write_text("Use `archcorp-fantasma`.\n", encoding="utf-8"),
+     "'archcorp-fantasma' não resolvida"),
+    (lambda root: (root / ".agents/skills/archcorp-revisao/SKILL.md").write_text(
+        "---\nname: archcorp-revisao\ndescription: x\n---\nChame archcorp-inexistente.\n", encoding="utf-8"),
+     "archcorp-revisao: referência a 'archcorp-inexistente' não resolvida"),
+    (lambda root: (root / ".claude/agents/archcorp-implementer.md").write_text(
+        "---\nname: archcorp-implementer\ndescription: x\nmaxTurns: 30\nskills: [archcorp-sumida]\n---\n", encoding="utf-8"),
+     "skill pré-carregada 'archcorp-sumida' não existe"),
+    (lambda root: (root / ".agents/skills/archcorp-revisao/SKILL.md").write_text(
+        "---\nname: archcorp-revisao\ndescription: [aberto\n---\n", encoding="utf-8"),
+     "YAML inválido"),
+    (lambda root: (root / "AGENTS.md").write_text("Veja [o guia](docs/nao-existe.md).\n", encoding="utf-8"),
+     "link local quebrado: docs/nao-existe.md"),
+])
+def test_integridade_detecta_problemas_da_avaliacao(integro, quebrar, mensagem):
+    quebrar(integro)
+    assert any(mensagem in erro for erro in perfil.check(integro, INTEGRIDADE)), perfil.check(integro, INTEGRIDADE)
+
+
+def test_dependencia_declarada_inexistente_e_citacao_sem_declaracao(integro):
+    write_skill(integro / ".agents/skills", "archcorp-tdd")
+    (integro / ".agents/skills/archcorp-revisao/SKILL.md").write_text(
+        "---\nname: archcorp-revisao\ndescription: x\n---\nAntes, `archcorp-tdd`.\n", encoding="utf-8")
+    manifest = {**INTEGRIDADE, "pacote": [
+        {"nome": "archcorp-revisao", "pasta": ".agents/skills", "depende_de": ["archcorp-ausente"]},
+        {"nome": "archcorp-tdd", "pasta": ".agents/skills"}]}
+    erros = perfil.check(integro, manifest)
+    assert "archcorp-revisao: dependência declarada 'archcorp-ausente' não existe no pacote" in erros
+    assert "archcorp-revisao: cita 'archcorp-tdd' sem declarar em depende_de" in erros
+
+
+def test_frontmatter_preserva_descricao_multilinha():
+    texto = "---\nname: x\ndescription: >\n  Primeira linha\n  segunda linha.\nlicense: MIT\n---\ncorpo\n"
+    assert perfil.frontmatter(texto) == {"name": "x", "description": "Primeira linha segunda linha.\n", "license": "MIT"}
+
+
 def test_valor_inline_do_codex_para_a_opcao_c(repo, home, capsys):
     assert run(repo, home, "--codex-inline") == 0
     value = capsys.readouterr().out.strip()
