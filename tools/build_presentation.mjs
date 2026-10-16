@@ -140,7 +140,7 @@ function notes(slide, text) {
     textbox(slide, name, { left: 90, top: y, width: 210, height: 45 }, 25, C.teal, true);
     textbox(slide, data, { left: 330, top: y, width: 820, height: 50 }, 23, C.ink);
   });
-  notes(slide, "Fonte: AGENT.md, tabela de propriedade dos dados, e plano de implementação, seção 6.");
+  notes(slide, "Fonte: AGENTS.md, tabela de propriedade dos dados, e plano de implementação, seção 6.");
 }
 
 // 8

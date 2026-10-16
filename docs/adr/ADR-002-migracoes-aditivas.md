@@ -16,7 +16,7 @@ existente. Em um PostgreSQL persistente, como o previsto em `render.yaml` e no
 aplicação falharia em tempo de execução. O arquivo `migrations/001_initial.sql`
 apenas criava schemas vazios e não era usado por nenhum processo.
 
-O `AGENT.md` exige migrações reproduzíveis e com estratégia de compatibilidade.
+O `AGENTS.md` exige migrações reproduzíveis e com estratégia de compatibilidade.
 T08 e T09 acrescentam colunas a tabelas existentes, o que torna o problema
 imediato.
 
