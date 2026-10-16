@@ -33,6 +33,7 @@ from archcorp.support import domain
 from archcorp.support.domain import TICKET_TRANSITIONS, Priority, SlaStatus, TicketStatus
 from archcorp.support.models import Ticket, TicketHistory
 from archcorp.support.service import TicketService
+from archcorp.workflow import service as workflow_service
 from archcorp.workflow.models import ProcessInstance, ProcessTask
 
 T0 = datetime(2026, 10, 20, 9, 0, tzinfo=timezone.utc)
@@ -442,14 +443,27 @@ def resolution_deadlines(ticket_id: str) -> tuple[str, list[str]]:
         return domain.iso_utc(process.due_at), [domain.iso_utc(task.due_at) for task in tasks]
 
 
-def test_despacho_atrasado_nao_estende_o_prazo_do_processo_de_resolucao(client, admin_headers, active_contract, clock):
+class LateDispatchDatetime(datetime):
+    """Relógio de Workflow duas horas após a abertura: simula despacho atrasado."""
+
+    @classmethod
+    def now(cls, tz=None):
+        return T0 + timedelta(hours=2)
+
+
+def test_despacho_atrasado_nao_estende_o_prazo_do_processo_de_resolucao(client, admin_headers, active_contract, clock, monkeypatch):
     customer, contract = active_contract
     ticket = open_ticket(client, admin_headers, body_for(customer, contract), "t15-late-dispatch").json()
     assert ticket["dueAt"] == iso(T0 + timedelta(hours=8))
-    clock.advance(hours=2)  # o despacho ocorre depois da abertura
+    monkeypatch.setattr(workflow_service, "datetime", LateDispatchDatetime)  # com now + slaHours o prazo seria T0 + 10 h
     client.post("/api/v1/integration/outbox/dispatch", headers=admin_headers)
-    client.post("/api/v1/integration/outbox/dispatch", headers=admin_headers)  # reentrega não recalcula o prazo
+    assert resolution_deadlines(ticket["ticketId"]) == (ticket["dueAt"], [ticket["dueAt"]])
 
+    [event] = events("TicketOpened.v1")
+    for _ in range(2):  # reentrega direta ao consumidor, sem a deduplicação da inbox
+        with SessionLocal() as session:
+            workflow_service.handle_ticket_opened(session, event.envelope())
+            session.commit()
     assert resolution_deadlines(ticket["ticketId"]) == (ticket["dueAt"], [ticket["dueAt"]])
     with SessionLocal() as session:
         assert len(list(session.scalars(select(ProcessInstance).where(ProcessInstance.reference_id == ticket["ticketId"])))) == 1

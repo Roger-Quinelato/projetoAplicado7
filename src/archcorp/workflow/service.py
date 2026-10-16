@@ -19,8 +19,9 @@ def _tasks(session: Session, process: ProcessInstance) -> list[ProcessTask]:
 
 
 def _parse_utc(value: str) -> datetime:
-    """Converte um instante ISO 8601 do evento em datetime UTC."""
-    return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
+    """Converte um instante ISO 8601 do evento em datetime UTC; sem fuso, é lido como UTC."""
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed.astimezone(timezone.utc)
 
 
 def _start(session: Session, envelope: dict, process_type: str, reference_field: str, due_at: datetime) -> None:
