@@ -118,6 +118,18 @@ def test_rodada_extra_autorizada_depois_do_bloqueio(amb):
     assert estado["estado"] == "aprovada" and estado["decisoes"][0]["decisao"] == "rodada extra autorizada"
 
 
+def test_revisar_novamente_apos_bloqueio_de_ambiente_nao_chama_o_implementador(amb):
+    amb.cenario(codex=[tarefa(), parecer("bloqueado"), parecer()], claude=[entrega(CORRIGIDO)])
+    assert amb.rodar("run", "--pedido", str(amb.pedido()), "--execucao", ID) == 2
+
+    assert amb.rodar("resume", "--execucao", ID, "--revisar-novamente") == 0
+
+    estado = amb.execucao(ID)
+    assert len(amb.chamadas("claude")) == 1 and len(commits_do_ramo(amb)) == 1
+    assert [p["valido"] for p in estado["fases"][0]["pareceres"]] == [False, True]
+    assert estado["decisoes"][0]["decisao"] == "revisar novamente o mesmo SHA"
+
+
 def test_timeout_interrompe_sem_contar_como_reprovacao(amb, monkeypatch):
     monkeypatch.setenv("ARCHCORP_FLUXO_TIMEOUT", "2")
     amb.cenario(codex=[tarefa()], claude=[dict(entrega(CORRIGIDO), dormir=30)])
@@ -159,6 +171,25 @@ def test_entrega_sem_listas_vazias_e_completada_mas_sem_conteudo_e_recusada(amb)
 
     sessao = next(s for s in amb.execucao(ID)["sessoes"] if s["ferramenta"] == "claude")
     assert sessao["campos_completados"] == ["resposta_achados", "limitacoes", "perguntas"]
+
+
+def test_utilitario_executa_verificacoes_e_prova_vermelho_na_base(amb):
+    marcador = amb.estado / "nao-devia-existir.txt"
+    verificacoes = [{"comando": '$env:PYTHONPATH="src"; python -m pytest tests/test_app.py -q -p no:cacheprovider',
+                     "proposito": "regressão", "ambiente": "local"},
+                    {"comando": f"python -c \"open(r'{marcador}', 'w')\"", "proposito": "fora da lista", "ambiente": "local"}]
+    teste = {"tests/test_app.py": "from app import soma\n\n\ndef test_soma():\n    assert soma(2, 2) == 4\n"}
+    amb.cenario(codex=[tarefa(verificacoes_exigidas=verificacoes), parecer()], claude=[entrega({**CORRIGIDO, **teste})])
+
+    assert amb.rodar("run", "--pedido", str(amb.pedido()), "--execucao", ID) == 0
+
+    pasta = amb.repo / ".agentes/execucoes" / ID
+    resultado = json.loads(next(pasta.glob("revisao-*.verificacoes.json")).read_text(encoding="utf-8"))
+    assert [v["resultado"] for v in resultado["head"]] == ["passou", "nao_executado"]
+    assert [v["resultado"] for v in resultado["base"]] == ["falhou"]  # teste do head contra o código da base
+    assert not marcador.exists()
+    assert "executadas pelo utilitário" in amb.chamadas("codex")[1]["prompt"]
+    assert "utilitário, código da base" in (pasta / "pr.md").read_text(encoding="utf-8")
 
 
 def test_parecer_que_aprova_com_achado_aberto_e_invalido(amb):

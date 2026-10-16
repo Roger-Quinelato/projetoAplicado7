@@ -19,6 +19,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -54,6 +55,11 @@ AMBIENTE_SEM_PUSH = {
     "GIT_TERMINAL_PROMPT": "0",
 }
 LISTAS_OPCIONAIS_ENTREGA = ("resposta_achados", "limitacoes", "perguntas")
+# Verificações que o próprio utilitário executa no commit entregue (fora do sandbox do revisor).
+VERIFICACOES_PERMITIDAS = (("python", "-m", "pytest"), ("python", "tools/export_openapi.py"), ("git", "diff"),
+                           ("git", "status"), ("git", "log"), ("git", "show"), ("git", "rev-parse"))
+PREFIXO_PYTHONPATH = re.compile(r"""^\s*(\$env:PYTHONPATH\s*=\s*['"]?src['"]?\s*;\s*|PYTHONPATH=src\s+)""")
+TIMEOUT_VERIFICACAO = 900
 LIMITE_TRECHO = 4000
 CREATE_NO_WINDOW = 0x08000000
 
@@ -758,6 +764,55 @@ def commitar(ex: Execucao, rodada: dict) -> None:
     ex.salvar()
 
 
+def preparar_verificacao(texto: str, python: str) -> list[str] | None:
+    """Comando do registro convertido em argumentos, ou None se estiver fora da lista permitida."""
+    texto = PREFIXO_PYTHONPATH.sub("", texto.strip())
+    if re.search(r"[;&|<>`$]", texto):
+        return None
+    try:
+        partes = shlex.split(texto)
+    except ValueError:
+        return None
+    if not any(tuple(partes[:len(p)]) == p for p in VERIFICACOES_PERMITIDAS):
+        return None
+    return [python, *partes[1:]] if partes[0] == "python" else partes
+
+
+def executar_verificacoes(ex: Execucao, wt: Path, comandos: list[str]) -> list[dict]:
+    """Executa as verificações do registro no worktree indicado, sem banco externo; evidência do utilitário."""
+    venv = ex.repo / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    python = str(venv) if venv.is_file() else sys.executable
+    env = ambiente_filho(ambiente_python(ex))
+    for variavel in ("TEST_DATABASE_URL", "DATABASE_URL"):
+        env.pop(variavel, None)  # nunca apontar testes para banco persistente
+    resultados = []
+    for comando in comandos:
+        argumentos = preparar_verificacao(comando, python)
+        if argumentos is None:
+            resultados.append({"comando": comando, "resultado": "nao_executado",
+                               "saida": "fora da lista de comandos que o utilitário executa"})
+            continue
+        res = executar(argumentos, cwd=wt, timeout=TIMEOUT_VERIFICACAO, env=env)
+        resultado = "expirou" if res.expirou else ("passou" if res.codigo == 0 else "falhou")
+        resultados.append({"comando": comando, "resultado": resultado,
+                           "saida": trecho((res.saida + "\n" + res.erro).strip())[-1500:]})
+    return resultados
+
+
+def prova_na_base(ex: Execucao, rotulo: str, base: str, head: str, comandos: list[str]) -> list[dict]:
+    """Testes do head sobre o código da base (arquivos fora de tests/ revertidos): o vermelho esperado em correção."""
+    wt = worktree(ex, f"{rotulo}-prova-base", head)
+    for caminho in git(wt, "diff", "--name-only", f"{base}..{head}").splitlines():
+        if caminho.startswith("tests/"):
+            continue
+        if executar(["git", "-C", str(wt), "cat-file", "-e", f"{base}:{caminho}"], cwd=wt).codigo == 0:
+            git(wt, "checkout", base, "--", caminho)
+        else:
+            git(wt, "rm", "-q", "-f", "--", caminho)
+    testes = [c for c in comandos if (args := preparar_verificacao(c, "python")) and args[1:3] == ["-m", "pytest"]]
+    return executar_verificacoes(ex, wt, testes)
+
+
 def estado_limpo(wt: Path, head: str) -> list[str]:
     """Problemas encontrados num worktree que o revisor não podia alterar."""
     problemas = []
@@ -788,7 +843,7 @@ def revisar(ex: Execucao) -> None:
                             cabecalho=f"Fase {fase['numero']} — revisão, tentativa {tentativa} de {limite} "
                                       f"({limite - tentativa} restante)")
     registro = {"n": len(fase["pareceres"]) + 1, "tentativa": tentativa, "rodada": rodada["n"], "head": head,
-                "veredito": parecer["veredito"], "valido": True,
+                "veredito": parecer["veredito"], "valido": True, "verificacoes_utilitario": ex.e.get("ultima_verificacao"),
                 "arquivo": ex.artefato(f"parecer-f{fase['numero']}-t{tentativa}", parecer,
                                        f"Parecer — fase {fase['numero']}, tentativa {tentativa}, {head[:12]}")}
     fase["pareceres"].append(registro)
@@ -817,6 +872,15 @@ def revisao_codex(ex: Execucao, *, rotulo: str, base_da_fase: str, head: str, ta
     impl_head = git(impl, "rev-parse", "HEAD")
     diff = git(rev_wt, "diff", "--stat", "--patch", f"{base_da_fase}..{head}")
     (ex.dir / f"{rotulo}.diff").write_text(sanear(diff), encoding="utf-8")
+    comandos = [v["comando"] for t in tarefas for v in t["verificacoes_exigidas"]]
+    verificacoes = {"head": executar_verificacoes(ex, rev_wt, comandos)}
+    if any(t["tipo"] == "correcao" for t in tarefas) and base_da_fase != head:
+        verificacoes["base"] = prova_na_base(ex, rotulo, base_da_fase, head, comandos)
+    if (sujos := versionados_alterados(rev_wt)):
+        raise Interrupcao(f"as verificações do utilitário alteraram arquivos versionados {sujos[:5]} em {rev_wt}")
+    gravar_json(ex.dir / f"{rotulo}.verificacoes.json", verificacoes)
+    ex.e["ultima_verificacao"] = f"{rotulo}.verificacoes.json"
+    ex.salvar()
     prompt = f"""Papel nesta sessão: REVISÃO (sessão separada da preparação; você não recebe o raciocínio do implementador).
 Execução {ex.id}. {cabecalho}.
 Regras: o worktree atual é a base fixada (SHA {ex.e['base_sha']}); AGENTS.md e as skills daqui valem para esta revisão.
@@ -830,6 +894,11 @@ Base desta revisão: {base_da_fase}. Diff completo também em {ex.dir / f'{rotul
 Você pode executar verificações (PYTHONPATH=src já definido), mas não altere arquivos versionados em nenhum worktree:
 o utilitário confere depois e rejeita o parecer se algo mudar.
 {('Arquivos fora do escopo permitido do registro: ' + ', '.join(fora_do_escopo)) if fora_do_escopo else ''}
+
+Verificações exigidas pelo registro, executadas pelo utilitário no commit {head[:12]} fora do seu sandbox
+(evidência independente da entrega; "base" = testes do head sobre o código da base, vermelho esperado em correção).
+Se o seu sandbox não conseguir executar Python, use estas evidências; não bloqueie só por isso:
+{json.dumps(verificacoes, indent=2, ensure_ascii=False)}
 
 Registro(s) da tarefa (especificação):
 {json.dumps(tarefas, indent=2, ensure_ascii=False)}
@@ -895,8 +964,13 @@ def _verificacoes(ex: Execucao) -> list[tuple[str, str, str]]:
     linhas = []
     for fase in ex.e["fases"]:
         for p in fase["pareceres"]:
+            origem = f"f{fase['numero']}/t{p['tentativa']}"
+            if p.get("verificacoes_utilitario") and (ex.dir / p["verificacoes_utilitario"]).is_file():
+                for onde, itens in ler_json(ex.dir / p["verificacoes_utilitario"]).items():
+                    rotulo = "utilitário, head" if onde == "head" else "utilitário, código da base"
+                    linhas += [(f"{origem} ({rotulo})", v["comando"], v["resultado"]) for v in itens]
             for v in ler_json(ex.dir / p["arquivo"])["verificacoes"]:
-                linhas.append((f"f{fase['numero']}/t{p['tentativa']}", v["comando"], v["resultado"]))
+                linhas.append((f"{origem} (revisor)", v["comando"], v["resultado"]))
     return linhas
 
 
@@ -1139,9 +1213,10 @@ def cmd_resume(args) -> int:
         return relatar(ex)
     if estado == "aguardando_esclarecimento" and not args.resposta:
         raise SystemExit("execução aguarda esclarecimento: informe --resposta <arquivo>")
-    if estado == "bloqueada" and not args.rodada_extra:
-        raise SystemExit("execução bloqueada: decisão humana necessária (nova execução, mudança de escopo "
-                         "ou --rodada-extra para autorizar mais uma correção e revisão)")
+    if estado == "bloqueada" and not (args.rodada_extra or args.revisar_novamente):
+        raise SystemExit("execução bloqueada: decisão humana necessária (nova execução, mudança de escopo, "
+                         "--rodada-extra para autorizar mais uma correção e revisão, ou --revisar-novamente "
+                         "quando o bloqueio do revisor foi de ambiente)")
     if args.dry_run:
         print(f"[dry-run] retomar {ex.id} a partir de {estado} (próximo passo derivado: {derivar(ex)})")
         print("[dry-run] reconciliar estado, Git e artefatos antes de qualquer chamada")
@@ -1157,7 +1232,13 @@ def cmd_resume(args) -> int:
             nome = f"resposta-{pendente['n']}.md"
             escrever_atomico(ex.dir / nome, Path(args.resposta).read_text(encoding="utf-8"))
             pendente["resposta"] = nome
-        if args.rodada_extra and estado == "bloqueada" and ex.e.get("fases"):
+        if args.revisar_novamente and estado == "bloqueada" and ex.fase["pareceres"]:
+            ultimo = ex.fase["pareceres"][-1]
+            ultimo.update(valido=False, invalidado_por="decisão humana: bloqueio do revisor atribuído ao ambiente")
+            ex.fase["estado"] = "revisao"
+            ex.e.setdefault("decisoes", []).append({"em": agora(), "decisao": "revisar novamente o mesmo SHA",
+                                                    "fase": ex.fase["numero"], "parecer_invalidado": ultimo["arquivo"]})
+        elif args.rodada_extra and estado == "bloqueada" and ex.e.get("fases"):
             ex.fase["rodadas_extras"] += 1
             ex.fase["estado"] = "correcao"
             ex.e.setdefault("decisoes", []).append({"em": agora(), "decisao": "rodada extra autorizada",
@@ -1220,6 +1301,8 @@ def main(argv: list[str] | None = None) -> int:
     resume.add_argument("--execucao", required=True)
     resume.add_argument("--resposta", help="arquivo com a resposta ao esclarecimento pendente")
     resume.add_argument("--rodada-extra", action="store_true", help="decisão humana: mais uma correção e revisão")
+    resume.add_argument("--revisar-novamente", action="store_true",
+                        help="decisão humana: o bloqueio do revisor foi de ambiente; revisar o mesmo SHA de novo")
     resume.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
     try:
