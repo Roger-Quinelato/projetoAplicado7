@@ -1,0 +1,4 @@
+interface:
+  display_name: "ArchCorp · Segurança"
+  short_description: "Tokens de demo, modo público, RLS, logs e texto não confiável"
+  default_prompt: "Use $archcorp-seguranca para revisar a superfície de segurança desta mudança."

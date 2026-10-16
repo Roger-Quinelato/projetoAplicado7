@@ -1,0 +1,4 @@
+interface:
+  display_name: "ArchCorp · Contratos e migrações"
+  short_description: "Compatibilidade v1, OpenAPI/AsyncAPI, Alembic e dinheiro"
+  default_prompt: "Use $archcorp-contratos-e-migracoes para verificar se esta mudança preserva a v1."

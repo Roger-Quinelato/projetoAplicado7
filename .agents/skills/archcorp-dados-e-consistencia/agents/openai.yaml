@@ -1,0 +1,4 @@
+interface:
+  display_name: "ArchCorp · Dados e consistência"
+  short_description: "Concorrência, idempotência, outbox, ordem de eventos e UTC"
+  default_prompt: "Use $archcorp-dados-e-consistencia para avaliar concorrência e consistência desta mudança."
