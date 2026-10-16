@@ -149,6 +149,18 @@ def test_saida_invalida_ou_erro_de_ambiente_interrompe(amb, papel, resposta, tre
     assert estado["estado"] == "interrompida" and trecho in estado["motivo"]
 
 
+def test_entrega_sem_listas_vazias_e_completada_mas_sem_conteudo_e_recusada(amb):
+    sem_listas = entrega(CORRIGIDO)
+    for campo in ("resposta_achados", "limitacoes", "perguntas"):
+        del sem_listas["json"][campo]
+    amb.cenario(codex=[tarefa(), parecer()], claude=[sem_listas])
+
+    assert amb.rodar("run", "--pedido", str(amb.pedido()), "--execucao", ID) == 0
+
+    sessao = next(s for s in amb.execucao(ID)["sessoes"] if s["ferramenta"] == "claude")
+    assert sessao["campos_completados"] == ["resposta_achados", "limitacoes", "perguntas"]
+
+
 def test_parecer_que_aprova_com_achado_aberto_e_invalido(amb):
     amb.cenario(codex=[tarefa(), parecer("aprovado", [("BLOQUEANTE", "x")])], claude=[entrega(CORRIGIDO)])
 

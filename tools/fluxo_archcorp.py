@@ -53,6 +53,7 @@ AMBIENTE_SEM_PUSH = {
     "GIT_CONFIG_VALUE_0": "",
     "GIT_TERMINAL_PROMPT": "0",
 }
+LISTAS_OPCIONAIS_ENTREGA = ("resposta_achados", "limitacoes", "perguntas")
 LIMITE_TRECHO = 4000
 CREATE_NO_WINDOW = 0x08000000
 
@@ -492,6 +493,14 @@ def chamar_claude(ex: Execucao, *, cwd: Path, prompt: str, rotulo: str) -> dict:
             dados = extrair_json(str(resultado.get("result", "")))
         except ValueError as erro:
             raise Interrupcao(f"saída inválida do Claude em {rotulo}: {erro}") from erro
+    # O --json-schema do Claude não é estrito: listas que significam "nenhum" podem vir omitidas.
+    # Só elas são completadas (e registradas); campos de conteúdo continuam obrigatórios.
+    completados = [campo for campo in LISTAS_OPCIONAIS_ENTREGA if campo not in dados]
+    for campo in completados:
+        dados[campo] = []
+    if completados:
+        ex.e["sessoes"][-1]["campos_completados"] = completados
+        ex.salvar()
     if (erros := validar("entrega", dados)):
         gravar_json(ex.dir / f"{rotulo}.invalida.json", dados)
         raise Interrupcao(f"entrega em {rotulo} viola entrega.schema.json: {'; '.join(erros[:5])}")
