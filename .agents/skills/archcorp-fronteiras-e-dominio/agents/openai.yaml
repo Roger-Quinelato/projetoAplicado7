@@ -1,0 +1,4 @@
+interface:
+  display_name: "ArchCorp · Fronteiras e domínio"
+  short_description: "Dono dos dados, portas públicas e regra no módulo proprietário"
+  default_prompt: "Use $archcorp-fronteiras-e-dominio para conferir se esta mudança respeita as fronteiras dos contextos."

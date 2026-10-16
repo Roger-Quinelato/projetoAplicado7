@@ -6,7 +6,12 @@
   "prefixo_obrigatorio": "archcorp-",
   "skills_legadas_do_projeto": ["cavecrew", "caveman", "caveman-commit"],
   "limite_linhas_skill": 200,
-  "pacote": [],
+  "pacote": [
+    {"nome": "archcorp-fronteiras-e-dominio", "pasta": ".agents/skills", "papel": "compartilhada"},
+    {"nome": "archcorp-dados-e-consistencia", "pasta": ".agents/skills", "papel": "compartilhada"},
+    {"nome": "archcorp-contratos-e-migracoes", "pasta": ".agents/skills", "papel": "compartilhada"},
+    {"nome": "archcorp-seguranca", "pasta": ".agents/skills", "papel": "compartilhada"}
+  ],
   "skills_pessoais_permitidas": [],
   "plugins_mantidos": ["document-skills@anthropic-agent-skills"],
   "desligar_sincronizacao_claude_ai": true,
