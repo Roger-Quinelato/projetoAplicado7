@@ -4,7 +4,7 @@ Protótipo acadêmico conceitual de integração entre CRM, reservas e contratos
 
 ## Regras para agentes
 
-Antes de trabalhar neste repositório, leia [`AGENT.md`](AGENT.md): suas regras **SEMPRE** são obrigatórias e suas regras **NUNCA** são proibições permanentes. Agentes Claude Code também devem ler [`CLAUDE.md`](CLAUDE.md), que encaminha ao guia completo. Consulte [`docs/ESTADO_IMPLEMENTACAO.md`](docs/ESTADO_IMPLEMENTACAO.md) para distinguir funcionalidades verificadas de metas e pendências. Nunca descreva este protótipo como conectado a sistemas reais da Localiza.
+Antes de trabalhar neste repositório, leia [`AGENTS.md`](AGENTS.md): suas regras **SEMPRE** são obrigatórias e suas regras **NUNCA** são proibições permanentes. Agentes Claude Code também devem ler [`CLAUDE.md`](CLAUDE.md), que encaminha ao guia completo. Consulte [`docs/ESTADO_IMPLEMENTACAO.md`](docs/ESTADO_IMPLEMENTACAO.md) para distinguir funcionalidades verificadas de metas e pendências. Nunca descreva este protótipo como conectado a sistemas reais da Localiza.
 
 ## Execução rápida
 
@@ -104,14 +104,14 @@ Os artefatos principais estão em:
 
 **Meta/organização**
 - `CLAUDE.md` — instruções iniciais para Claude Code;
-- `AGENT.md`, `README.md`, `termino1.md`
+- `AGENTS.md`, `README.md`, `termino1.md`
 
 ### Ordem sugerida para auditoria
 
 A ordem segue a estrutura do `Guia.pdf` (requisitos → arquitetura atual → arquitetura proposta → padrões → integrações → sistemas corporativos → qualidade → evolução → negócio → entrega/demonstração → relatório final):
 
 1. `Guia.pdf` — critérios de entrega;
-2. `README.md` e `AGENT.md` — visão geral do repositório;
+2. `README.md` e `AGENTS.md` — visão geral do repositório;
 3. `PLANO_IMPLEMENTACAO_CENARIO_4.md` — plano geral;
 4. `docs/PRD_LOCALIZA.md` e `docs/REQUISITOS.md` — produto, requisitos funcionais e não funcionais;
 5. `docs/arquitetura/AS_IS.md` — cenário atual;

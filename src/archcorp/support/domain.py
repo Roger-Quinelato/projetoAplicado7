@@ -114,7 +114,7 @@ def sla_status(status: str, due: datetime | None, now: datetime, resolved_at: da
     return SlaStatus.WITHIN if as_utc(now) <= due else SlaStatus.BREACHED
 
 
-# Conteúdo que não pode entrar na descrição do chamado (AGENT.md e RNF-03): documento,
+# Conteúdo que não pode entrar na descrição do chamado (AGENTS.md e RNF-03): documento,
 # cartão ou telefone (11 ou mais dígitos, com separadores simples), placa e e-mail.
 _SENSITIVE_PATTERNS = (
     re.compile(r"\d(?:[ .\-/]?\d){10,}"),
