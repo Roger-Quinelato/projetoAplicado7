@@ -137,7 +137,21 @@ Mudanças relevantes para este levantamento (diff contra o backup):
 | `implement` | Busca o ticket no tracker antes de começar; chama `tdd` e `code-review` pelo `Skill` | Reforça a exclusão: continua acoplando implementação e autorrevisão |
 | Demais (16) | Ajustes de redação ou de arquivos auxiliares (`wizard/template.sh`, `setup-matt-pocock-skills/*`) | Sem efeito nas recomendações |
 
-## 7. Pontos para validação no piloto
+## 7. Perfil de carga: só o pacote do projeto (verificado em 16/10/2026)
+
+Implementado por [`tools/perfil_skills.py`](../../tools/perfil_skills.py) a partir de [`pacote-skills.json`](pacote-skills.json); origem e licença das skills de referência em [`ORIGEM_SKILLS.md`](ORIGEM_SKILLS.md).
+
+| Ferramenta | Mecanismo | Evidência |
+|---|---|---|
+| Claude Code (sessão no repositório) | `python tools/perfil_skills.py` grava `.claude/settings.local.json` (ignorado pelo Git) com `skillOverrides: "off"` para as skills pessoais fora da lista, `syncClaudeAiPlugins`/`syncClaudeAiSkills: false` e `enabledPlugins` restrito | `claude -p` perguntando as skills disponíveis: **282** fora do repositório, **19** dentro (3 do projeto, 4 de `document-skills`, 12 internas do Claude Code). Os plugins sincronizados da conta deixaram de aparecer |
+| Claude Code (worktree ou execução automática) | `claude --settings .claude/perfil-archcorp.json`, o mesmo conteúdo gerado | Arquivo gerado pelo mesmo comando; uso pelo utilitário a validar no piloto |
+| Codex (por invocação) | `codex exec -c "<saída de --codex-inline>"`, sem alterar `~/.codex/config.toml` | codex-cli 0.163.0: com `-c`, `tdd` deixou de aparecer (controle sem `-c`: aparece). Com as 118 skills desligadas, `implement`, `tdd` e `code-review` ausentes |
+
+Limitação no Windows: o valor completo tem cerca de 9,7 mil caracteres. Pelo atalho `codex.cmd`, o `cmd.exe` recusa com "Linha de comando muito longa" (limite de 8.191). Chamar `node <instalação>\node_modules\@openai\codex\bin\codex.js` diretamente funciona. O utilitário deve usar essa forma, com argumentos em lista e sem shell.
+
+Ainda não verificado: a configuração de projeto `.codex/config.toml` (o projeto *trusted* no Codex é `C:\ProjetoAplicado7`, não este clone) e o `[[skills.config]]` dentro de `.codex/agents/*.toml`.
+
+## 8. Pontos para validação no piloto
 
 1. O Claude reconhece `archcorp-implementer` e as skills pré-carregadas (verificar o aviso de skill ausente no log de debug).
 2. O revisor do Codex não enxerga as skills desativadas.

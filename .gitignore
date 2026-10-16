@@ -229,3 +229,8 @@ web/*.tsbuildinfo
 docs/*_SYNC.json
 docs/JIRA_LINKS.json
 docs/JIRA_STATUS.json
+# Perfil de carga de skills gerado por tools/perfil_skills.py (específico da máquina)
+.claude/settings.local.json
+.claude/perfil-archcorp.json
+# Progresso local do archcorp-deepwork
+.agentes/
