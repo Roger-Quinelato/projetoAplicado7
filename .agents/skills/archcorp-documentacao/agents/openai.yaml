@@ -1,0 +1,4 @@
+interface:
+  display_name: "ArchCorp · Documentação"
+  short_description: "Implementado × decidido × meta × premissa, com evidência datada"
+  default_prompt: "Use $archcorp-documentacao para revisar este documento contra o estado verificado."

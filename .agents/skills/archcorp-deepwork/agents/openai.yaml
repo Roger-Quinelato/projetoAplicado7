@@ -1,0 +1,6 @@
+interface:
+  display_name: "ArchCorp · Deepwork"
+  short_description: "Orquestração por fases com portão de revisão e limite de re-revisões"
+  default_prompt: "Use $archcorp-deepwork para planejar e conduzir este trabalho em fases."
+policy:
+  allow_implicit_invocation: false

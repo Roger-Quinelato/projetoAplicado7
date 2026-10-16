@@ -1,0 +1,4 @@
+interface:
+  display_name: "ArchCorp · Pós-merge"
+  short_description: "Estado combinado da main: CI no SHA, interações entre PRs, F1–F3"
+  default_prompt: "Use $archcorp-pos-merge para auditar a main depois destes merges."

@@ -69,6 +69,10 @@ def check(root: Path, manifest: dict) -> list[str]:
     """Valida o pacote do projeto; devolve a lista de erros (vazia quando válido)."""
     errors = []
     prefix, legacy = manifest["prefixo_obrigatorio"], set(manifest["skills_legadas_do_projeto"])
+    external = set(manifest.get("skills_externas_do_projeto", []))
+    locked = set(read_json(root / "skills-lock.json").get("skills", {}))
+    for name in sorted(external - locked):
+        errors.append(f"{name}: skill externa sem registro em skills-lock.json (instale com npx skills add)")
     found = project_skills(root, manifest)
     declared = {entry["nome"]: entry for entry in manifest["pacote"]}
     for name, paths in found.items():
@@ -81,7 +85,7 @@ def check(root: Path, manifest: dict) -> list[str]:
             errors.append(f"{name}: o campo name do frontmatter ({fields.get('name')!r}) difere do nome da pasta")
         if not fields.get("description"):
             errors.append(f"{name}: description ausente no frontmatter")
-        if name in legacy:
+        if name in legacy or name in external:
             continue
         if not name.startswith(prefix):
             errors.append(f"{name}: skill nova sem o prefixo {prefix!r}")

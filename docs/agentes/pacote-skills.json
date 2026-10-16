@@ -5,6 +5,7 @@
   "pastas_do_projeto": [".claude/skills", ".agents/skills"],
   "prefixo_obrigatorio": "archcorp-",
   "skills_legadas_do_projeto": ["cavecrew", "caveman", "caveman-commit"],
+  "skills_externas_do_projeto": ["humanizer"],
   "limite_linhas_skill": 200,
   "pacote": [
     {"nome": "archcorp-fronteiras-e-dominio", "pasta": ".agents/skills", "papel": "compartilhada"},
@@ -14,7 +15,13 @@
     {"nome": "archcorp-implementacao", "pasta": ".claude/skills", "papel": "implementador"},
     {"nome": "archcorp-tdd", "pasta": ".claude/skills", "papel": "implementador"},
     {"nome": "archcorp-diagnostico", "pasta": ".claude/skills", "papel": "implementador"},
-    {"nome": "archcorp-entrega", "pasta": ".claude/skills", "papel": "implementador"}
+    {"nome": "archcorp-entrega", "pasta": ".claude/skills", "papel": "implementador"},
+    {"nome": "archcorp-preparar-tarefa", "pasta": ".agents/skills", "papel": "coordenador"},
+    {"nome": "archcorp-deepwork", "pasta": ".agents/skills", "papel": "coordenador"},
+    {"nome": "archcorp-revisao", "pasta": ".agents/skills", "papel": "revisor"},
+    {"nome": "archcorp-pos-merge", "pasta": ".agents/skills", "papel": "revisor"},
+    {"nome": "archcorp-pr", "pasta": ".agents/skills", "papel": "coordenador"},
+    {"nome": "archcorp-documentacao", "pasta": ".agents/skills", "papel": "revisor"}
   ],
   "skills_pessoais_permitidas": [],
   "plugins_mantidos": ["document-skills@anthropic-agent-skills"],

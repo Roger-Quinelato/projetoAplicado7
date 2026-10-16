@@ -1,0 +1,4 @@
+interface:
+  display_name: "ArchCorp · Preparar tarefa"
+  short_description: "Registro de tarefa com evidência planejada e pré-mortem"
+  default_prompt: "Use $archcorp-preparar-tarefa para transformar esta issue em registro de tarefa."

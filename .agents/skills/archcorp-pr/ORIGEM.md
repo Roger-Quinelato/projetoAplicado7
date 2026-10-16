@@ -1,0 +1,3 @@
+# Origem
+
+Adaptado de `pr`, de [mattpocock/skills](https://github.com/mattpocock/skills) (`skills/engineering/pr`), Copyright (c) 2026 Matt Pocock, licença MIT, que credita a skill `show-me` de Dex Horthy / [Humanlayer](https://github.com/humanlayer/skills). Mantidos: resumo com o menor visual suficiente, evidência antes/depois e "perigo do merge" (porta de mão única/dupla e raio de impacto). Acrescentados: tarefa vinculada, parecer automatizado por SHA e limitações, conforme o protocolo Codex↔Claude e o achado Q-13 da auditoria de 16/10/2026. Aviso em [`docs/agentes/licencas/MIT-mattpocock-skills.txt`](../../../docs/agentes/licencas/MIT-mattpocock-skills.txt).
