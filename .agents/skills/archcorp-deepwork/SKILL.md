@@ -3,77 +3,60 @@ name: archcorp-deepwork
 description: >
   Use como coordenador só para trabalho grande e arriscado no ArchCorp: várias fases dependentes,
   mudança de fronteira ou de arquitetura, migração que não pode ficar pela metade, ou correção de
-  integridade que exige experimento antes (ex.: Q-02 ativação concorrente, Q-07 política de
-  Workflow). Não use para correção pontual, documentação ou mudança limitada a um contexto.
+  integridade que exige caracterização antes. Não use para correção pontual, documentação ou
+  mudança limitada a um contexto.
 ---
 
 # Deepwork no ArchCorp
 
-O coordenador vira **escalonador**: divide o trabalho em fases, prepara cada fase como tarefa,
-aciona o implementador, conduz o portão de revisão e registra o progresso. Ele **não escreve
-código**.
+O coordenador vira **escalonador**: divide o trabalho em fases, prepara cada fase como tarefa e
+conduz cada uma pelo **mesmo ciclo** do protocolo (`docs/agentes/PROTOCOLO.md`): implementação,
+entrega, revisão por SHA, até duas correções. Ele **não escreve código**.
 
 ## 1. Ativação
 
 Ative só se pelo menos dois forem verdadeiros: fases com dependência real entre si; mudança de
 fronteira, contrato ou esquema; risco de integridade que precisa ser caracterizado antes da
-correção; entrega parcial perigosa. Caso contrário, use uma tarefa comum
-(`archcorp-preparar-tarefa`). Mexer em vários arquivos, sozinho, não justifica deepwork.
+correção; entrega parcial perigosa. Caso contrário, tarefa comum (`archcorp-preparar-tarefa`).
+Mexer em vários arquivos, sozinho, não justifica deepwork. Exemplos do repositório em
+[`references/historico.md`](references/historico.md).
 
-## 2. Arquivo de progresso
+## 2. Planejamento
 
-Crie `.agentes/deepwork/<slug>.md` (pasta ignorada pelo Git; confira o `.gitignore` antes). Ele é o
-estado de trabalho, não entregável. O resumo revisado de cada fase vai para a descrição do PR.
+- Fases pequenas, cada uma com **um resultado válido por si** (um commit que não quebra a `main`),
+  em ordem: a fase N parte do commit aprovado da fase N-1.
+- Cada fase recebe um registro de tarefa completo, com o próprio caminho de evidência.
+- Risco de integridade: a primeira fase **caracteriza** o problema com um teste que o reproduz. Use
+  PostgreSQL quando a alegação depender de propriedades dele (bloqueio, `skip_locked`, isolamento,
+  limites numéricos, migração); SQLite basta para o resto.
+- Pesquisa necessária (biblioteca, comportamento do banco) é registrada **antes** da revisão, com
+  fonte primária, para o revisor não repetir a descoberta.
 
-Conteúdo mínimo:
+## 3. Execução
 
-```markdown
-# Deepwork <slug>
-Objetivo: …    SHA de base: …    Branch: …
-## Fases
-| # | Objetivo | Depende de | Estado | Commit | Tentativas de revisão |
-## Decisões e pesquisa aceitas
-## Riscos abertos
-## Registro por fase
-### Fase N — <objetivo>
-Arquivos alterados · evidência da validação · decisão ou risco a revisar · parecer (SHA) · resultado
-```
+Com `tools/fluxo_archcorp.py`, o deepwork é um registro com `modo: deepwork` e a lista de fases; o
+utilitário executa as fases em sequência e guarda o progresso em `.agentes/execucoes/<id>/`
+(ignorado pelo Git). Sem o utilitário, mantenha o mesmo registro em `.agentes/deepwork/<slug>.md`.
 
-## 3. Planejamento
+Por fase:
 
-- Fases pequenas, cada uma com **um resultado válido por si** (pode virar commit sem quebrar a
-  `main`). A primeira fase de um risco de integridade é **caracterizar**: teste que reproduz o
-  problema em PostgreSQL antes de qualquer correção.
-- Cada fase recebe um registro de tarefa completo (`archcorp-preparar-tarefa`), com o caminho de
-  evidência da fase.
-- Pesquisa necessária (biblioteca, comportamento do PostgreSQL) é feita e registrada **antes** do
-  portão, com fonte primária, para o revisor não repetir a descoberta.
+1. Implementador com o registro da fase, num worktree exclusivo; ninguém mais escreve nele.
+2. Entrega (`archcorp-entrega`) e commit local criado pelo utilitário.
+3. Fase que muda fronteira, direção de dependência ou local de arquivo: revisão consulta
+   `archcorp-fronteiras-e-dominio` e os testes de arquitetura.
+4. Revisão (`archcorp-revisao`) em sessão separada, declarando `Fase N — tentativa M de 3`.
 
-## 4. Execução de uma fase
+## 4. Portão por fase
 
-1. Acionar o implementador (`archcorp-implementer`) com o registro da fase; um implementador por
-   fase, num diretório exclusivo; nenhum outro processo escreve nos mesmos arquivos.
-2. Receber a entrega (`archcorp-entrega`) e rodar a validação do caminho de evidência.
-3. Fase que muda fronteira, direção de dependência ou local de arquivo: conferir
-   `archcorp-fronteiras-e-dominio` e os testes de arquitetura antes do portão.
-4. Atualizar o arquivo de progresso e passar ao portão.
+- 1 revisão + até 2 re-revisões. Re-revisão prioriza achados não resolvidos e riscos introduzidos
+  pela correção; **não reabre** achados aceitos ou resolvidos.
+- Esgotadas as tentativas com achado material aberto: fase **bloqueada**; o responsável humano
+  decide entre aceitar o risco, mudar o escopo ou autorizar revisão extra.
+- Fase aprovada: só então a próxima.
 
-## 5. Portão de revisão por fase
+## 5. Conclusão
 
-- Revisão com `archcorp-revisao`, em contexto separado do planejamento da fase.
-- Cada pedido de revisão declara a tentativa: `Fase N — revisão, tentativa 2 de 3 (1 restante)`.
-- **1 revisão inicial + até 2 re-revisões.** Re-revisão só quando a correção mudou a decisão
-  revisada ou quando um achado não pôde ser verificado com evidência focada; não gaste re-revisão em
-  ajuste mecânico já provado.
-- Na re-revisão: priorizar achados não resolvidos e riscos introduzidos pela correção; **não
-  reabrir** achados aceitos ou resolvidos.
-- Esgotadas as tentativas com achado material aberto: fase **bloqueada**. Registre o risco e peça
-  ao responsável humano uma decisão: aceitar o risco, mudar o escopo ou autorizar revisão extra.
-- Aprovada: commit focado da fase (feito pelo coordenador, segundo o protocolo) e só então a
-  próxima fase.
-
-## 6. Conclusão
-
-Validação final do conjunto (portão completo da CI, incluindo PostgreSQL quando aplicável),
-`archcorp-pos-merge` se várias fases forem integradas, e resumo final no PR: fases, commits,
-pareceres por SHA, riscos aceitos e o que ficou fora.
+Revisão final **integrada** da combinação das fases (base da primeira até o commit da última),
+procurando interações entre fases. Ela não é pós-merge: `archcorp-pos-merge` só vale depois de
+integração efetiva na `main`. Resumo final: fases, commits, pareceres por SHA, riscos aceitos e o
+que ficou fora.

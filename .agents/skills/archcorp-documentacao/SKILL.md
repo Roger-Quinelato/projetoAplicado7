@@ -9,8 +9,10 @@ description: >
 # Documentação no ArchCorp
 
 Documento acadêmico que afirma capacidade inexistente é o defeito de maior impacto na entrega
-(Q-12). Cada frase sobre o sistema precisa caber numa destas categorias, e o texto deve deixar
-claro qual é:
+(caso real em [`references/historico.md`](references/historico.md)). O oposto também é defeito:
+capacidade **comprovada** deve ser afirmada com clareza, com a evidência, sem ressalvas vagas que a
+façam parecer hipotética. Cada frase sobre o sistema precisa caber numa destas categorias, e o
+texto deve deixar claro qual é:
 
 | Categoria | Como escrever | Exemplo |
 |---|---|---|
@@ -20,8 +22,10 @@ claro qual é:
 | **Premissa a validar** | Marcada como premissa, com quem valida | "Prazo de 10 dias: premissa a validar com o docente" |
 
 Nunca descreva o protótipo como integrado a sistemas reais da Localiza, nem OIDC/OAuth, tracing
-distribuído, fila de erro no broker, escala horizontal ou deploy público como existentes
-(`AGENTS.md`, regras NUNCA).
+distribuído, fila de erro no broker, escala horizontal ou deploy público como existentes **enquanto
+não houver evidência verificável** (`AGENTS.md`, regras NUNCA). Quando uma dessas capacidades for
+implementada e verificada, ela passa à primeira categoria, com a evidência e a atualização de
+`docs/ESTADO_IMPLEMENTACAO.md` na mesma mudança.
 
 ## 1. Fonte única de cada fato
 
@@ -47,17 +51,32 @@ Ao mudar comportamento, atualize essas fontes **na mesma mudança**.
   `tools/build_presentation.mjs`; confira as afirmações na fonte antes de regenerar, e inspecione o
   arquivo renderizado (páginas, figuras, equipe e contribuições), não só o texto.
 - Conferir contra o Guia (`Guia.pdf`): requisitos, três fluxos integrados, referências.
-- Prosa com cara de texto gerado: revisar com a skill `humanizer` quando instalada no projeto.
+- Prosa com cara de texto gerado: ver seção 4.
 
-## 4. Estilo
+## 4. Acabamento opcional com `humanizer`
+
+A skill externa `humanizer` (instalada no projeto, `skills-lock.json`) é acabamento, **depois** da
+conferência factual, nunca antes:
+
+1. Confira as afirmações (seções 1–2) e guarde a versão conferida.
+2. Chame a `humanizer` em **modo incorporado** (*Embedded mode*: devolve só o texto final). Em
+   arquivo, só prosa muda; código, comandos, caminhos, YAML e links ficam intactos.
+3. Compare com a versão conferida: fatos, números, datas, SHAs, ressalvas ("não implementado",
+   "não verificado", "premissa") e referências precisam continuar presentes e iguais. Ressalva
+   perdida é defeito; reponha-a.
+
+Sem a skill instalada, o texto conferido segue como está; a ausência não bloqueia a entrega.
+
+## 5. Estilo
 
 Português do Brasil; identificadores, endpoints e campos em inglês como no código. Frases diretas,
 sem adjetivos promocionais. Links relativos válidos. Tabelas para comparações; listas curtas para
 passos.
 
-## 5. Revisão de documento (checklist)
+## 6. Revisão de documento (checklist)
 
 - [ ] Cada afirmação sobre o sistema tem categoria clara e, se implementada, evidência datada.
+- [ ] Capacidade comprovada aparece como implementada, sem ressalva vaga.
 - [ ] Nenhuma capacidade da lista NUNCA aparece como existente.
 - [ ] Números e estados não contradizem `ESTADO_IMPLEMENTACAO.md` nem o código no SHA.
 - [ ] Links e caminhos citados existem.

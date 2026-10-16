@@ -2,9 +2,10 @@
 name: archcorp-fronteiras-e-dominio
 description: >
   Use ao criar, mover ou revisar código que cruza contextos do ArchCorp (crm, contracts, finance,
-  support, workflow, integration), ao decidir onde fica uma regra de negócio ou uma máquina de
-  estados, ou quando um import, consulta ou evento liga dois módulos. Não use para mudança
-  restrita a um único arquivo de um único contexto sem efeito em outro.
+  support, workflow, integration), quando um import, consulta ou evento liga dois módulos, e
+  sempre que uma regra de negócio ou máquina de estados for criada ou alterada, mesmo num único
+  arquivo. Não use para mudança técnica restrita a um arquivo sem regra de negócio nem efeito em
+  outro contexto.
 ---
 
 # Fronteiras e domínio do ArchCorp
@@ -50,8 +51,11 @@ exige ADR.
 
 - Estado e transições ficam numa **máquina de estados única** no domínio do dono
   (`contracts/domain.py`, `finance/domain.py`, `support/domain.py`). Rota HTTP valida formato e
-  delega; não atribui estado diretamente. Exceção conhecida: `workflow/routes.py` ainda faz
-  `item.state = body.state` (achado Q-07 da auditoria de 16/10/2026).
+  delega; não atribui estado diretamente. Exceções conhecidas em 16/10/2026 estão em
+  [`references/historico.md`](references/historico.md); reconfira no SHA atual.
+- Alteração de transição, guarda ou regra num único arquivo de domínio também passa por esta
+  seção: confira se a regra continua no dono, se outra cópia dela existe em outro contexto e se os
+  consumidores do estado (eventos, `web/src/api.ts`) continuam coerentes.
 - Valor sem identidade própria (dinheiro com moeda, período, prazo) é tratado como valor; não
   espalhe `float` + `str` soltos.
 - Regra semelhante em dois contextos é sinal de dono errado ou de regra vazada para a integração.
@@ -62,7 +66,7 @@ exige ADR.
 - Um contexto lê dado de outro que poderia mudar sem que ele saiba (cópia sem evento de
   atualização ou sem ordem garantida; ver `archcorp-dados-e-consistencia`).
 - Um consumidor de evento recalcula algo que o produtor já publicou (ex.: Workflow recalculando o
-  prazo do chamado; corrigido em Q-01).
+  prazo do chamado; ver histórico).
 - Uma mudança exige editar quatro contextos por um motivo só: a regra está espalhada.
 - Um módulo de negócio passa a importar SDK, HTTP ou broker no domínio.
 - "Última escrita vence" aplicada a divergência entre contextos sem decisão explícita.

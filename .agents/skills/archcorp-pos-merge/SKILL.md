@@ -1,20 +1,27 @@
 ---
 name: archcorp-pos-merge
 description: >
-  Use depois de integrar um ou mais PRs na main do ArchCorp, ou antes de uma entrega acadêmica ou
-  publicação, para auditar o estado combinado: interação entre PRs, CI no SHA integrado, contratos,
-  documentação e regressões dos três fluxos obrigatórios.
+  Use depois de integração efetiva de um ou mais PRs na main do ArchCorp, ou antes de uma entrega
+  acadêmica ou publicação, para auditar o estado combinado: interação entre PRs, CI no SHA
+  integrado, contratos, documentação e regressões dos três fluxos obrigatórios. Não use para a
+  revisão integrada das fases locais de um deepwork.
 ---
 
 # Auditoria pós-merge
 
-Cada PR foi revisado isoladamente; o risco agora está **entre** eles.
+Cada PR foi revisado isoladamente; o risco agora está **entre** eles. Só se aplica a commits já
+integrados na `main`; a validação conjunta das fases locais de um deepwork é a revisão integrada
+de `archcorp-deepwork`, não esta.
 
 ## 1. Congele o intervalo
 
-Defina `BASE_SHA` (último estado auditado ou a entrega anterior) e `HEAD_SHA` (main atual). Liste
-os PRs e commits do intervalo (`git log --oneline BASE..HEAD`) e o parecer de cada um. PR integrado
-sem parecer no SHA final é achado.
+`HEAD_SHA` é a `main` atual. `BASE_SHA` é, nesta ordem: a base informada no pedido; o `HEAD_SHA`
+do último pós-merge registrado; o commit da entrega anterior identificável (tag ou release de
+entrega acadêmica). **Na primeira execução sem nenhum desses, pergunte ao responsável humano.**
+Não invente intervalo (ex.: "últimos N commits") nem trate o histórico inteiro como auditado.
+
+Liste os PRs e commits do intervalo (`git log --oneline <BASE_SHA>..<HEAD_SHA>`) e o parecer de
+cada um. PR integrado sem parecer no SHA final é achado.
 
 ## 2. CI no SHA integrado
 

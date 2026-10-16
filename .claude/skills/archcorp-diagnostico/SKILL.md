@@ -1,62 +1,62 @@
 ---
 name: archcorp-diagnostico
 description: >
-  Use antes de corrigir quando a causa não é óbvia no ArchCorp: falha intermitente, teste que
-  quebra só no PostgreSQL ou só na CI, efeito duplicado ou ausente após despacho da outbox,
-  regressão de desempenho, ou quando a tarefa pede só investigação.
+  Use antes de corrigir quando a causa não está estabelecida no ArchCorp: falha intermitente, teste
+  que quebra só no PostgreSQL ou só na CI, efeito duplicado ou ausente após despacho da outbox,
+  regressão de desempenho, ou quando a tarefa pede só investigação. Não use quando o registro da
+  tarefa já traz a causa comprovada.
 ---
 
 # Diagnóstico no ArchCorp
 
-Evidência antes de edição. Sem um laço que fica vermelho **neste** defeito, não há hipótese.
+Evidência antes de afirmar a causa. Hipóteses podem e devem orientar a coleta de evidência, mas
+ficam marcadas como **provisórias** até um laço de reprodução comprová-las.
 
-## 1. Construa o laço de feedback (a parte que importa)
+## 1. Construa o laço de feedback
 
-Um comando, já executado, que reproduz o **sintoma exato** do registro da tarefa, de forma
-determinística e em segundos. Opções, nesta ordem:
+Um comando, já executado, que reproduz o **sintoma do registro da tarefa** da forma mais
+determinística e rápida que o defeito permitir. Opções, nesta ordem:
 
-1. Teste `pytest` na seam que alcança o defeito (`archcorp-tdd`):
-   `PYTHONPATH=src python -m pytest tests/<arquivo>.py -k <nome> -q -p no:cacheprovider`.
-2. Sequência HTTP contra `uvicorn` local ou pelo `client` de teste, incluindo
+1. Teste `pytest` na seam que alcança o defeito (`archcorp-tdd`).
+   PowerShell: `$env:PYTHONPATH="src"; python -m pytest tests/<arquivo>.py -k <nome> -q -p no:cacheprovider`
+   POSIX: `PYTHONPATH=src python -m pytest tests/<arquivo>.py -k <nome> -q -p no:cacheprovider`
+2. Sequência HTTP pelo `client` de teste ou contra `uvicorn` local, incluindo
    `POST /api/v1/integration/outbox/dispatch` quando o efeito atravessa contextos.
-3. Reprodução de envelope: pegue o `OutboxEvent` gravado e chame o consumidor com
-   `event.envelope()` isoladamente.
+3. Reprodução de envelope: o `OutboxEvent` gravado, entregue ao consumidor com `event.envelope()`.
 4. Diferencial: mesma entrada em SQLite e em PostgreSQL (`TEST_DATABASE_URL` descartável), ou base
    × candidato.
-5. Para falha intermitente: repita o gatilho muitas vezes, fixe relógio e dados, aumente a taxa de
-   reprodução até ser depurável.
+5. Falha intermitente: repita o gatilho, fixe relógio e dados e aumente a taxa de reprodução até
+   ser depurável. Registre a taxa observada.
 
-Aperte o laço: mais rápido, sinal mais específico (o sintoma, não "não quebrou"), mais
-determinístico (relógio injetado, dados sintéticos fixos).
+Aperte o laço quando possível: sinal específico (o sintoma, não "não quebrou"), relógio injetado,
+dados sintéticos fixos.
 
-Não conseguiu construir o laço? **Pare** e devolva ao coordenador o que tentou e o que falta
-(acesso, artefato, permissão). Não hipotetize sem laço.
+## 2. Hipóteses provisórias
 
-## 2. Reproduza e reduza
+Antes e durante a construção do laço, escreva as hipóteses que a evidência atual sustenta, quantas
+forem úteis, cada uma falseável: "se X é a causa, mudar Y faz o defeito sumir". Ordene por
+evidência e pelo custo de falsear. Separe **sintoma observado** de **causa inferida**.
 
-Confirme que o laço mostra o defeito descrito, não um vizinho. Reduza o cenário retirando um
-elemento por vez até que tudo o que sobra seja necessário para ficar vermelho. O cenário mínimo
-vira o teste de regressão.
+Suspeitos frequentes neste repositório: relógio do consumidor, ordem de eventos, transação
+aninhada, diferença SQLite/PostgreSQL, fixture `clean_database`, impressão digital de idempotência.
 
-## 3. Hipóteses ranqueadas
+## 3. Reproduza, reduza, instrumente
 
-Escreva de 3 a 5 hipóteses **falseáveis** antes de testar qualquer uma:
-"Se X é a causa, então mudar Y faz o defeito sumir e mudar Z o piora."
-Separe sintoma observado de causa inferida. Ordene por evidência e pelo custo de falsear.
-Suspeitos frequentes aqui: relógio do consumidor, ordem de eventos, transação aninhada,
-diferença SQLite/PostgreSQL, fixture `clean_database`, impressão digital de idempotência.
+- Confirme que o laço mostra o defeito descrito, não um vizinho.
+- Reduza o cenário retirando um elemento por vez; o mínimo vira o teste de regressão.
+- Cada sonda testa uma previsão; mude uma variável por vez. Log temporário com prefixo único
+  (`[DIAG-xxxx]`), sem token, descrição de chamado ou payload sensível (`archcorp-seguranca`).
+- Desempenho: meça a linha de base antes de mudar.
 
-## 4. Instrumente uma variável por vez
+## 4. Conclua com a força certa
 
-Cada sonda testa uma previsão. Prefira depurador ou asserção pontual; se precisar de log, use um
-prefixo único (`[DIAG-xxxx]`) para removê-lo com uma busca. Nunca registre token, descrição de
-chamado ou payload sensível (`archcorp-seguranca`). Desempenho: meça antes (linha de base), depois
-mude.
+| Situação | O que escrever na entrega |
+|---|---|
+| Laço reproduz e a correção o deixa verde | Causa **comprovada**, com comando e saída relevante |
+| Laço reproduz, causa ainda não isolada | Sintoma comprovado; hipóteses **provisórias** e o que as falsearia |
+| Sem laço (acesso, artefato, permissão, ambiente) | Entrega `bloqueada`: o que foi tentado e o que destravaria |
 
-## 5. Conclua
-
-- Causa nomeada com a prova (comando e saída relevantes, sem segredos).
-- Se a tarefa autoriza correção: siga `archcorp-implementacao`, modo correção.
-- Se não autoriza: entregue só o diagnóstico.
-- Se não existe seam correta para o teste de regressão, isso é um achado; registre-o.
+- Correção autorizada pelo registro: siga `archcorp-implementacao`, modo correção.
+- Só investigação: entregue o diagnóstico; não edite código de produção.
+- Sem seam adequada para o teste de regressão: registre como achado.
 - Remova toda instrumentação `[DIAG-...]` e harness temporário antes da entrega.

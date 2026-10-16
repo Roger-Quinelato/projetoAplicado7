@@ -9,9 +9,13 @@ description: >
 # Implementação no ArchCorp
 
 Você implementa **uma tarefa** descrita num registro (objetivo, escopo, critérios de aceite,
-verificações exigidas, SHA de base). O registro é a especificação; regras gerais estão em
-`AGENTS.md`. Conhecimento de arquitetura fica em `.agents/skills/archcorp-*` (leia pelo caminho
-quando o gatilho da tarefa pedir; ver `docs/agentes/IMPLEMENTADOR.md`).
+verificações exigidas, SHA de base). O registro é a especificação; o ciclo está em
+`docs/agentes/PROTOCOLO.md` e as regras gerais em `AGENTS.md`. Conhecimento de arquitetura fica em
+`.agents/skills/archcorp-*` (leia pelo caminho quando o gatilho pedir; tabela em
+`docs/agentes/IMPLEMENTADOR.md`).
+
+Pedido direto de implementação, sem registro de tarefa? Não implemente: encaminhe à preparação
+(`archcorp-preparar-tarefa`, pelo coordenador). Tarefa simples tem registro curto, mas tem registro.
 
 ## 1. Antes de editar
 
@@ -26,7 +30,9 @@ quando o gatilho da tarefa pedir; ver `docs/agentes/IMPLEMENTADOR.md`).
 
 | Modo | Quando | Regra central |
 |---|---|---|
-| **Correção** | Comportamento errado | Reproduzir antes (`archcorp-diagnostico`); teste que falha na base (`archcorp-tdd`); mudar a camada responsável; nada além disso |
+| **Correção** | Comportamento errado | Causa não estabelecida: `archcorp-diagnostico` antes; teste que falha na base pelo motivo do bug (`archcorp-tdd`); mudar a camada responsável; nada além disso |
+| **Documentação** | Só texto | `archcorp-documentacao`; afirmações com evidência; nenhum código alterado |
+| **Verificação** | Só conferir | Executar os comandos do registro e relatar; nenhum arquivo alterado |
 | **Funcionalidade** | Comportamento novo | Caminho completo e estreito entre as camadas que possuem as invariantes; reaproveitar a costura existente; sem modos, opções ou configuração que o aceite não pede |
 | **Refatoração** | Estrutura muda, comportamento não | Prova antes e depois com os mesmos testes; uma fronteira de propriedade por vez; interfaces públicas, ordem e falhas preservadas; nenhuma funcionalidade junto |
 | **Rodada de correção** | Achados da revisão | Responder a **cada** achado numerado: corrigido (com prova), não corrigido (com motivo) ou discordância fundamentada. Não reabrir o que foi aceito; não ampliar escopo |
@@ -35,8 +41,8 @@ quando o gatilho da tarefa pedir; ver `docs/agentes/IMPLEMENTADOR.md`).
 
 Quando o defeito vem de um padrão (helper, normalização, cálculo de prazo, validação), procure os
 **sítios irmãos** do mesmo padrão. Ou corrija todos com teste em cada um, ou declare no resultado
-por que o escopo ficou restrito. Exemplo real: Q-01 corrigiu o prazo de `TICKET_RESOLUTION`, mas o
-`ONBOARDING` ainda usa `datetime.now()`; isso precisa estar explícito na entrega.
+por que o escopo ficou restrito; isso precisa estar explícito na entrega. Caso real em
+[`references/historico.md`](references/historico.md).
 
 Mudou um formato compartilhado (payload, campo de resposta, enum)? Enumere **todos** os
 consumidores (outros contextos, `web/src/api.ts`, exemplos OpenAPI/AsyncAPI) e confirme cada um.
@@ -58,15 +64,16 @@ identificadores no padrão existente).
 
 ## 5. Documentação na mesma mudança
 
-Comportamento, API, evento ou operação mudou? Atualize no mesmo commit: contratos
-(`archcorp-contratos-e-migracoes`), `docs/ESTADO_IMPLEMENTACAO.md` e o que mais a tarefa citar.
-Separe implementado de planejado; não afirme o que não verificou.
+Comportamento, API, evento ou operação mudou? Atualize na mesma entrega: contratos
+(`archcorp-contratos-e-migracoes`), `docs/ESTADO_IMPLEMENTACAO.md` e o que mais a tarefa citar
+(`archcorp-documentacao`). Separe implementado de planejado; não afirme o que não verificou.
 
 ## 6. Limites do papel
 
-O implementador **não**: faz push, merge, deploy ou fecha issue; publica comentário externo;
-delega a outros agentes; altera o registro da tarefa; revisa o próprio trabalho como se fosse o
-revisor. Se a tarefa exigir algo fora do escopo (migração, contrato, novo evento, área não
-prevista), **interrompa** e devolva o motivo; não redimensione sozinho.
+O implementador **não**: faz commit (o utilitário faz, depois da entrega), push, merge, deploy ou
+fecha issue; publica comentário externo; delega a outros agentes; altera o registro da tarefa;
+revisa o próprio trabalho como se fosse o revisor. Se a tarefa exigir algo fora do escopo
+(migração, contrato, novo evento, área não prevista), **interrompa** e devolva o motivo; não
+redimensione sozinho. Comando negado por permissão é impedimento: declare-o, não contorne.
 
 Ao terminar, entregue no formato de `archcorp-entrega`.

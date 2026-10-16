@@ -19,7 +19,7 @@ incompatível exige nova versão ou exceção registrada em ADR** (ADR-002, ADR-
 | Novo campo **opcional** na resposta ou no evento | Compatível | Atualize exemplos e AsyncAPI/OpenAPI juntos |
 | Novo valor de enum na resposta | Compatível com ressalva | Consumidor estrito pode quebrar; registre (ex.: `PARTIALLY_PAID`, ADR-003) |
 | Campo novo **obrigatório** na entrada, remoção ou renomeação de campo, mudança de tipo | **Incompatível** | Nova versão ou exceção em ADR |
-| Validação mais restrita em entrada antes aceita (ex.: limite monetário, Q-06) | **Incompatível** | Exceção explícita, como ADR-003 fez com valor de mais de duas casas |
+| Validação mais restrita em entrada antes aceita (ex.: limite monetário) | **Incompatível** | Exceção explícita, como ADR-003 fez com valor de mais de duas casas |
 | Mudança de `status`/`code` de erro | **Incompatível** | `test_api_v1_compatibility.py` protege o baseline |
 
 O teste `test_contrato_v1_compativel_com_baseline_e_excecoes_explicitas`
@@ -28,23 +28,23 @@ exceção nele sem ADR é enfraquecer o teste.
 
 ## 2. Contratos versionados no repositório
 
-- OpenAPI é **gerado**: `PYTHONPATH=src python tools/export_openapi.py` regenera
-  `docs/api/openapi.yaml`; `--check` falha se divergir. Edite o código (schemas, `api_examples.py`),
-  nunca o YAML gerado à mão.
+- OpenAPI é **gerado**: `tools/export_openapi.py` regenera `docs/api/openapi.yaml`; `--check`
+  falha se divergir. PowerShell: `$env:PYTHONPATH="src"; python tools/export_openapi.py --check`;
+  POSIX: `PYTHONPATH=src python tools/export_openapi.py --check`. Edite o código (schemas,
+  `api_examples.py`), nunca o YAML gerado à mão.
 - AsyncAPI (`docs/events/asyncapi.yaml`) é mantido à mão; o envelope obrigatório está no
   `AGENTS.md`. Evento novo exige schema, exemplo e consumidor documentado.
-- Exemplos precisam **validar contra o schema**, não só existir. Foram achados exemplos que omitem
-  campos obrigatórios nulos (`overdueSince`, `contractId`; Q-05). Ao tocar um schema, valide o
-  exemplo correspondente.
+- Exemplos precisam **validar contra o schema**, não só existir; exemplo que omite campo
+  obrigatório anulável é inválido. Ao tocar um schema, valide o exemplo correspondente. Casos reais
+  em [`references/historico.md`](references/historico.md).
 
 ## 3. Dinheiro e datas
 
 - Valores monetários: duas casas, moeda ISO explícita, limite compatível com `Numeric(14,2)` na
   entrada **e** no resultado calculado (ex.: fatura final que multiplica ciclos). Na v1 eles
   trafegam como `number`; isso é dívida aceita para a v2 (decimal em string), não um padrão.
-- Validação de múltiplo monetário com `float` falha para valores válidos (`19.99` rejeitado por
-  `multipleOf: 0.01`; Q-04). Use comparação decimal exata no validador; não afrouxe com
-  tolerância ampla.
+- Validação de múltiplo monetário com `float` falha para valores válidos (ex.: `19.99` com
+  `multipleOf: 0.01`). Use comparação decimal exata no validador; não afrouxe com tolerância ampla.
 - Datas e horas em ISO 8601 UTC com `Z` (ver `archcorp-dados-e-consistencia`).
 
 ## 4. Migrações Alembic
