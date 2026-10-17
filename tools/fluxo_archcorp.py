@@ -24,6 +24,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unicodedata
 from pathlib import Path
 
@@ -130,7 +131,16 @@ def escrever_atomico(caminho: Path, conteudo: str) -> None:
     fd, tmp = tempfile.mkstemp(dir=caminho.parent, prefix=f".{caminho.name}.", suffix=".tmp")
     with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as arquivo:
         arquivo.write(conteudo)
-    os.replace(tmp, caminho)
+    # No Windows, os.replace falha com acesso negado enquanto outro processo (leitor, antivírus,
+    # indexador) mantém o destino aberto; a janela é curta, então tenta de novo antes de desistir.
+    for tentativa in range(40):
+        try:
+            os.replace(tmp, caminho)
+            return
+        except PermissionError:
+            if tentativa == 39:
+                raise
+            time.sleep(0.05 * (1 + tentativa // 10))
 
 
 def gravar_json(caminho: Path, dados: dict) -> None:

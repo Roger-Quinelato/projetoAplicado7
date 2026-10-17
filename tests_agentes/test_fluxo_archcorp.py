@@ -231,6 +231,20 @@ def test_saida_invalida_com_alteracoes_retoma_mantendo_o_trabalho(amb):
     assert "return a + b" in git(amb.repo, "show", f"archcorp/{ID}:src/app.py")  # trabalho da 1ª tentativa preservado
 
 
+def test_escrita_atomica_tenta_de_novo_quando_o_destino_esta_ocupado(tmp_path, monkeypatch):
+    destino, original, falhas = tmp_path / "estado.json", fluxo.os.replace, []
+
+    def replace_ocupado(origem, alvo):
+        if len(falhas) < 3:  # Windows: destino aberto por outro processo
+            falhas.append(alvo)
+            raise PermissionError(5, "Acesso negado")
+        original(origem, alvo)
+
+    monkeypatch.setattr(fluxo.os, "replace", replace_ocupado)
+    fluxo.escrever_atomico(destino, "{}")
+    assert destino.read_text(encoding="utf-8") == "{}" and len(falhas) == 3
+
+
 def test_parecer_que_aprova_com_achado_aberto_e_invalido(amb):
     amb.cenario(codex=[tarefa(), parecer("aprovado", [("BLOQUEANTE", "x")])], claude=[entrega(CORRIGIDO)])
 
