@@ -18,13 +18,19 @@ def _tasks(session: Session, process: ProcessInstance) -> list[ProcessTask]:
     return list(session.scalars(select(ProcessTask).where(ProcessTask.process_id == process.process_id)))
 
 
-def _start(session: Session, envelope: dict, process_type: str, reference_field: str, due_hours: int) -> None:
+def _parse_utc(value: str) -> datetime:
+    """Converte um instante ISO 8601 do evento em datetime UTC; sem fuso, é lido como UTC."""
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed.astimezone(timezone.utc)
+
+
+def _start(session: Session, envelope: dict, process_type: str, reference_field: str, due_at: datetime) -> None:
     """Inicia o processo e sua primeira tarefa uma única vez por referência."""
     payload = envelope["payload"]
     reference_id = payload[reference_field]
     if _find_process(session, process_type, reference_id):
         return
-    process = ProcessInstance(process_type=process_type, reference_id=reference_id, customer_id=payload["customerId"], due_at=datetime.now(timezone.utc) + timedelta(hours=due_hours))
+    process = ProcessInstance(process_type=process_type, reference_id=reference_id, customer_id=payload["customerId"], due_at=due_at)
     session.add(process)
     session.flush()
     session.add(ProcessTask(process_id=process.process_id, title="Executar " + process_type.lower().replace("_", " "), due_at=process.due_at))
@@ -33,12 +39,24 @@ def _start(session: Session, envelope: dict, process_type: str, reference_field:
 
 def handle_contract_activated(session: Session, envelope: dict) -> None:
     """Consumidor de ContractActivated.v1: inicia a preparação de retirada (72 h)."""
-    _start(session, envelope, "ONBOARDING", "contractId", 72)
+    _start(session, envelope, "ONBOARDING", "contractId", datetime.now(timezone.utc) + timedelta(hours=72))
 
 
 def handle_ticket_opened(session: Session, envelope: dict) -> None:
-    """Consumidor de TicketOpened.v1: inicia a resolução com o prazo do SLA."""
-    _start(session, envelope, "TICKET_RESOLUTION", "ticketId", envelope["payload"].get("slaHours") or 24)
+    """Consumidor de TicketOpened.v1: inicia a resolução com o prazo publicado por Support.
+
+    O prazo é o `dueAt` do chamado, nunca o instante do despacho: atraso ou
+    reentrega da outbox não estende o SLA. Chamado pendente de elegibilidade
+    (sem `dueAt`) recebe prazo operacional provisório de 24 h contado da
+    abertura, substituído na reconciliação.
+    """
+    payload = envelope["payload"]
+    if payload.get("dueAt"):
+        due_at = _parse_utc(payload["dueAt"])
+    else:
+        opened_at = _parse_utc(payload.get("openedAt") or envelope["occurredAt"])
+        due_at = opened_at + timedelta(hours=payload.get("slaHours") or 24)
+    _start(session, envelope, "TICKET_RESOLUTION", "ticketId", due_at)
 
 
 def handle_ticket_entitlement_reconciled(session: Session, envelope: dict) -> None:
@@ -48,7 +66,7 @@ def handle_ticket_entitlement_reconciled(session: Session, envelope: dict) -> No
     if not process:
         return
     if payload["status"] == "OPEN":
-        process.due_at = datetime.fromisoformat(payload["dueAt"].replace("Z", "+00:00"))
+        process.due_at = _parse_utc(payload["dueAt"])
     else:
         process.state = "CANCELLED"
         process.due_at = None
