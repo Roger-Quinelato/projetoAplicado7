@@ -461,7 +461,8 @@ execução. Use um contêiner temporário da API com a configuração documentad
    ```
 
    Verifique `status: PENDING_ENTITLEMENT`, `slaHours: null` e `dueAt: null`. O
-   despacho inicia a resolução em Workflow com o prazo padrão de 24 horas.
+   despacho inicia a resolução em Workflow com o prazo provisório de 24 horas
+   contado da abertura do chamado (`openedAt`), não da hora do despacho.
 
 3. Interrompa o contêiner temporário com `Ctrl+C` e restaure a API normal:
 
