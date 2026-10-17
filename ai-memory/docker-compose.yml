@@ -1,0 +1,15 @@
+# Servidor ai-memory (memória de longo prazo para agentes de código).
+# Independente do docker-compose.yml da raiz (API, PostgreSQL e RabbitMQ do protótipo).
+# Escuta somente em loopback (127.0.0.1:49374), sem autenticação, para uso local.
+# Não adicione chaves de API aqui; se precisar delas, use um arquivo .env fora do Git.
+services:
+  ai-memory:
+    image: akitaonrails/ai-memory:latest
+    container_name: ai-memory
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:49374:49374"
+    volumes:
+      - ai-memory-data:/data
+volumes:
+  ai-memory-data:
