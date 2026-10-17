@@ -14,7 +14,7 @@ Requisitos: Docker Desktop com Docker Compose.
 docker compose up --build
 ```
 
-A interface e a API ficam em `http://localhost:8000`, a documentação Swagger em `http://localhost:8000/docs` e o RabbitMQ local em `http://localhost:15672` (`guest`/`guest`). O Compose publica as portas só em `127.0.0.1`: fora do modo público, a API aceita os tokens fixos `demo-*`, inclusive `demo-admin`. Para acesso pela rede, use `PUBLIC_DEMO=true` com `DEMO_ACCESS_TOKEN` configurado no ambiente, nunca as portas abertas com os tokens locais. No Compose, o navegador usa a mesma origem da API. O despacho da outbox é explícito pelo botão da interface ou por `POST /api/v1/integration/outbox/dispatch`.
+A interface e a API ficam em `http://localhost:8000`, a documentação Swagger em `http://localhost:8000/docs` e o RabbitMQ local em `http://localhost:15672` (`guest`/`guest`). O PostgreSQL fica acessível a clientes como o pgAdmin em `localhost:5432`, banco e usuário `archcorp`, com a senha de desenvolvimento definida em `POSTGRES_PASSWORD` no `docker-compose.yml`. O Compose publica as portas só em `127.0.0.1`: fora do modo público, a API aceita os tokens fixos `demo-*`, inclusive `demo-admin`. Para acesso pela rede, use `PUBLIC_DEMO=true` com `DEMO_ACCESS_TOKEN` configurado no ambiente, nunca as portas abertas com os tokens locais. No Compose, o navegador usa a mesma origem da API. O despacho da outbox é explícito pelo botão da interface ou por `POST /api/v1/integration/outbox/dispatch`.
 
 Para executar a demonstração completa:
 
