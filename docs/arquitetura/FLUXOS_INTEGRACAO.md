@@ -69,7 +69,7 @@ Finance e Workflow. A ativação e o registro da outbox pertencem à mesma trans
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Reservas e contratos as Usuário de reservas e contratos
+    actor Usuario as Usuário de reservas e contratos
     actor Operador
     participant API as API REST v1
     participant Contracts
@@ -82,14 +82,14 @@ sequenceDiagram
     participant Workflow
     participant MQ as RabbitMQ
 
-    Reservas e contratos->>API: POST /contracts/{id}/activate<br/>Idempotency-Key e X-Correlation-ID
+    Usuario->>API: POST /contracts/{id}/activate<br/>Idempotency-Key e X-Correlation-ID
     API->>Contracts: activate(contractId, chave, correlação)
     Contracts->>Idempotency: Buscar chave da operação
 
     alt Ativação repetida
         Idempotency-->>Contracts: Resposta armazenada
         Contracts-->>API: Mesmo contrato e eventId
-        API-->>Reservas e contratos: 200 e Idempotency-Replayed true
+        API-->>Usuario: 200 e Idempotency-Replayed true
     else Primeira ativação
         Contracts->>Contracts: Alterar estado para ACTIVE
         Contracts->>Outbox: Gravar ContractActivated.v1
@@ -97,7 +97,7 @@ sequenceDiagram
         Contracts->>Audit: Gravar ativação e correlação
         Outbox-->>Contracts: eventId na mesma transação
         Contracts-->>API: Contrato ativo e eventId
-        API-->>Reservas e contratos: 200 e Idempotency-Replayed false
+        API-->>Usuario: 200 e Idempotency-Replayed false
     end
 
     Operador->>API: POST /integration/outbox/dispatch
