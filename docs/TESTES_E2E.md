@@ -11,7 +11,7 @@ Estado em 17/10/2026. Os roteiros exercitam a interface React/Vite (`web/`) cont
 | `web/e2e/navegacao.spec.ts` | Seis contextos por menu e por URL com hash; hash desconhecido volta à Visão geral | Sim |
 | `web/e2e/a11y.spec.ts` | Varredura axe (WCAG 2 A/AA) de cada contexto | Não: informativo |
 
-O job `e2e` ainda não rodou no GitHub Actions; ele só vira condição de merge se for configurado como check obrigatório na proteção da branch (não versionado aqui).
+O job `e2e` passou no GitHub Actions no PR #54 (run 39067995117, 17/10/2026). Ele só vira condição de merge se for configurado como check obrigatório na proteção da branch (não versionado aqui).
 
 Fora do escopo desta versão: F2, F3, cancelamento de reserva (`window.confirm`), ativação/encerramento de contrato e despacho da outbox pela UI.
 

@@ -295,4 +295,5 @@ Ambiente: Windows 11, `node -v` = v24.21.0, `npx playwright --version` = 1.63.0,
 - Verificação de que o teste não é vazio: com a asserção do F1 trocada de propósito por um texto inexistente, o teste falhou; o arquivo foi restaurado.
 - `npm run test:a11y`: na execução local de 17/10/2026 o axe (WCAG 2 A/AA) listou 0 violações nos seis contextos, apenas no estado inicial (banco vazio, sem diálogos ou erros). O teste não tem asserção e o resumo não foi versionado. Não substitui auditoria formal nem teste com leitor de tela.
 - Correção durante a validação: as primeiras execuções reaproveitaram a API do `docker compose` na porta 8000 (banco PostgreSQL persistente) e **não** valem como evidência; a porta padrão passou a 8765 e o reaproveitamento silencioso de servidor foi removido.
-- Não verificado: o job `e2e` do GitHub Actions, o início do `npx` do MCP no Windows (depende do PR), a interface na URL HTTPS pública, F2/F3 pela interface e o perfil Playwright MCP em uma sessão do Claude Code/Codex.
+- CI: o job `e2e` passou no GitHub Actions no PR #54 (run 39067995117, 53 s), junto de `application`, `postgresql` e `rabbitmq`.
+- Não verificado: o início do `npx` do MCP no Windows (depende do PR), a interface na URL HTTPS pública, F2/F3 pela interface e o perfil Playwright MCP em uma sessão do Claude Code/Codex.
