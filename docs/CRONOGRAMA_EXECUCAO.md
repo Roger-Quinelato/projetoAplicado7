@@ -35,19 +35,19 @@ Semanas transcorridas não significam conclusão: cada demanda abaixo depende de
 
 Cada linha é uma **tarefa** (tipo), salvo os agrupamentos Q1–Q7, que serão **épicos**. `A confirmar` evita prioridade inventada. O prazo é data de entrega interna, não reserva de agenda.
 
-| ID | Semana | Demanda e critério de aceite | Prioridade | Status em 27/09 | Dependência |
+| ID | Semana | Demanda e critério de aceite | Prioridade | Status | Dependência |
 |---|---|---|---|---|---|
-| T01 | S1 | Fixar escopo acadêmico, cinco contextos, exclusões e premissas Localiza; revisão do professor pendente | Alta | Em revisão | — |
-| T02 | S2 | Mapear atores, dados e fluxos F1–F3; sinalizar hipótese versus fato do enunciado | Alta | Em revisão | T01 |
-| T03 | S3 | Consolidar PRD, RF/RNF, aceites mensuráveis e matriz de rastreabilidade | Alta | Em revisão | T02 |
-| T04 | S3 | Desenhar AS-IS conceitual com duplicidades e riscos, sem alegar acesso real | Normal | Em revisão | T02 |
-| T05 | S4 | Aprovar TO-BE modular, ADR, DDD/TDD, segurança e propriedade de dados | Alta | Em andamento | T03,T04 |
-| T06 | S5 | Versionar OpenAPI e AsyncAPI com todos endpoints/eventos e exemplos válidos | Alta | Em andamento | T05 |
-| T07 | S5 | Definir dados sintéticos, identificadores globais, migração aditiva e contrato de erro | Alta | Em andamento | T05 |
-| T08 | S6 | Completar CRM: clientes, contatos e oportunidades, validação e autorização | Alta | Em andamento | T06,T07 |
-| T09 | S6 | Completar reservas/contratos: reserva, rascunho, ativação idempotente e encerramento | Alta | Em andamento | T06,T07 |
-| T10 | S7 | Entregar frontend navegável nos cinco contextos, com estados e feedback de erros | Alta | Em revisão | T08,T09 |
-| T11 | S7 | Demonstrar F1 cliente → reserva → contrato sem recadastro | Alta | Em revisão | T08,T09,T10 |
+| T01 | S1 | Fixar escopo acadêmico, cinco contextos, exclusões e premissas Localiza; revisão do professor pendente | Alta | Concluído ([#4](https://github.com/Roger-Quinelato/projetoAplicado7/issues/4), 29/09/2026) | — |
+| T02 | S2 | Mapear atores, dados e fluxos F1–F3; sinalizar hipótese versus fato do enunciado | Alta | Concluído ([#5](https://github.com/Roger-Quinelato/projetoAplicado7/issues/5), 29/09/2026) | T01 |
+| T03 | S3 | Consolidar PRD, RF/RNF, aceites mensuráveis e matriz de rastreabilidade | Alta | Concluído ([#6](https://github.com/Roger-Quinelato/projetoAplicado7/issues/6), 29/09/2026) | T02 |
+| T04 | S3 | Desenhar AS-IS conceitual com duplicidades e riscos, sem alegar acesso real | Normal | Concluído ([#7](https://github.com/Roger-Quinelato/projetoAplicado7/issues/7), 29/09/2026) | T02 |
+| T05 | S4 | Aprovar TO-BE modular, ADR, DDD/TDD, segurança e propriedade de dados | Alta | Concluído ([#8](https://github.com/Roger-Quinelato/projetoAplicado7/issues/8), 29/09/2026) | T03,T04 |
+| T06 | S5 | Versionar OpenAPI e AsyncAPI com todos endpoints/eventos e exemplos válidos | Alta | Concluído ([PR #28](https://github.com/Roger-Quinelato/projetoAplicado7/pull/28); [#9](https://github.com/Roger-Quinelato/projetoAplicado7/issues/9) fechada em 17/10/2026) | T05 |
+| T07 | S5 | Definir dados sintéticos, identificadores globais, migração aditiva e contrato de erro | Alta | Concluído ([PR #28](https://github.com/Roger-Quinelato/projetoAplicado7/pull/28); [#10](https://github.com/Roger-Quinelato/projetoAplicado7/issues/10) fechada em 17/10/2026) | T05 |
+| T08 | S6 | Completar CRM: clientes, contatos e oportunidades, validação e autorização | Alta | Concluído ([PR #28](https://github.com/Roger-Quinelato/projetoAplicado7/pull/28); [#11](https://github.com/Roger-Quinelato/projetoAplicado7/issues/11) fechada em 17/10/2026) | T06,T07 |
+| T09 | S6 | Completar reservas/contratos: reserva, rascunho, ativação idempotente e encerramento | Alta | Concluído ([PR #28](https://github.com/Roger-Quinelato/projetoAplicado7/pull/28); [#12](https://github.com/Roger-Quinelato/projetoAplicado7/issues/12) fechada em 17/10/2026) | T06,T07 |
+| T10 | S7 | Entregar frontend navegável nos cinco contextos, com estados e feedback de erros | Alta | Concluído ([PR #31](https://github.com/Roger-Quinelato/projetoAplicado7/pull/31); [#13](https://github.com/Roger-Quinelato/projetoAplicado7/issues/13) fechada em 17/10/2026; riscos residuais na [#34](https://github.com/Roger-Quinelato/projetoAplicado7/issues/34)) | T08,T09 |
+| T11 | S7 | Demonstrar F1 cliente → reserva → contrato sem recadastro | Alta | Concluído ([PRs #33](https://github.com/Roger-Quinelato/projetoAplicado7/pull/33) e [#50](https://github.com/Roger-Quinelato/projetoAplicado7/pull/50); [#14](https://github.com/Roger-Quinelato/projetoAplicado7/issues/14) fechada em 17/10/2026; ADR-006 aguarda aceite) | T08,T09,T10 |
 | T12 | S8 | Completar financeiro: fatura, pagamento simulado e inadimplência por vencimento | Alta | Em revisão (14/10/2026) | T09 |
 | T13 | S8 | Demonstrar F2 ativação → cobrança + preparação; reentrega sem duplicação | Alta | Em revisão (17/10: `scripts/demo_f2.py` 14/14) | T09,T12 |
 | T14 | S8 | Revisar viabilidade e empreendedorismo: custos zero, limites e evolução comercial | Normal | Planejado | T05 |
