@@ -14,6 +14,7 @@ import pytest
 from sqlalchemy import select
 
 from archcorp import main
+from archcorp.contracts.adapters import ResilientCustomerReader
 from archcorp.contracts.models import Contract, Reservation
 from archcorp.infrastructure.db import SessionLocal
 from archcorp.integration.models import AuditLog, IdempotencyRecord
@@ -194,31 +195,55 @@ def test_f1_rascunho_da_reserva_valida_cabecalho_recurso_e_papel(client, admin_h
 
 
 class UnavailableCustomerReader:
-    """Simula o adaptador do CRM sem resposta (timeout), sem tocar no módulo CRM."""
+    """Simula o CRM sem resposta (timeout), sem tocar no módulo CRM."""
+
+    def __init__(self):
+        self.calls = 0
 
     def get(self, session, customer_id):
+        self.calls += 1
         raise TimeoutError("CRM sem resposta no prazo (simulado)")
 
 
-def test_f1_indisponibilidade_do_crm_comportamento_atual_500_sem_efeito_parcial(client, admin_headers, reservation, monkeypatch, json_logs):
+class FlakyCustomerReader:
+    """Falha de forma transitória nas primeiras chamadas e depois delega ao CRM real."""
+
+    def __init__(self, failures: int, error: Exception):
+        self.failures, self.error, self.calls = failures, error, 0
+
+    def get(self, session, customer_id):
+        self.calls += 1
+        if self.calls <= self.failures:
+            raise self.error
+        return main.customers.get(session, customer_id)
+
+
+def resilient(inner, attempts=3):
+    """Envolve o leitor simulado com o adaptador de produção, sem esperar de fato entre tentativas."""
+    return ResilientCustomerReader(inner, timeout_seconds=5, max_attempts=attempts, base_delay_seconds=0.1, sleep=lambda _: None)
+
+
+def test_f1_indisponibilidade_do_crm_retorna_503_sem_efeito_parcial(client, admin_headers, reservation, monkeypatch, json_logs):
     path = f"/api/v1/contracts/reservations/{reservation['reservationId']}/draft"
     correlation_id = str(uuid4())
     headers = {**admin_headers, "X-Correlation-ID": correlation_id, "Idempotency-Key": "f1-timeout"}
+    unavailable = UnavailableCustomerReader()
     with monkeypatch.context() as patch:
-        patch.setattr(main.contracts, "customers", UnavailableCustomerReader())
+        patch.setattr(main.contracts, "customers", resilient(unavailable))
         failed = client.post(path, headers=headers)
-    # Comportamento ATUAL, não contrato-alvo: sem timeout/retentativa no adaptador, a falha vira 500 genérico.
-    # A resposta-alvo (503 ou chamado PENDING) será decidida em ADR quando o conector do CRM sair do processo.
-    problem = assert_problem(failed, 500, "INTERNAL_ERROR", correlation_id)
+    # ADR-006: retentativa limitada ao erro transitório; ao esgotar, 503 sem gravar contrato, chave ou auditoria.
+    problem = assert_problem(failed, 503, "SERVICE_UNAVAILABLE", correlation_id)
     assert "CRM sem resposta" not in json.dumps(problem)
-    assert any(line["correlationId"] == correlation_id and line["level"] == "ERROR" for line in json_logs())
+    assert unavailable.calls == 3
+    retries = [line for line in json_logs() if line["correlationId"] == correlation_id and line["level"] == "WARNING"]
+    assert len(retries) == 3
     assert client.get(f"/api/v1/contracts/reservations/{reservation['reservationId']}", headers=admin_headers).json()["status"] == "REQUESTED"
     assert contracts_in_db() == []
     with SessionLocal() as session:
         assert session.scalar(select(IdempotencyRecord).where(IdempotencyRecord.key == "f1-timeout")) is None
         assert session.scalar(select(AuditLog).where(AuditLog.correlation_id == correlation_id)) is None
 
-    # Comportamento definido: sem retentativa automática; o chamador repete com a mesma chave após o retorno do CRM.
+    # O chamador repete com a mesma chave após o retorno do CRM e recebe um único contrato.
     retried = client.post(path, headers=headers)
     assert retried.status_code == 200, retried.text
     assert retried.headers["Idempotency-Replayed"] == "false"
@@ -226,6 +251,43 @@ def test_f1_indisponibilidade_do_crm_comportamento_atual_500_sem_efeito_parcial(
     assert again.headers["Idempotency-Replayed"] == "true"
     assert again.json()["contract"]["contractId"] == retried.json()["contract"]["contractId"]
     assert len(contracts_in_db()) == 1
+
+
+def test_f1_falha_transitoria_do_crm_e_absorvida_pela_retentativa(client, admin_headers, reservation, monkeypatch):
+    flaky = FlakyCustomerReader(failures=2, error=ConnectionError("CRM recusou a conexão (simulado)"))
+    with monkeypatch.context() as patch:
+        patch.setattr(main.contracts, "customers", resilient(flaky))
+        drafted = client.post(f"/api/v1/contracts/reservations/{reservation['reservationId']}/draft",
+                              headers={**admin_headers, "Idempotency-Key": "f1-flaky"})
+    assert drafted.status_code == 200, drafted.text
+    assert flaky.calls == 3
+    assert len(contracts_in_db()) == 1
+
+
+def test_f1_erro_nao_transitorio_do_crm_nao_e_repetido(client, admin_headers, reservation, monkeypatch):
+    broken = FlakyCustomerReader(failures=5, error=ValueError("resposta inválida do CRM (simulado)"))
+    with monkeypatch.context() as patch:
+        patch.setattr(main.contracts, "customers", resilient(broken))
+        failed = client.post(f"/api/v1/contracts/reservations/{reservation['reservationId']}/draft",
+                             headers={**admin_headers, "Idempotency-Key": "f1-broken"})
+    assert_problem(failed, 500, "INTERNAL_ERROR")
+    assert broken.calls == 1
+    assert contracts_in_db() == []
+
+
+def test_f1_reserva_e_ativacao_tambem_respondem_503_com_crm_indisponivel(client, admin_headers, crm_customer, monkeypatch):
+    customer = crm_customer
+    draft = client.post("/api/v1/contracts/drafts", headers={**admin_headers, "Idempotency-Key": "f1-503-draft"}, json=draft_body(customer["customerId"]))
+    assert draft.status_code == 201, draft.text
+    with monkeypatch.context() as patch:
+        patch.setattr(main.contracts, "customers", resilient(UnavailableCustomerReader()))
+        reservation = client.post("/api/v1/contracts/reservations", headers={**admin_headers, "Idempotency-Key": "f1-503-res"},
+                                  json=reservation_body(customer["customerId"]))
+        activation = client.post(f"/api/v1/contracts/{draft.json()['contractId']}/activate",
+                                 headers={**admin_headers, "Idempotency-Key": "f1-503-act"})
+    assert_problem(reservation, 503, "SERVICE_UNAVAILABLE")
+    assert_problem(activation, 503, "SERVICE_UNAVAILABLE")
+    assert client.get(f"/api/v1/contracts/{draft.json()['contractId']}", headers=admin_headers).json()["status"] == "DRAFT"
 
 
 def test_f1_correlation_id_atravessa_http_auditoria_e_trilha(client, admin_headers):

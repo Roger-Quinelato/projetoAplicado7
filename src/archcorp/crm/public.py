@@ -19,6 +19,10 @@ class CustomerData:
         return self.active and self.eligible and self.consent_service
 
 
+class CustomerReaderUnavailableError(Exception):
+    """O CRM não respondeu dentro do prazo nem após as retentativas permitidas."""
+
+
 class CustomerReader(Protocol):
     def get(self, session: Session, customer_id: str) -> CustomerData | None:
         """Lê os dados públicos do cliente ou devolve None."""

@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     rabbitmq_heartbeat_seconds: int = 30
     rabbitmq_queue_max_length: int = 10000
     contract_adapter_available: bool = True
+    # Leitura do CRM por Contracts (ADR-006): prazo total, tentativas e atraso inicial da retentativa.
+    crm_reader_timeout_seconds: float = 2.0
+    crm_reader_max_attempts: int = 3
+    crm_reader_base_delay_seconds: float = 0.1
     # Simulação local: permite data de referência futura na verificação de vencimento (T12).
     finance_allow_future_as_of: bool = False
     retry_limit: int = 3

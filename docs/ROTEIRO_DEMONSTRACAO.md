@@ -141,8 +141,8 @@ $headers = @{
 
 [`scripts/demo_f1.py`](../scripts/demo_f1.py) executa o F1 pelo caminho cliente →
 reserva → rascunho e as ramificações do plano, usando `httpx` (já em
-`requirements-dev.txt`). Não tem dependência específica de SO; foi executado só em
-Linux. Pode ser repetido no mesmo banco, pois gera e-mail, ID legado e chaves novas a cada execução.
+`requirements-dev.txt`). Não tem dependência específica de SO; foi executado em
+Linux e, em 17/10/2026, em Windows 11. Pode ser repetido no mesmo banco, pois gera e-mail, ID legado e chaves novas a cada execução.
 
 1. Suba a API local (Docker Compose acima ou diretamente):
 
@@ -187,17 +187,34 @@ Linux. Pode ser repetido no mesmo banco, pois gera e-mail, ID legado e chaves no
 
 A API não possui chave para simular timeout ou indisponibilidade do CRM durante o
 F1, por isso o script não cobre essa ramificação. Ela é demonstrada pelo teste
-`tests/test_f1_cliente_reserva_contrato.py::test_f1_indisponibilidade_do_crm_comportamento_atual_500_sem_efeito_parcial`,
-que substitui o adaptador `CustomerReader` por um simulador sem resposta. O
-comportamento **atual** (não é o contrato-alvo) é: `500 INTERNAL_ERROR` em problem+json com o
-`correlationId`, log `ERROR` com a mesma correlação, nenhum contrato, vínculo ou
-chave idempotente gravados, e a repetição com a mesma chave cria o rascunho uma
-única vez. Não há timeout configurado nem retentativa automática no adaptador
-interno; a repetição cabe ao chamador.
+`tests/test_f1_cliente_reserva_contrato.py::test_f1_indisponibilidade_do_crm_retorna_503_sem_efeito_parcial`,
+que envolve um simulador sem resposta com o adaptador `ResilientCustomerReader`
+(ADR-006). O comportamento é: três tentativas com log `WARNING` e o mesmo
+`correlationId`, `503 SERVICE_UNAVAILABLE` em problem+json, nenhum contrato,
+vínculo ou chave idempotente gravados, e a repetição com a mesma chave cria o
+rascunho uma única vez depois que o CRM volta. Uma falha transitória seguida de
+sucesso é absorvida pela retentativa sem erro para o chamador.
 
 ```bash
 PYTHONPATH=src python -m pytest -q tests/test_f1_cliente_reserva_contrato.py -p no:cacheprovider
 ```
+
+### F2 e F3 verificáveis por script Python (T13 e T16)
+
+[`scripts/demo_f2.py`](../scripts/demo_f2.py) e
+[`scripts/demo_f3.py`](../scripts/demo_f3.py) seguem o mesmo formato, as mesmas
+opções e os mesmos códigos de saída de `demo_f1.py`, com a API local já em execução:
+
+```bash
+python scripts/demo_f2.py   # ativação, despacho, uma fatura INITIAL e uma preparação de retirada; repetições sem duplicar
+python scripts/demo_f3.py   # elegibilidade/SLA, chamado, processo de resolução, atribuição, resolução MET e ramificações
+```
+
+Em 17/10/2026, contra `uvicorn` local em Windows 11 com SQLite, os três roteiros
+aprovaram 20/20 (F1), 14/14 (F2) e 15/15 (F3) checagens. O `demo_f3.py` mostra o prazo
+do chamado e o do processo lado a lado; eles só passam a coincidir com a correção do
+PR #42. Falha permanente e indisponibilidade de Contracts continuam nas seções
+manuais abaixo, porque exigem reiniciar a API com outra configuração.
 
 ## F2: ativar, cobrar e iniciar preparação de retirada
 

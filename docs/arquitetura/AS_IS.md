@@ -44,11 +44,11 @@ flowchart LR
   Cliente[Cliente ou gestor de frota] --> CRM[CRM e canais digitais]
   Comercial[Comercial] --> CRM
   CRM -. recadastro ou planilha .-> CT[Reservas e contratos]
-  CT -. lancamento manual .-> FI[Financeiro e faturamento]
-  CT -. solicitacao operacional .-> BPM[Gestao de processos]
-  Atendimento[Atendimento e assistencia 24h] -. consulta manual .-> CT
+  CT -. lançamento manual .-> FI[Financeiro e faturamento]
+  CT -. solicitação operacional .-> BPM[Gestão de processos]
+  Atendimento[Atendimento e assistência 24h] -. consulta manual .-> CT
   Atendimento -. abertura manual .-> BPM
-  Operacao[Loja, frota e manutencao] --> BPM
+  Operacao[Loja, frota e manutenção] --> BPM
 ```
 
 ## Problemas e Limitacoes
