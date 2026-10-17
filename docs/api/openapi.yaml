@@ -2171,6 +2171,22 @@ paths:
                 instance: /api/v1/contracts/reservations
                 code: VALIDATION_ERROR
                 correlationId: 11111111-1111-4111-8111-111111111111
+        '503':
+          description: CRM indisponível após as retentativas; nenhuma reserva foi
+            gravada (ADR-006).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:service-unavailable
+                title: Dependência indisponível
+                status: 503
+                detail: CRM indisponível após as retentativas; nenhuma reserva foi
+                  gravada (ADR-006)
+                instance: /api/v1/contracts/reservations
+                code: SERVICE_UNAVAILABLE
+                correlationId: 11111111-1111-4111-8111-111111111111
     get:
       tags:
       - Reservas e contratos
@@ -2463,6 +2479,22 @@ paths:
                 detail: Cliente inelegível, sem consentimento ou entrada inválida
                 instance: /api/v1/contracts/reservations/{reservation_id}/draft
                 code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '503':
+          description: CRM indisponível após as retentativas; nenhum rascunho foi
+            gravado (ADR-006).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:service-unavailable
+                title: Dependência indisponível
+                status: 503
+                detail: CRM indisponível após as retentativas; nenhum rascunho foi
+                  gravado (ADR-006)
+                instance: /api/v1/contracts/reservations/{reservation_id}/draft
+                code: SERVICE_UNAVAILABLE
                 correlationId: 11111111-1111-4111-8111-111111111111
   /api/v1/contracts/reservations/{reservation_id}/cancel:
     post:
@@ -3053,6 +3085,22 @@ paths:
                       - body
                       - customerId
                       msg: Entrada inválida
+        '503':
+          description: CRM indisponível após as retentativas; nenhum efeito foi gravado
+            (ADR-006).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:service-unavailable
+                title: Dependência indisponível
+                status: 503
+                detail: CRM indisponível; nenhum efeito foi gravado. Repita com a
+                  mesma Idempotency-Key
+                instance: /api/v1/contracts/drafts
+                code: SERVICE_UNAVAILABLE
+                correlationId: 11111111-1111-4111-8111-111111111111
   /api/v1/contracts/{contract_id}/activate:
     post:
       tags:
@@ -3225,6 +3273,22 @@ paths:
                 correlationId: 11111111-1111-4111-8111-111111111111
                 errors:
                 - *id001
+        '503':
+          description: CRM indisponível na revalidação do cliente; o contrato continua
+            em rascunho (ADR-006).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:service-unavailable
+                title: Dependência indisponível
+                status: 503
+                detail: CRM indisponível; nenhum efeito foi gravado. Repita com a
+                  mesma Idempotency-Key
+                instance: /api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/activate
+                code: SERVICE_UNAVAILABLE
+                correlationId: 11111111-1111-4111-8111-111111111111
   /api/v1/contracts/{contract_id}/entitlement:
     get:
       tags:

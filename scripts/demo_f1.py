@@ -11,8 +11,8 @@ O token também pode vir de ARCHCORP_TOKEN (no modo público, a credencial confi
 URL de ARCHCORP_BASE_URL. Use `--forbidden-token ""` para pular a checagem de 403 (modo público).
 Cada execução gera e-mail, ID legado e chaves novas; pode ser repetida no mesmo banco.
 Código de saída: 0 se todas as checagens passarem, 1 se alguma falhar, 2 se a API estiver inacessível.
-A indisponibilidade/timeout do CRM não tem chave de ativação na API; ela é coberta por
-`tests/test_f1_cliente_reserva_contrato.py::test_f1_indisponibilidade_do_crm_comportamento_atual_500_sem_efeito_parcial`.
+A indisponibilidade/timeout do CRM (503 após retentativa limitada, ADR-006) não tem chave de ativação na API; ela é coberta por
+`tests/test_f1_cliente_reserva_contrato.py::test_f1_indisponibilidade_do_crm_retorna_503_sem_efeito_parcial`.
 """
 import argparse
 import os

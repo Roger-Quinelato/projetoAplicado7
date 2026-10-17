@@ -2,7 +2,20 @@
 
 > Estado de execução em 27/09/2026: consulte [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
 
-## Verificação atual em 27/09/2026
+## Verificação em 17/10/2026 (entrega de 19/10)
+
+Ambiente: Windows 11 (10.0.26300), Python 3.12.10, SQLite, dependências de `requirements.txt` e `requirements-dev.txt` em ambiente limpo.
+
+- `PYTHONPATH=src python -m pytest -q -p no:cacheprovider`: **211 testes aprovados e 10 ignorados** em 7 min 50 s. Os ignorados exigem PostgreSQL ou RabbitMQ reais. Inclui os 8 testes novos de `tests/test_crm_reader_resiliente.py` e os 4 de indisponibilidade do CRM em `tests/test_f1_cliente_reserva_contrato.py` (ADR-006).
+- `tools/export_openapi.py`: OpenAPI regenerado com as respostas `503` aditivas das quatro rotas que leem o CRM.
+- Roteiros contra `uvicorn` local com banco novo: `scripts/demo_f1.py` **20/20**, `scripts/demo_f2.py` **14/14**, `scripts/demo_f3.py` **15/15**, todos com código de saída `0`. O F3 mostrou o prazo do processo cerca de 2 s depois do prazo do chamado, o defeito corrigido pelo PR #42 (ainda não integrado).
+- `scripts/performance_smoke.py`: 200 consultas de prontidão com **p95 de 4,22 ms** (meta: 500 ms). O valor não representa hospedagem pública.
+- `tools/render_diagrams.py`: seis diagramas Mermaid renderizados em `docs/arquitetura/img/` e inspecionados visualmente. Foram corrigidos o alias inválido de ator no F2, que duplicava participantes, e a acentuação do AS-IS.
+- `tools/build_report.py`: o DOCX foi convertido pelo LibreOffice e tem **20 páginas**, todas inspecionadas em folha de contato. A estrutura segue o Guia (seções 1 a 5 e referências), com seis figuras e citações autor-data.
+- `tools/build_presentation.mjs`: **18 slides**. O finalizador aprovou integridade e layout, e a conversão pelo LibreOffice confirmou os diagramas embutidos.
+- Não verificado: URL HTTPS pública, PostgreSQL gerenciado e corte de chamada de rede de um CRM externo. Nomes e contribuições dos integrantes continuam pendentes no relatório e na apresentação.
+
+## Verificação em 27/09/2026
 
 - `PYTHONPATH=src .venv/Scripts/python -m pytest -q tests -p no:cacheprovider`: **18 testes aprovados**, um aviso de depreciação de Starlette/AnyIO. Inclui reserva → contrato → fatura → pagamento simulado; chamado → resolução → workflow; segredo do modo público; idempotência, reconciliação e proteção RLS no modo PostgreSQL.
 - `cd web && npm run build`: TypeScript e Vite concluídos sem erro, com `web/dist` gerado. Falta testar a interface no serviço HTTPS público.

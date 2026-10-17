@@ -1,4 +1,5 @@
 """Metadados de respostas da API v1, sem estado da aplicação."""
+from archcorp.contracts.service import CRM_UNAVAILABLE_DETAIL
 from archcorp.errors import problem_content, problem_example
 from archcorp.api_examples import (EXAMPLE_CONTRACT_ACTIVATED_RESPONSE, EXAMPLE_CONTRACT_DRAFT_RESPONSE, EXAMPLE_CONTRACT_EVENT_ID, EXAMPLE_CONTRACT_ID, EXAMPLE_CORRELATION_ID, EXAMPLE_PENDING_TICKET_RESPONSE, EXAMPLE_TICKET_RESPONSE)
 
@@ -86,6 +87,10 @@ CONTRACT_DRAFT_RESPONSES = {
         "/api/v1/contracts/drafts", "customerId",
         "Cliente não pode originar contrato", "Cliente inexistente ou inelegível",
     ),
+    503: {
+        "description": "CRM indisponível após as retentativas; nenhum efeito foi gravado (ADR-006).",
+        "content": problem_content(problem_example(503, CRM_UNAVAILABLE_DETAIL, "/api/v1/contracts/drafts")),
+    },
 }
 
 
@@ -116,6 +121,10 @@ CONTRACT_ACTIVATION_RESPONSES = {
     409: {
         "description": "Contrato já encerrado ou estado incompatível para ativação.",
         "content": problem_content(problem_example(409, "Somente contrato em rascunho pode ser ativado", "/api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/activate", "INVALID_STATE")),
+    },
+    503: {
+        "description": "CRM indisponível na revalidação do cliente; o contrato continua em rascunho (ADR-006).",
+        "content": problem_content(problem_example(503, CRM_UNAVAILABLE_DETAIL, "/api/v1/contracts/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/activate")),
     },
 }
 

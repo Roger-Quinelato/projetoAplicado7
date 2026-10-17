@@ -50,15 +50,19 @@ pela impressão digital, leitura da regra 11 do ADR-001 registrada aqui): reutil
 chave já usada em `POST /api/v1/contracts/drafts` retorna `409` com
 `IDEMPOTENCY_CONFLICT`, sem criar nem vincular contrato.
 
-O protótipo executa `CustomerReader` dentro do mesmo processo. A API não oferece
-chave para simular timeout ou indisponibilidade do CRM em F1, e o adaptador não tem
-timeout configurado nem retentativa automática. Se a porta falhar, a API responde
-hoje `500 INTERNAL_ERROR` em problem+json (comportamento atual, não contrato-alvo) com o `correlationId`, registra log `ERROR`
-com a mesma correlação e não grava contrato, vínculo ou chave idempotente; o
-chamador pode repetir com a mesma chave. Esse comportamento é verificado com um
-simulador em `tests/test_f1_cliente_reserva_contrato.py`. Timeout, retentativa
-limitada e o mapeamento da indisponibilidade (`503` ou estado pendente, a decidir em
-ADR) estão registrados como pendência em `CRONOGRAMA_EXECUCAO.md`.
+O protótipo executa `CustomerReader` dentro do mesmo processo, envolvido pelo
+adaptador `ResilientCustomerReader` (ADR-006). `TimeoutError` e `ConnectionError`
+são repetidos com atraso exponencial, teto e jitter, até `CRM_READER_MAX_ATTEMPTS`
+tentativas (padrão 3) e dentro do prazo total `CRM_READER_TIMEOUT_SECONDS` (padrão
+2 s). Cada tentativa falha gera log `WARNING` com o `correlationId`. Ao esgotar, a API
+responde `503 SERVICE_UNAVAILABLE` em problem+json, sem gravar reserva, contrato,
+vínculo ou chave idempotente; o chamador repete com a mesma `Idempotency-Key`. O
+mesmo vale para criação de reserva, rascunho direto e revalidação na ativação.
+Outros erros não são repetidos. O prazo limita tentativas e esperas, mas não
+interrompe uma leitura no mesmo processo; o corte por chamada cabe ao cliente HTTP
+do conector quando o CRM sair do processo. A API não oferece chave para simular a
+falha do CRM; o comportamento é verificado com simuladores em
+`tests/test_f1_cliente_reserva_contrato.py` e `tests/test_crm_reader_resiliente.py`.
 
 ## F2: contrato ativo para faturamento e preparação de retirada
 

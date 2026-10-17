@@ -176,6 +176,7 @@ def set_replay(response: Response, replay: bool) -> None:
         404: {"description": "Cliente não encontrado."},
         409: {"description": "Idempotency-Key reutilizada com outra reserva."},
         422: {"description": "Cliente inelegível, sem consentimento, inativo ou período inválido."},
+        503: {"description": "CRM indisponível após as retentativas; nenhuma reserva foi gravada (ADR-006)."},
     },
     dependencies=[Depends(RESERVATION_ACTORS)],
 )
@@ -216,6 +217,7 @@ def get_reservation(reservation_id: UUID, session: Session = Depends(get_session
         404: {"description": "Reserva não encontrada."},
         409: {"description": "Reserva cancelada, Idempotency-Key reutilizada ou contrato já existente para cliente, serviço e início."},
         422: {"description": "Cliente inelegível, sem consentimento ou entrada inválida."},
+        503: {"description": "CRM indisponível após as retentativas; nenhum rascunho foi gravado (ADR-006)."},
     },
     dependencies=[Depends(RESERVATION_ACTORS)],
 )
