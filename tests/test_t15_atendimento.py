@@ -33,7 +33,8 @@ from archcorp.support import domain
 from archcorp.support.domain import TICKET_TRANSITIONS, Priority, SlaStatus, TicketStatus
 from archcorp.support.models import Ticket, TicketHistory
 from archcorp.support.service import TicketService
-from archcorp.workflow.models import ProcessInstance
+from archcorp.workflow import service as workflow_service
+from archcorp.workflow.models import ProcessInstance, ProcessTask
 
 T0 = datetime(2026, 10, 20, 9, 0, tzinfo=timezone.utc)
 CORRELATION = "22222222-2222-4222-8222-222222222222"
@@ -432,6 +433,52 @@ def test_reconciliacao_conta_o_prazo_da_abertura_e_e_idempotente(client, admin_h
     with SessionLocal() as session:
         process = session.scalar(select(ProcessInstance).where(ProcessInstance.reference_id == pending["ticketId"]))
         assert domain.iso_utc(process.due_at) == reconciled["dueAt"]
+
+
+def resolution_deadlines(ticket_id: str) -> tuple[str, list[str]]:
+    """Prazo do processo de resolução e de suas tarefas, relidos do banco."""
+    with SessionLocal() as session:
+        process = session.scalar(select(ProcessInstance).where(ProcessInstance.reference_id == ticket_id))
+        tasks = session.scalars(select(ProcessTask).where(ProcessTask.process_id == process.process_id))
+        return domain.iso_utc(process.due_at), [domain.iso_utc(task.due_at) for task in tasks]
+
+
+class LateDispatchDatetime(datetime):
+    """Relógio de Workflow duas horas após a abertura: simula despacho atrasado."""
+
+    @classmethod
+    def now(cls, tz=None):
+        return T0 + timedelta(hours=2)
+
+
+def test_despacho_atrasado_nao_estende_o_prazo_do_processo_de_resolucao(client, admin_headers, active_contract, clock, monkeypatch):
+    customer, contract = active_contract
+    ticket = open_ticket(client, admin_headers, body_for(customer, contract), "t15-late-dispatch").json()
+    assert ticket["dueAt"] == iso(T0 + timedelta(hours=8))
+    monkeypatch.setattr(workflow_service, "datetime", LateDispatchDatetime)  # com now + slaHours o prazo seria T0 + 10 h
+    client.post("/api/v1/integration/outbox/dispatch", headers=admin_headers)
+    assert resolution_deadlines(ticket["ticketId"]) == (ticket["dueAt"], [ticket["dueAt"]])
+
+    [event] = events("TicketOpened.v1")
+    for _ in range(2):  # reentrega direta ao consumidor, sem a deduplicação da inbox
+        with SessionLocal() as session:
+            workflow_service.handle_ticket_opened(session, event.envelope())
+            session.commit()
+    assert resolution_deadlines(ticket["ticketId"]) == (ticket["dueAt"], [ticket["dueAt"]])
+    with SessionLocal() as session:
+        assert len(list(session.scalars(select(ProcessInstance).where(ProcessInstance.reference_id == ticket["ticketId"])))) == 1
+
+
+def test_chamado_pendente_conta_o_prazo_provisorio_da_abertura(client, admin_headers, active_contract, monkeypatch, clock):
+    customer, contract = active_contract
+    contracts_available(monkeypatch, False)
+    pending = open_ticket(client, admin_headers, body_for(customer, contract), "t15-pending-deadline").json()
+    assert (pending["dueAt"], pending["openedAt"]) == (None, iso(T0))
+    clock.advance(hours=5)
+    client.post("/api/v1/integration/outbox/dispatch", headers=admin_headers)
+
+    provisional = iso(T0 + timedelta(hours=24))  # prazo operacional provisório, não um SLA confirmado
+    assert resolution_deadlines(pending["ticketId"]) == (provisional, [provisional])
 
 
 def test_reconciliacao_rejeita_quando_o_contrato_deixa_de_ser_elegivel(client, admin_headers, active_contract, monkeypatch):
