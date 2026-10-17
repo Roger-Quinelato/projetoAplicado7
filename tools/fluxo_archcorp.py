@@ -716,8 +716,14 @@ def prompt_implementacao(ex: Execucao, tarefa: dict, rodada: dict) -> str:
     parecer = ""
     if rodada["tipo"] == "correcao" and fase["pareceres"]:
         ultimo = ler_json(ex.dir / fase["pareceres"][-1]["arquivo"])
-        parecer = ("\nParecer a responder (responda a cada achado numerado em resposta_achados):\n"
+        parecer = ("\nParecer a responder. Em resposta_achados, um item por achado numerado, exatamente com os campos "
+                   '{"numero": <int>, "acao": "corrigido" | "nao_corrigido" | "discordancia", "prova_ou_motivo": "<texto>"}:\n'
                    + json.dumps(ultimo, indent=2, ensure_ascii=False))
+    rotulo = f"implementacao-f{fase['numero']}-r{rodada['n']}"
+    if (ex.dir / f"{rotulo}.invalida.json").is_file():
+        parecer += ("\n\nA entrega anterior desta mesma rodada foi recusada por violar entrega.schema.json "
+                    f"(ver {ex.dir / (rotulo + '.invalida.json')}). As alterações dela continuam neste worktree: "
+                    "confira-as, complete o que faltar e responda no formato do schema.")
     respostas = "\n\n".join(
         f"Perguntas anteriores:\n{(ex.dir / c['perguntas']).read_text(encoding='utf-8')}\n"
         f"Resposta do responsável humano:\n{(ex.dir / c['resposta']).read_text(encoding='utf-8')}"
@@ -1116,7 +1122,9 @@ def reconciliar(ex: Execucao) -> None:
                 raise SystemExit(f"o worktree {impl} tem commit que o utilitário não reconhece ({head[:12]}). "
                                  "Resultado incerto: inspecione e resolva manualmente antes de retomar.")
             rodada.update(situacao="commitada", commit=head)
-        elif rodada["situacao"] == "em_andamento" and alterados(impl):
+        elif (rodada["situacao"] == "em_andamento" and alterados(impl)
+              and not (ex.dir / f"implementacao-f{ex.fase['numero']}-r{rodada['n']}.invalida.json").is_file()):
+            # Com .invalida.json o implementador terminou: as alterações são o trabalho dele, não resultado incerto.
             raise SystemExit(f"a rodada {rodada['n']} foi interrompida com alterações em {impl} e sem entrega "
                              "registrada. Resultado incerto: inspecione o worktree, preserve ou descarte as "
                              "alterações manualmente e retome de novo.")

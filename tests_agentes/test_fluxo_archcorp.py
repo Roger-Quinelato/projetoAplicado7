@@ -217,6 +217,20 @@ def test_preparar_verificacao(comando, esperado):
     assert fluxo.preparar_verificacao(comando, "PY") == esperado
 
 
+def test_saida_invalida_com_alteracoes_retoma_mantendo_o_trabalho(amb):
+    invalida = entrega(CORRIGIDO)
+    invalida["json"]["resposta_achados"] = [{"numero": 1, "resposta": "x", "prova": "y"}]
+    amb.cenario(codex=[tarefa(), parecer()], claude=[invalida, entrega()])
+    assert amb.rodar("run", "--pedido", str(amb.pedido()), "--execucao", ID) == 1
+    assert "viola entrega.schema.json" in amb.execucao(ID)["motivo"]
+
+    assert amb.rodar("resume", "--execucao", ID) == 0  # não exige limpeza manual
+
+    segunda = amb.chamadas("claude")[1]["prompt"]
+    assert "foi recusada por violar entrega.schema.json" in segunda
+    assert "return a + b" in git(amb.repo, "show", f"archcorp/{ID}:src/app.py")  # trabalho da 1ª tentativa preservado
+
+
 def test_parecer_que_aprova_com_achado_aberto_e_invalido(amb):
     amb.cenario(codex=[tarefa(), parecer("aprovado", [("BLOQUEANTE", "x")])], claude=[entrega(CORRIGIDO)])
 
