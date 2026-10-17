@@ -9,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from archcorp.api_docs import COMMON_API_ERRORS
+from archcorp.contracts.adapters import ResilientCustomerReader
 from archcorp.contracts.routes import configure as configure_contracts, router as contracts_router
 from archcorp.contracts.service import ContractService
 from archcorp.crm.service import CustomerService
@@ -39,7 +40,12 @@ from archcorp.workflow.service import count_processes, handle_contract_activated
 
 
 customers = CustomerService()
-contracts = ContractService(customers)
+contracts = ContractService(ResilientCustomerReader(
+    customers,
+    timeout_seconds=settings.crm_reader_timeout_seconds,
+    max_attempts=settings.crm_reader_max_attempts,
+    base_delay_seconds=settings.crm_reader_base_delay_seconds,
+))
 tickets = TicketService(contracts)
 configure_contracts(contracts)
 finance = FinanceService()

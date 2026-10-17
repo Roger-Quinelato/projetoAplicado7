@@ -6,10 +6,13 @@ from sqlalchemy.orm import Session
 
 from archcorp.contracts.domain import ContractStatus, ReservationStatus, ensure_contract_transition, ensure_reservation_transition
 from archcorp.contracts.models import Contract, Reservation
-from archcorp.crm.public import CustomerData, CustomerReader
-from archcorp.exceptions import BusinessRuleError, ConflictError, InvalidStateError, NotFoundError
+from archcorp.crm.public import CustomerData, CustomerReader, CustomerReaderUnavailableError
+from archcorp.exceptions import BusinessRuleError, ConflictError, InvalidStateError, NotFoundError, ServiceUnavailableError
 from archcorp.infrastructure.db import count_rows, get_or_raise
 from archcorp.integration.public import IdempotencyStore, audit, enqueue
+
+
+CRM_UNAVAILABLE_DETAIL = "CRM indisponível; nenhum efeito foi gravado. Repita com a mesma Idempotency-Key"
 
 
 def money(value) -> str:
@@ -22,9 +25,16 @@ class ContractService:
         """Recebe a porta de leitura de clientes do CRM."""
         self.customers = customers
 
+    def read_customer(self, session: Session, customer_id: str) -> CustomerData | None:
+        """Lê o cliente pelo CRM; a indisponibilidade vira 503 antes de qualquer gravação (ADR-006)."""
+        try:
+            return self.customers.get(session, customer_id)
+        except (CustomerReaderUnavailableError, TimeoutError, ConnectionError) as exc:
+            raise ServiceUnavailableError(CRM_UNAVAILABLE_DETAIL) from exc
+
     def eligible_customer(self, session: Session, customer_id: str) -> CustomerData:
         """Lê o cliente pelo CRM e exige que ele possa originar contrato."""
-        customer = self.customers.get(session, customer_id)
+        customer = self.read_customer(session, customer_id)
         if not customer or not customer.can_contract:
             raise BusinessRuleError("Cliente inexistente ou inelegível")
         return customer
@@ -182,7 +192,7 @@ class ReservationService:
             stored = IdempotencyStore.replay(session, idempotency_key, "create_reservation", request, "Idempotency-Key já utilizada com outra reserva")
             if stored:
                 return stored, True
-        customer = self.contracts.customers.get(session, data["customerId"])
+        customer = self.contracts.read_customer(session, data["customerId"])
         if not customer:
             raise NotFoundError("Cliente não encontrado")
         if not customer.can_contract:
