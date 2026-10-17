@@ -69,7 +69,7 @@ devem permanecer identificadas como premissas a validar.
 | D1 | `docs/REQUISITOS.md` | Guia e plano | RFs, RNFs, prioridades, critérios e rastreabilidade documentados | Concluído |
 | D2 | Revisar AS-IS e TO-BE | D1, guia e ADR | Fatos e premissas separados; sistemas, componentes, consumidores, dados e fronteiras completos | Concluído |
 | D3 | `docs/EXEMPLOS_API.md` | Código, testes e reservas e contratos | Requisições, respostas, erros, replay e correlação válidos para F1-F3 | Concluído |
-| D4 | OpenAPI e AsyncAPI | D3 e regras do `AGENT.md` | Reservas e contratos válidos, exemplos sincronizados e envelope completo | Concluído |
+| D4 | OpenAPI e AsyncAPI | D3 e regras do `AGENTS.md` | Reservas e contratos válidos, exemplos sincronizados e envelope completo | Concluído |
 | D5 | Revisar `docs/INTEGRACOES.md` | D2-D4 | Cada fluxo contém todos os itens exigidos pelo guia | Concluído |
 | D6 | `docs/arquitetura/FLUXOS_INTEGRACAO.md` | D3-D5 | Diagramas Mermaid de F1-F3 e cenários alternativos renderizam sem erro | Concluído: sete diagramas renderizados sem erro |
 | D7 | Qualidade, evolução e visão de negócio | D2, D5, D6 | Metas, evidências, limitações e viabilidade estão separadas com clareza | Concluído |
