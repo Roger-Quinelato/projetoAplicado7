@@ -6,6 +6,16 @@
 
 
 
+## Situação atual e próxima etapa
+
+A figura usa três estados visuais:
+
+- **Verde/contorno sólido:** recurso implementado no protótipo.
+- **Azul e identificação “local”:** comportamento executado dentro da aplicação com dados sintéticos e adaptadores/simuladores.
+- **Cinza claro/tracejado:** conexão ou capacidade planejada; ainda não implementada nem conectada a sistema corporativo.
+
+O trabalho atual estabelece os contratos REST, os módulos e os fluxos locais. Depois dessa base, os adaptadores externos poderão ligar o protótipo aos sistemas reais — CRM, disponibilidade de frota e pontos de retirada/devolução, assinatura, cobrança, atendimento e BPM. A seta tracejada mostra o ponto planejado de entrada desses conectores pela camada de integração.
+
 ## O que a pessoa consegue fazer na demonstração
 
 A interface é uma demonstração operacional por perfis, voltada às equipes que atendem o fluxo, não um portal público de autoatendimento para clientes. Ela permite:
