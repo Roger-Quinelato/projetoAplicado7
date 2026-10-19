@@ -57,8 +57,11 @@
 <!-- core -->
 <rect x="457" y="300" width="436" height="76" rx="15" fill="#f3fbf7" stroke="#b7dfd2"/>
 <text x="482" y="331" fill="#124b3e" class="label">Rotas · routes.py</text><text x="482" y="356" fill="#55766d" class="body">recebem o comando e coordenam a resposta</text>
-<rect x="457" y="397" width="436" height="98" rx="15" fill="#eaf8f2" stroke="#8ccbb5" stroke-width="1.5"/>
-<text x="482" y="429" fill="#124b3e" class="label">Casos de uso</text><text x="482" y="457" fill="#456c61" class="body">ReservationService · ContractService</text><text x="482" y="480" fill="#6b877f" class="small">Reserva · rascunho · ativação · encerramento</text>
+<rect x="457" y="397" width="250" height="98" rx="15" fill="#eaf8f2" stroke="#8ccbb5" stroke-width="1.5"/>
+<text x="478" y="429" fill="#124b3e" font-size="17" font-weight="720">Casos de uso</text><text x="478" y="455" fill="#456c61" font-size="13" font-weight="600">ReservationService</text><text x="478" y="478" fill="#6b877f" font-size="13">ContractService · contratos</text>
+<rect x="725" y="397" width="168" height="98" rx="14" fill="#f4f6f8" stroke="#bdc8d2"/>
+<text x="747" y="425" fill="#445767" font-size="10" font-weight="800" letter-spacing=".6px">PORTA PÚBLICA</text><text x="747" y="450" fill="#283542" font-size="18" font-weight="720">CRM</text><text x="747" y="472" fill="#586c7d" font-size="12" font-weight="550">CustomerReader</text><text x="747" y="488" fill="#748391" font-size="10">existência · elegibilidade</text>
+<path d="M725 446 H711" fill="none" stroke="#8998a7" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
 <rect x="457" y="516" width="436" height="86" rx="15" fill="#f3fbf7" stroke="#b7dfd2"/>
 <text x="482" y="548" fill="#124b3e" class="label">Domínio</text><text x="482" y="577" fill="#55766d" class="body">Elegibilidade · estados · transições válidas</text>
 <rect x="457" y="623" width="436" height="55" rx="15" fill="#f3fbf7" stroke="#b7dfd2"/>
@@ -67,13 +70,7 @@
 <path d="M675 495v15" stroke="#637c98" stroke-width="2.5" marker-end="url(#arrow)"/>
 <path d="M675 602v15" stroke="#637c98" stroke-width="2.5" marker-end="url(#arrow)"/>
 
-<!-- crm sidecar -->
-<rect x="748" y="285" width="145" height="92" rx="14" fill="#f4f6f8" stroke="#bdc8d2"/>
-<text x="770" y="311" fill="#445767" class="pill">PORTA PÚBLICA</text><text x="770" y="339" fill="#283542" class="label">CRM</text><text x="770" y="361" fill="#586c7d" class="small">CustomerReader</text>
-<path d="M748 340 C720 340 720 445 748 445" fill="none" stroke="#8998a7" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
-<text x="700" y="391" fill="#6d7c89" class="small" text-anchor="end">consulta cliente</text>
-<rect x="748" y="397" width="145" height="98" rx="14" fill="#f8fafb" stroke="#d1d9df"/>
-<text x="770" y="425" fill="#445767" class="small">Existência</text><text x="770" y="448" fill="#445767" class="small">Elegibilidade</text><text x="770" y="475" fill="#748391" font-size="11">Retentativa limitada</text>
+<!-- A leitura do CRM aparece ao lado dos casos de uso, sem cruzar o fluxo vertical. -->
 
 <!-- storage -->
 <rect x="988" y="300" width="529" height="116" rx="16" fill="#fffaf0" stroke="#e8cb8e" stroke-width="1.5"/>
