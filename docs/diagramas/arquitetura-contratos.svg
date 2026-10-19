@@ -27,6 +27,23 @@
 <rect x="1250" y="50" width="276" height="42" rx="21" fill="#ffffff" opacity=".12"/>
 <circle cx="1274" cy="71" r="6" fill="#65d6a7"/><text x="1290" y="76" fill="#e9f4ff" class="small">VISÃO DO PROTÓTIPO ATUAL</text>
 
+<!-- business journey -->
+<rect x="55" y="165" width="1490" height="112" rx="20" fill="#ffffff" stroke="#d7e2ee" filter="url(#shadow)"/>
+<text x="82" y="188" fill="#3973c6" font-size="12" font-weight="800" letter-spacing="1.3px">O QUE A PLATAFORMA DEMONSTRA · FLUXO DE NEGÓCIO</text>
+<rect x="82" y="198" width="292" height="48" rx="12" fill="#f7faff" stroke="#c9dcf7"/>
+<text x="100" y="218" fill="#193b63" font-size="15" font-weight="720">1 · Cliente no CRM</text><text x="100" y="237" fill="#536b86" font-size="12">Consulta de elegibilidade</text>
+<path d="M374 222H398" stroke="#637c98" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="407" y="198" width="400" height="48" rx="12" fill="#f3fbf7" stroke="#b7dfd2"/>
+<text x="425" y="218" fill="#124b3e" font-size="15" font-weight="720">2 · Reserva e contrato de locação</text><text x="425" y="237" fill="#55766d" font-size="12">Grupo · proteção · datas · valor · ativar</text>
+<path d="M807 222H831" stroke="#637c98" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="840" y="198" width="330" height="48" rx="12" fill="#fffaf0" stroke="#ead7ad"/>
+<text x="858" y="218" fill="#644510" font-size="15" font-weight="720">3 · Financeiro</text><text x="858" y="237" fill="#806634" font-size="12">Faturas · saldo · pagamento simulado</text>
+<path d="M1170 222H1194" stroke="#637c98" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1203" y="198" width="314" height="48" rx="12" fill="#faf7ff" stroke="#d8c8ee"/>
+<text x="1221" y="218" fill="#3e2b64" font-size="15" font-weight="720">4 · Atendimento e operação</text><text x="1221" y="237" fill="#655582" font-size="12">Contrato/SLA · chamado · preparação de retirada</text>
+<text x="82" y="266" fill="#74869a" font-size="11" font-weight="550">Demonstração interna: não há seleção de origem/destino nem consulta à disponibilidade real da frota.</text>
+
+<g transform="translate(0,95)">
 <!-- panel backgrounds -->
 <rect x="55" y="200" width="340" height="505" rx="22" fill="#ffffff" stroke="#d7e2ee" filter="url(#shadow)"/>
 <rect x="430" y="200" width="490" height="505" rx="22" fill="#ffffff" stroke="#b7dfd2" filter="url(#shadow)"/>
@@ -102,4 +119,5 @@
 <path d="M1120 651 C1200 690 240 689 240 815" fill="none" stroke="#8760c5" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#arrowPurple)"/>
 <text x="620" y="700" text-anchor="middle" class="flow">ContractActivated.v1 · ContractClosed.v1 · mesma transação</text>
 <text x="800" y="1009" fill="#718195" font-size="13" text-anchor="middle">Protótipo acadêmico com dados sintéticos · integrações reais da Localiza não comprovadas</text>
+</g>
 </svg>
