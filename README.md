@@ -4,6 +4,8 @@ Protótipo acadêmico de integração entre os cinco sistemas do Cenário 4 da L
 
 A solução é uma SOA pragmática entregue como monólito modular ([ADR-001](docs/adr/ADR-001-integracao-empresa-de-servicos.md)). Os módulos conversam por REST e por eventos gravados numa outbox transacional. O despachante entrega os eventos aos consumidores internos e publica uma cópia no RabbitMQ local.
 
+Veja o [diagrama do fluxo de Reservas e Contratos](docs/ARQUITETURA_CONTRATOS.md), da entrada pela API até o banco, outbox e consumidores.
+
 > **Estado do protótipo:** este README descreve como usar o repositório. Para saber o que está verificado, o que é meta e o que depende de validação externa, consulte [`docs/ESTADO_IMPLEMENTACAO.md`](docs/ESTADO_IMPLEMENTACAO.md).
 
 ## Regras para agentes
