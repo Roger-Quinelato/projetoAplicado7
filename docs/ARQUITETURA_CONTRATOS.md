@@ -6,6 +6,18 @@
 
 
 
+## O que a pessoa consegue fazer na demonstração
+
+A interface é uma demonstração operacional por perfis, voltada às equipes que atendem o fluxo, não um portal público de autoatendimento para clientes. Ela permite:
+
+- Consultar um cliente elegível no CRM e solicitar uma reserva de locação com grupo de veículo, proteção, datas, valor e ciclo de cobrança.
+- Gerar o rascunho do contrato, ativar, cancelar a reserva ou encerrar o contrato.
+- No Financeiro, consultar faturas e saldo, registrar pagamentos simulados e verificar vencimentos.
+- No Atendimento, consultar se um contrato está ativo e qual SLA se aplica, abrir/acompanhar chamados e encaminhar a resolução para Workflow.
+- No Workflow, acompanhar processos e tarefas, inclusive a preparação de retirada iniciada após a ativação.
+
+**Limite do protótipo:** não há campos para origem e destino da viagem, busca de disponibilidade real de veículos, assinatura, cobrança ou pagamento real. O fluxo representa a integração entre CRM, Reservas e Contratos, Financeiro, Atendimento e Workflow.
+
 ## Fluxo ponta a ponta
 
 ```mermaid
