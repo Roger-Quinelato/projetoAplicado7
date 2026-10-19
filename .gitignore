@@ -229,3 +229,8 @@ web/*.tsbuildinfo
 docs/*_SYNC.json
 docs/JIRA_LINKS.json
 docs/JIRA_STATUS.json
+
+# Playwright (web/)
+web/test-results/
+web/playwright-report/
+web/blob-report/

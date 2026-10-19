@@ -138,7 +138,7 @@ Sem serviços reais, a suíte ignora os testes de PostgreSQL e RabbitMQ. Para in
 - `TEST_DATABASE_URL`: uma URL `postgresql+psycopg://` para **um banco exclusivo de testes**. O `conftest.py` apaga e recria todas as tabelas desse banco. Nunca aponte para o banco `archcorp` da demonstração.
 - `TEST_RABBITMQ_URL`: uma URL `amqp://` de um broker de testes. O teste apaga a fila `archcorp.events.all`.
 
-Para a interface, entre em `web/` e use `npm ci`, `npm run dev` (Vite só em `localhost`, com a API na porta 8000), `npm test` (testes de `web/tests` com `node:test`) e `npm run build` (gera `web/dist`, que o FastAPI serve na raiz).
+Para a interface, entre em `web/` e use `npm ci`, `npm run dev` (Vite só em `localhost`, com a API na porta 8000), `npm test` (testes de `web/tests` com `node:test`) e `npm run build` (gera `web/dist`, que o FastAPI serve na raiz). Os roteiros de navegador (`npm run test:e2e`) e o perfil Playwright MCP estão em [`docs/TESTES_E2E.md`](docs/TESTES_E2E.md).
 
 Outras tarefas de desenvolvimento:
 
@@ -153,6 +153,7 @@ Outras tarefas de desenvolvimento:
 O workflow `Verify` roda em cada PR:
 
 - **`application`:** `pip-audit`, `pytest`, `npm audit --audit-level=moderate`, `npm test`, `npm run build` e o build da imagem Docker.
+- **`e2e`:** build do frontend, Chromium e roteiros Playwright contra a API real com SQLite novo; a varredura axe roda como informativa.
 - **`postgresql`:** a suíte completa contra PostgreSQL 16, incluindo concorrência e convergência de migrações.
 - **`rabbitmq`:** a publicação confirmada contra um RabbitMQ real.
 
