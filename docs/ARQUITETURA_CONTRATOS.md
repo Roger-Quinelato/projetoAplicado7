@@ -2,6 +2,10 @@
 
 > Visão do fluxo implementado no protótipo. A aplicação é um monólito modular com dados sintéticos; não há conexão comprovada com sistemas reais da Localiza.
 
+![Diagrama visual da arquitetura de Reservas e Contratos](diagramas/arquitetura-contratos.svg)
+
+
+
 ## Fluxo ponta a ponta
 
 ```mermaid
