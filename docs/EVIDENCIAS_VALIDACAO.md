@@ -2,6 +2,20 @@
 
 > Estado de execução em 27/09/2026: consulte [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
 
+## Integridade de F2/F3 e migrações (#60, 2026-10-20)
+
+Ambiente: Linux (contêiner), Python 3.13, SQLite e **PostgreSQL 16 local** (instância descartável, dados sintéticos, `TEST_DATABASE_URL`). Base: `main` em `cf155ee`, branch `f2-f3-integridade-migracoes`. RabbitMQ real não disponível.
+
+- Linha de base da `main` no PostgreSQL local, antes das mudanças: 221 aprovados e 2 ignorados (RabbitMQ).
+- Com as mudanças, PostgreSQL: **227 aprovados e 2 ignorados**; SQLite: **217 aprovados e 12 ignorados** (PostgreSQL/RabbitMQ).
+- Novo `tests/test_integridade_f2_f3.py`:
+  - data padrão de encerramento em UTC (31/12 23h30 em Brasília = 01/01 UTC); **falha com o serviço anterior**, que usava `date.today()` local;
+  - novo evento com outro `eventId` para o mesmo fato (`ContractActivated.v1`, `TicketOpened.v1`) não cria segunda fatura, preparação ou processo de resolução;
+  - pagamentos concorrentes de 1.500 numa fatura de 2.500: um é aceito e o outro recusado com `409`, saldo final 1.000 (somente PostgreSQL).
+- `tests/test_migration_convergence.py`: banco vazio → head única sem divergência dos modelos, em SQLite e PostgreSQL; as convergências a partir de `0003` e de cada `0004` e o bloqueio do downgrade com fatura `FINAL` passaram nos dois bancos.
+- Já cobertos por testes existentes e reexecutados aqui: frações de centavo (`422`), pagamento acima do saldo (`409`), transições que impedem reabrir fatura paga, fatura cancelada não recobrada no acerto final, valor final zero sem fatura, reentrega do mesmo `eventId`, replay e histórico do Support.
+- Não verificado: RabbitMQ real e PostgreSQL gerenciado do provedor.
+
 ## Verificação em 17/10/2026 (entrega de 19/10)
 
 Ambiente: Windows 11 (10.0.26300), Python 3.12.10, SQLite, dependências de `requirements.txt` e `requirements-dev.txt` em ambiente limpo.

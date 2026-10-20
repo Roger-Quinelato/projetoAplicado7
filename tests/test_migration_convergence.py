@@ -69,3 +69,11 @@ def test_head_unica_e_downgrade_final_preserva_esquema_e_dados(migration_engine)
         assert inspect(connection).get_table_names() == before
         assert connection.execute(text("SELECT kind FROM finance_invoices")).scalar_one() == "FINAL"
         assert MigrationContext.configure(connection).get_current_heads() == ("0005_merge_finance_support",)
+
+
+def test_banco_vazio_converge_para_head_unica_sem_divergencia(migration_engine):
+    with migration_engine.begin() as connection:
+        command.upgrade(alembic_config(connection), "head")
+    with migration_engine.connect() as connection:
+        assert compare_metadata(MigrationContext.configure(connection), load_models().metadata) == []
+        assert MigrationContext.configure(connection).get_current_heads() == ("0005_merge_finance_support",)

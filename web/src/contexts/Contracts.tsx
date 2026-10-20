@@ -78,7 +78,7 @@ export default function Contracts({ params }: { params: URLSearchParams }) {
           if (ok) setClosing(null)
           return ok
         }}>
-          <Field name="endsOn" label="Data de encerramento" type="date" required={false} hint="Vazio: data atual ou início do contrato, o que for posterior." />
+          <Field name="endsOn" label="Data de encerramento" type="date" required={false} hint="Vazio: data atual em UTC ou início do contrato, o que for posterior." />
           <Field name="reason" label="Motivo" required={false} defaultValue="Devolução do veículo" />
         </ActionForm>
         <button type="button" className="secondary small spaced" onClick={() => setClosing(null)}>Voltar</button>

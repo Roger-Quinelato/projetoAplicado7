@@ -5757,8 +5757,8 @@ components:
             format: date
           - type: 'null'
           title: Endson
-          description: Data de encerramento; padrão é a data atual ou o início do
-            contrato, o que for posterior.
+          description: Data de encerramento; padrão é a data atual em UTC ou o início
+            do contrato, o que for posterior.
         reason:
           anyOf:
           - type: string
