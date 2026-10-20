@@ -19,7 +19,7 @@ Versão: branch `aceite-integrado`, commit `eb7ca1b` (pacote F) sobre a integra�
 
 - **Prontidão AMQP reproduzida:** com o RabbitMQ iniciando, `rabbitmq-diagnostics ping` respondeu no 2º segundo, a porta 5672 só aceitou conexão no 3º e `check_port_connectivity` passou no 4º. Compose e CI passam a usar `check_port_connectivity`.
 - **Broker parado e religado de verdade** (API com PostgreSQL, `rabbitmqctl stop`): prontidão `broker: DOWN` com `status: UP`; despacho `failed: 1` e nenhuma fatura do contrato; listener AMQP de volta em ~4 s; despacho `processed: 1`, novo despacho `processed: 0`; uma fatura e um processo para o contrato.
-- **Automatizado:** `test_broker_indisponivel_nao_deixa_efeito_e_reprocessamento_recupera` leva o evento a `FAILED` no limite (3), sem fatura, processo ou inbox; após a volta do broker, o reprocessamento gera um único conjunto de efeitos e uma mensagem na fila `archcorp.events`.
+- **Automatizado:** `test_broker_indisponivel_nao_deixa_efeito_e_reprocessamento_recupera` leva o evento a `FAILED` no limite (3), sem fatura nem processo para o contrato; após a volta do broker, o reprocessamento gera um único conjunto de efeitos e uma mensagem na fila `archcorp.events`.
 - Os 10 ignorados do SQLite são os testes que exigem PostgreSQL (locks, concorrência de pagamento e convergência de migrações em PostgreSQL); todos rodaram na linha PostgreSQL acima.
 - Observação de desempenho: a listagem de faturas é a mais lenta (calcula o saldo por fatura); continua duas ordens de grandeza abaixo da meta.
 - Não verificado: Compose com Docker real, URL pública (T20), PostgreSQL gerenciado, leitor de tela.
