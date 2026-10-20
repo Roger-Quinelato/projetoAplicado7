@@ -20,6 +20,8 @@ test('F1: cliente elegível → reserva → rascunho de contrato para o mesmo cl
 
   await test.step('registra a reserva', async () => {
     await irPara(page, 'Reservas e contratos')
+    await expect(page.getByRole('heading', { level: 1, name: 'Reservas e contratos' })).toBeVisible()
+    await page.getByRole('button', { name: 'Nova reserva' }).click()
     const form = page.getByRole('form', { name: 'Nova reserva' })
     await form.getByLabel('Cliente (CRM)').selectOption({ label: `${nome} · ${email}` })
     await form.getByRole('button', { name: 'Registrar reserva' }).click()

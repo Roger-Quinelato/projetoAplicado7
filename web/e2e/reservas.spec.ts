@@ -1,0 +1,56 @@
+import { expect, test } from '@playwright/test'
+import { dadosUnicos, entrar, irPara } from './helpers'
+
+test('Reservas: vindo do CRM, o painel abre com o cliente; cancelar pede confirmação nomeada', async ({ page }) => {
+  const { nome, email } = dadosUnicos('reserva')
+  await entrar(page, 'demo-admin')
+  await irPara(page, 'CRM')
+  await page.getByRole('button', { name: 'Novo cliente' }).click()
+  const cadastro = page.getByRole('form', { name: 'Novo cliente' })
+  await cadastro.getByLabel('Nome (fictício)').fill(nome)
+  await cadastro.getByLabel('E-mail sintético').fill(email)
+  await cadastro.getByRole('button', { name: 'Cadastrar cliente' }).click()
+  await page.getByRole('region', { name: 'Tabela: Clientes' }).getByRole('row').filter({ hasText: email })
+    .getByRole('button', { name: 'Nova reserva' }).click()
+
+  const form = page.getByRole('form', { name: 'Nova reserva' })
+  await expect(form.getByLabel('Cliente (CRM)')).toHaveValue(/.+/)
+  await expect(form.getByText('Já escolhido a partir do CRM.')).toBeVisible()
+  await form.getByRole('button', { name: 'Registrar reserva' }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'solicitada' })).toBeVisible()
+
+  const linha = page.getByRole('region', { name: 'Tabela: Reservas' }).getByRole('row').filter({ hasText: nome })
+  await linha.getByRole('button', { name: /^Mais ações: reserva/ }).click()
+  await page.getByRole('menuitem', { name: 'Cancelar reserva…' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Manter reserva' }).click()
+  await expect(linha).toContainText('Solicitada')
+
+  await linha.getByRole('button', { name: /^Mais ações: reserva/ }).click()
+  await page.getByRole('menuitem', { name: 'Cancelar reserva…' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancelar reserva' }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'cancelada' })).toBeVisible()
+  await expect(linha).toContainText('Cancelado')
+})
+
+test('Reservas: ativar o contrato orienta o despacho na barra de eventos', async ({ page }) => {
+  const { nome, email } = dadosUnicos('ativa')
+  await entrar(page, 'demo-admin')
+  await irPara(page, 'CRM')
+  await page.getByRole('button', { name: 'Novo cliente' }).click()
+  const cadastro = page.getByRole('form', { name: 'Novo cliente' })
+  await cadastro.getByLabel('Nome (fictício)').fill(nome)
+  await cadastro.getByLabel('E-mail sintético').fill(email)
+  await cadastro.getByLabel('Elegível para contratar').check()
+  await cadastro.getByRole('button', { name: 'Cadastrar cliente' }).click()
+  await page.getByRole('region', { name: 'Tabela: Clientes' }).getByRole('row').filter({ hasText: email })
+    .getByRole('button', { name: 'Nova reserva' }).click()
+  await page.getByRole('form', { name: 'Nova reserva' }).getByRole('button', { name: 'Registrar reserva' }).click()
+  await page.getByRole('region', { name: 'Tabela: Reservas' }).getByRole('row').filter({ hasText: nome })
+    .getByRole('button', { name: 'Gerar rascunho' }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'em rascunho para o mesmo cliente' })).toBeVisible()
+
+  await page.getByRole('region', { name: 'Tabela: Contratos' }).getByRole('row').filter({ hasText: nome })
+    .getByRole('button', { name: 'Ativar' }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'ativado' })).toContainText('Despache os eventos na barra do topo')
+  await expect(page.getByRole('region', { name: 'Eventos de integração' })).toContainText(/\d+ eventos? aguardando despacho/)
+})
