@@ -1,8 +1,8 @@
 import { useEffect, useReducer, useState } from 'react'
 import type { Entitlement, PendingReconciliation, SlaStatus, Ticket, TicketHistoryAction } from '../api'
 import {
-  ActionForm, Card, Field, FeedbackBanner, Id, PageIntro, ResourceView, SelectField, Status, Table, TextArea, dateTime, text,
-  useActions, useIdempotencyKeys, useResource, useSession,
+  ActionForm, Card, CustomerPicker, Field, FeedbackBanner, Id, PageIntro, PendingIntents, ResourceView, SelectField, Status, Table,
+  TextArea, dateTime, text, useActions, useIdempotencyKeys, useResource, useSession,
 } from '../ui'
 import { DispatchButton } from './shared'
 
@@ -61,14 +61,17 @@ export default function Support({ params }: { params: URLSearchParams }) {
   const [panel, setPanel] = useState<Panel>(null)
 
   const customers = useResource(a => a.listCustomers({ active: true }), [version])
-  const contracts = useResource(a => a.listContracts(), [version])
+  // Com cliente escolhido, a consulta é filtrada na API: contratos de clientes fora da primeira página também aparecem.
+  const contracts = useResource(a => a.listContracts(customerId || undefined), [version, customerId])
   const tickets = useResource(a => a.listTickets(), [version])
 
+  // Contrato vindo da URL: carregado pelo UUID para identificar o cliente, sem depender da listagem.
   useEffect(() => {
     if (!preselectedContract || customerId) return
-    const contract = contracts.data?.find(c => c.contractId === preselectedContract)
-    if (contract) setCustomerId(contract.customerId)
-  }, [contracts.data, preselectedContract, customerId])
+    let current = true
+    api.getContract(preselectedContract).then(r => { if (current) setCustomerId(r.data.customerId) }, () => { /* o seletor segue vazio; a abertura valida o contrato */ })
+    return () => { current = false }
+  }, [api, preselectedContract, customerId])
 
   const activeContracts = (contracts.data ?? []).filter(c => c.status === 'ACTIVE' && (!customerId || c.customerId === customerId))
   const selectedContract = contracts.data?.find(c => c.contractId === contractId)
@@ -96,6 +99,7 @@ export default function Support({ params }: { params: URLSearchParams }) {
   return <>
     <PageIntro>Chamado, assistência, prioridade, SLA e resolução pertencem a Support. A abertura consulta elegibilidade e SLA no contrato ativo; o despacho do evento <code>TicketOpened.v1</code> inicia o processo de resolução em Workflow.</PageIntro>
     <FeedbackBanner feedback={feedback} onClose={clear} />
+    <PendingIntents keys={keys} busy={busy} run={run} onCheck={refresh} />
 
     <div className="grid two">
       <Card title="Abrir chamado" roles="support, admin">
@@ -105,15 +109,13 @@ export default function Support({ params }: { params: URLSearchParams }) {
             customerId: contract?.customerId ?? customerId, contractId,
             serviceCode: contract?.serviceCode ?? 'RENTAL-FLEX', category: text(f, 'category'), description: text(f, 'description'),
           }
-          const result = await run('Abertura de chamado', () => keys.send('ticket', body, key => api.openTicket(body, key)), t => t.status === 'OPEN'
+          const result = await run('Abertura de chamado', () => keys.send('ticket', body, key => api.openTicket(body, key), 'Abertura de chamado'), t => t.status === 'OPEN'
             ? `Chamado ${t.ticketId.slice(0, 8)} aberto, prioridade ${t.priority === 'HIGH' ? 'alta' : 'normal'}, SLA até ${dateTime(t.dueAt)}.`
             : `Chamado ${t.ticketId.slice(0, 8)} com elegibilidade pendente; reconcilie quando Contracts voltar.`)
           if (result) refresh()
           return result !== null
         }}>
-          <SelectField name="customerId" label="Cliente" value={customerId} onChange={v => { setCustomerId(v); setContractId(''); setEntitlement(null) }}
-            options={(customers.data ?? []).map(c => ({ value: c.customerId, label: `${c.name} · ${c.email}` }))}
-            placeholder={customers.status === 'loading' ? 'Carregando…' : 'Selecione'} />
+          <CustomerPicker label="Cliente" value={customerId} onChange={v => { setCustomerId(v); setContractId(''); setEntitlement(null) }} />
           <SelectField name="contractId" label="Contrato ativo" value={contractId} onChange={v => { setContractId(v); setEntitlement(null) }}
             options={activeContracts.map(c => ({ value: c.contractId, label: `${c.contractId.slice(0, 8)} · ${c.serviceCode} · SLA ${c.slaHours} h` }))}
             placeholder={activeContracts.length ? 'Selecione' : 'Nenhum contrato ativo para este cliente'}
@@ -169,9 +171,9 @@ export default function Support({ params }: { params: URLSearchParams }) {
           { key: 'contract', label: 'Contrato', render: r => <Id value={r.contractId} /> },
           { key: 'actions', label: 'Ações', render: r => <div className="row-actions">
             {(r.status === 'OPEN' || r.status === 'PENDING_ENTITLEMENT') && <button type="button" className="inline quiet" disabled={busy} onClick={() => { setPanel({ kind: 'assign', ticket: r }); clear() }}>{r.owner ? 'Reatribuir…' : 'Atribuir…'}</button>}
-            {r.status === 'OPEN' && <button type="button" className="inline" disabled={busy} onClick={() => void run('Resolução de chamado', () => api.resolveTicket(r.ticketId),
+            {r.status === 'OPEN' && <button type="button" className="inline" disabled={busy} onClick={() => void run('Resolução de chamado', () => keys.send(`resolve:${r.ticketId}`, null, key => api.resolveTicket(r.ticketId, key), 'Resolução de chamado'),
               t => t.slaStatus === 'BREACHED' ? 'Resolvido após o prazo do SLA.' : t.slaStatus === 'MET' ? 'Resolvido dentro do SLA.' : '').then(x => { if (x) refresh() })}>Resolver</button>}
-            {r.status === 'PENDING_ENTITLEMENT' && <button type="button" className="inline" disabled={busy} onClick={() => void run('Reconciliação de elegibilidade', () => api.reconcileTicket(r.ticketId)).then(x => { if (x) refresh() })}>Reconciliar</button>}
+            {r.status === 'PENDING_ENTITLEMENT' && <button type="button" className="inline" disabled={busy} onClick={() => void run('Reconciliação de elegibilidade', () => keys.send(`reconcile:${r.ticketId}`, null, key => api.reconcileTicket(r.ticketId, key), 'Reconciliação de elegibilidade')).then(x => { if (x) refresh() })}>Reconciliar</button>}
             <button type="button" className="inline quiet" disabled={busy} onClick={() => { setPanel({ kind: 'history', ticket: r }); clear() }}>Histórico</button>
           </div> },
         ]} />}

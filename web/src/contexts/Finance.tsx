@@ -1,7 +1,7 @@
 import { useReducer, useState } from 'react'
 import type { Invoice, InvoiceStatus } from '../api'
 import {
-  ActionForm, Card, Field, FeedbackBanner, Id, PageIntro, ResourceView, SelectField, Status, Table, date, dateTime, money, text,
+  ActionForm, Card, Field, FeedbackBanner, Id, PageIntro, PendingIntents, ResourceView, SelectField, Status, Table, date, dateTime, money, text,
   useActions, useIdempotencyKeys, useResource, useSession,
 } from '../ui'
 import { DispatchButton } from './shared'
@@ -29,6 +29,7 @@ export default function Finance() {
   return <>
     <PageIntro>Fatura, pagamento, saldo, vencimento e inadimplência pertencem a Finance. A primeira fatura nasce do evento <code>ContractActivated.v1</code> e a fatura final de <code>ContractClosed.v1</code>, depois do despacho da outbox. Pagamentos são apenas simulados: não há PSP, conciliação bancária, nota fiscal nem cobrança real.</PageIntro>
     <FeedbackBanner feedback={feedback} onClose={clear} />
+    <PendingIntents keys={keys} busy={busy} run={run} onCheck={refresh} />
 
     <div className="grid two">
       <Card title="Registrar pagamento simulado" roles="finance, admin">
@@ -36,7 +37,7 @@ export default function Finance() {
           const invoiceId = text(f, 'invoiceId')
           const invoice = invoices.data?.find(i => i.invoiceId === invoiceId)
           const body = { amount: Number(text(f, 'amount')), currency: invoice?.currency ?? 'BRL', reference: text(f, 'reference') }
-          const result = await run('Registro de pagamento', () => keys.send('payment', { invoiceId, ...body }, key => api.recordPayment(invoiceId, body, key)),
+          const result = await run('Registro de pagamento', () => keys.send(`payment:${invoiceId}`, body, key => api.recordPayment(invoiceId, body, key), 'Registro de pagamento'),
             r => `Fatura ${r.invoice.invoiceId.slice(0, 8)}: ${money(r.invoice.paidAmount, r.invoice.currency)} pagos de ${money(r.invoice.amount, r.invoice.currency)}; saldo ${money(r.invoice.balance, r.invoice.currency)}.`)
           if (result) { setReference(`SIM-${Date.now()}`); setSelected(result.data.invoice); refresh() }
           return result !== null

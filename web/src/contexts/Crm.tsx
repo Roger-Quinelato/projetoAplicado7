@@ -1,7 +1,7 @@
 import { useReducer, useState } from 'react'
 import type { Customer, CustomerUpdate, OpportunityStatus } from '../api'
 import {
-  ActionForm, Card, Checkbox, Field, FeedbackBanner, Id, PageIntro, ResourceView, SelectField, Status, Table, TextArea,
+  ActionForm, Card, Checkbox, CustomerPicker, Field, FeedbackBanner, Id, PageIntro, ResourceView, SelectField, Status, Table, TextArea,
   text, useActions, useResource, useSession,
 } from '../ui'
 
@@ -24,7 +24,6 @@ export default function Crm() {
   const contacts = useResource(api => api.listContacts(contactCustomer || undefined), [contactCustomer, version])
   const opportunities = useResource(api => api.listOpportunities({ status: opportunityStatus || undefined }), [opportunityStatus, version])
 
-  const customerOptions = (activeCustomers.data ?? []).map(c => ({ value: c.customerId, label: `${c.name} · ${c.email}` }))
   const customerName = (id: string) => activeCustomers.data?.find(c => c.customerId === id)?.name ?? id.slice(0, 8)
 
   async function after<T>(result: T | null): Promise<boolean> {
@@ -79,7 +78,7 @@ export default function Crm() {
       </Card> : <Card title="Oportunidade" roles="commercial, admin">
         <ActionForm submit="Criar oportunidade" busy={busy} label="Nova oportunidade" onSubmit={async f => after(await run('Criação de oportunidade',
           () => api.createOpportunity({ customerId: text(f, 'customerId'), title: text(f, 'title'), notes: text(f, 'notes') || null }))) }>
-          <SelectField name="customerId" label="Cliente" options={customerOptions} placeholder={activeCustomers.status === 'loading' ? 'Carregando…' : 'Selecione'} />
+          <CustomerPicker label="Cliente" />
           <Field name="title" label="Título" />
           <TextArea name="notes" label="Notas" required={false} />
         </ActionForm>
@@ -126,7 +125,7 @@ export default function Crm() {
       <Card title="Contatos" roles="commercial, admin">
         <ActionForm submit="Adicionar contato" busy={busy} label="Novo contato" onSubmit={async f => after(await run('Inclusão de contato',
           () => api.createContact({ customerId: text(f, 'customerId'), name: text(f, 'name'), email: text(f, 'email'), phone: text(f, 'phone') || null })))}>
-          <SelectField name="customerId" label="Cliente" options={customerOptions} />
+          <CustomerPicker label="Cliente" />
           <Field name="name" label="Nome do contato" />
           <div className="form-grid">
             <Field name="email" label="E-mail" type="email" />
@@ -134,7 +133,7 @@ export default function Crm() {
           </div>
         </ActionForm>
         <div className="divider" />
-        <SelectField name="contactFilter" label="Mostrar contatos de" required={false} placeholder="Todos os clientes" options={customerOptions} onChange={setContactCustomer} />
+        <CustomerPicker name="contactFilter" label="Mostrar contatos de" required={false} placeholder="Todos os clientes" value={contactCustomer} onChange={setContactCustomer} />
         <ResourceView resource={contacts} label="contatos" empty="Nenhum contato cadastrado.">
           {rows => <Table caption="Contatos" rows={rows} rowKey={r => r.contactId} columns={[
             { key: 'name', label: 'Nome', render: r => r.name },

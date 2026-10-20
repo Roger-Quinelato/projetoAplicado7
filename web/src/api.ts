@@ -308,6 +308,7 @@ export function createApi(token: string, fetcher: typeof fetch = (...args) => fe
   return {
     // CRM
     listCustomers: (q?: { email?: string, active?: boolean, limit?: number, offset?: number }) => get<Customer[]>('/api/v1/crm/customers', q),
+    getCustomer: (id: Uuid) => get<Customer>(`/api/v1/crm/customers/${id}`),
     createCustomer: (body: CustomerCreate) => request<Customer>('POST', '/api/v1/crm/customers', { body }),
     updateCustomer: (id: Uuid, body: CustomerUpdate) => request<Customer>('PATCH', `/api/v1/crm/customers/${id}`, { body }),
     deactivateCustomer: (id: Uuid) => request<Customer>('POST', `/api/v1/crm/customers/${id}/deactivate`),
@@ -327,6 +328,7 @@ export function createApi(token: string, fetcher: typeof fetch = (...args) => fe
       request<ReservationDraft>('POST', `/api/v1/contracts/reservations/${id}/draft`, { idempotencyKey }),
     cancelReservation: (id: Uuid) => request<Reservation>('POST', `/api/v1/contracts/reservations/${id}/cancel`),
     listContracts: (customerId?: Uuid) => get<Contract[]>('/api/v1/contracts', { customerId }),
+    getContract: (id: Uuid) => get<Contract>(`/api/v1/contracts/${id}`),
     createDraft: (body: ContractDraftCreate, idempotencyKey: string) =>
       request<Contract>('POST', '/api/v1/contracts/drafts', { body, idempotencyKey }),
     activateContract: (id: Uuid, idempotencyKey: string) =>
@@ -349,8 +351,9 @@ export function createApi(token: string, fetcher: typeof fetch = (...args) => fe
     openTicket: (body: TicketCreate, idempotencyKey: string) =>
       request<Ticket>('POST', '/api/v1/support/tickets', { body, idempotencyKey }),
     assignTicket: (id: Uuid, owner: string) => request<Ticket>('POST', `/api/v1/support/tickets/${id}/assign`, { body: { owner } }),
-    resolveTicket: (id: Uuid) => request<Ticket>('POST', `/api/v1/support/tickets/${id}/resolve`),
-    reconcileTicket: (id: Uuid) => request<Ticket>('POST', `/api/v1/support/tickets/${id}/reconcile`),
+    /** A chave é opcional no contrato; com ela, a repetição devolve a resposta gravada. */
+    resolveTicket: (id: Uuid, idempotencyKey?: string) => request<Ticket>('POST', `/api/v1/support/tickets/${id}/resolve`, { idempotencyKey }),
+    reconcileTicket: (id: Uuid, idempotencyKey?: string) => request<Ticket>('POST', `/api/v1/support/tickets/${id}/reconcile`, { idempotencyKey }),
     reconcilePendingTickets: () => request<PendingReconciliation>('POST', '/api/v1/support/tickets/reconcile-pending'),
     ticketHistory: (id: Uuid) => get<TicketHistoryEntry[]>(`/api/v1/support/tickets/${id}/history`),
 
