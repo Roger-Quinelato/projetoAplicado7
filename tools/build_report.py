@@ -143,9 +143,9 @@ IMG = ROOT / "docs" / "arquitetura" / "img"
 EQUIPE: list[tuple[str, str]] = []
 
 # Evidência vigente; atualize junto com docs/EVIDENCIAS_VALIDACAO.md.
-DATA_EVIDENCIA = "17 de outubro de 2026"
-TESTES = "211 testes aprovados e 10 ignorados"
-P95 = "4,22 ms"
+DATA_EVIDENCIA = "20 de outubro de 2026"
+TESTES = "246 testes aprovados com PostgreSQL 16 e RabbitMQ 3.12 reais (232 aprovados e 14 ignorados com SQLite puro)"
+P95 = "45,1 ms"
 
 
 def figure(doc, name, caption, width=6.9):
@@ -217,7 +217,7 @@ meta.add_run(f"{autores}\nOutubro de 2026")
 page(doc, "Resumo")
 para(doc, "O Cenário 4 do Projeto Aplicado descreve uma empresa de serviços com CRM, sistema de contratos, sistema financeiro, sistema de atendimento e sistema de gestão de processos que não se comunicam adequadamente (ARCHCORP, 2026a). O trabalho aplica o cenário a uma locadora de veículos fictícia inspirada na Localiza, com dados sintéticos e sem acesso a sistemas reais. O problema consiste em duplicidade de cadastro, lançamentos manuais, falhas difíceis de rastrear e processos fragmentados.")
 para(doc, "A solução proposta é uma arquitetura orientada a serviços entregue como monólito modular, com arquitetura hexagonal, APIs REST para interações imediatas e eventos para efeitos desacoplados. A metodologia combinou análise do enunciado, levantamento de requisitos, modelagem AS-IS e TO-BE, registro de decisões em ADR, implementação incremental e verificação automatizada. O protótipo separa os contextos CRM, Contracts, Finance, Support, Workflow e Integration, e a entrega confiável usa outbox, inbox, idempotência, correlação e reprocessamento auditado.")
-para(doc, f"Em {DATA_EVIDENCIA}, a suíte automatizada local registrou {TESTES}; os ignorados exigem PostgreSQL ou RabbitMQ reais. Roteiros executados contra a API local demonstraram os três fluxos integrados: cliente do CRM para contrato sem recadastro (20 de 20 checagens), ativação para primeira fatura e preparação de retirada sem duplicidade (14 de 14) e chamado com contrato e SLA até a resolução (15 de 15). A medição local de 200 consultas de prontidão teve p95 de {P95}, valor que não representa hospedagem pública.")
+para(doc, f"Em {DATA_EVIDENCIA}, a suíte automatizada local registrou {TESTES}; os ignorados exigem PostgreSQL ou RabbitMQ reais. Os 22 roteiros de navegador (F1, F2 e F3 pela interface e acessibilidade com axe) passaram com SQLite e com PostgreSQL e RabbitMQ. Roteiros executados contra a API local demonstraram os três fluxos integrados: cliente do CRM para contrato sem recadastro (20 de 20 checagens), ativação para primeira fatura e preparação de retirada sem duplicidade (14 de 14) e chamado com contrato e SLA até a resolução (15 de 15). Na medição local do RNF-07 (60 clientes e 100 amostras por consulta, em 10 consultas de negócio), o maior p95 foi {P95} com PostgreSQL, abaixo da meta de 500 ms; o valor não representa hospedagem pública.")
 para(doc, "Palavras-chave: arquitetura de sistemas corporativos; SOA; monólito modular; integração de sistemas; interoperabilidade; eventos.")
 
 # 1 Introdução
@@ -448,11 +448,11 @@ table(doc, ["Atributo", "Necessidade", "Risco", "Estratégia adotada", "Resultad
     ["Observabilidade", "Seguir operação entre módulos", "Falha sem causa identificável", "correlationId, logs, métricas e auditoria", "Trilha completa por consulta"],
     ["Manutenibilidade", "Mudar um contexto isoladamente", "Dependências cruzadas", "Portas públicas e teste de fronteira", "Mudanças localizadas"],
     ["Disponibilidade", "Não perder chamado", "Contracts indisponível", "Estado pendente e reconciliação", "Chamado preservado"],
-    ["Desempenho", "Resposta rápida na demo", "Latência de banco e serialização", "API sem estado e índices", f"p95 local {P95}"],
+    ["Desempenho", "Resposta rápida na demo", "Latência de banco e serialização", "API sem estado e índices", f"p95 local até {P95}"],
     ["Escalabilidade", "Crescer sem redesenho", "Saturação da API ou da fila", "API sem estado e consumidores idempotentes", "Escala no componente pressionado"],
     ["Testabilidade", "Reproduzir fluxos e falhas", "Erro só na apresentação", "Adaptadores substituíveis e suíte automatizada", TESTES],
 ], [1.05, 1.25, 1.2, 1.75, 1.45])
-para(doc, "As medições representam o ambiente local (Windows 11, Python 3.12, SQLite) e não substituem planejamento de capacidade com volumes reais. PostgreSQL, RabbitMQ e a hospedagem pública só foram verificados na integração contínua ou ainda não foram verificados.")
+para(doc, "As medições representam um ambiente local (contêiner Linux, Python 3.13, PostgreSQL 16 e SQLite) com dados sintéticos e não substituem planejamento de capacidade com volumes reais. PostgreSQL e RabbitMQ foram verificados localmente e na integração contínua; a hospedagem pública e o PostgreSQL gerenciado ainda não foram verificados.")
 
 # 12 Evolução
 doc.add_heading("4.9 Escalabilidade, manutenção, evolução e viabilidade", level=2)
@@ -468,7 +468,7 @@ table(doc, ["Pergunta do enunciado", "Estratégia"], [
 para(doc, "A extração de um contexto para serviço próprio só ocorre quando métricas de volume, disponibilidade ou cadência de implantação justificarem, sempre com novo ADR.")
 doc.add_heading("4.9.1 Visão de negócio e viabilidade", level=3)
 para(doc, "Público-alvo: áreas comercial, de contratos, financeira, de atendimento e de operações, além dos clientes que deixam de repetir informações. Proposta de valor: um cliente, um contrato e um chamado com a mesma identidade em todos os sistemas, com efeitos automáticos e rastreáveis. Benefícios esperados: menos retrabalho e duplicidade, cobrança no momento da ativação, SLA correto no atendimento e diagnóstico mais rápido.")
-para(doc, "Viabilidade: o monólito modular limita custo de infraestrutura e complexidade operacional, e a demonstração usa apenas componentes gratuitos. A equipe júnior consegue manter um único implantável com fronteiras testadas. Custos, prazos e infraestrutura de produção não foram informados; a adoção real depende de levantar a linha de base dos indicadores (tempo entre ativação e cobrança, recadastros, chamados com SLA incorreto e tempo de diagnóstico). Como afirma o enunciado, \"uma boa arquitetura não é apenas tecnicamente adequada, mas também precisa fazer sentido para o negócio\" (ARCHCORP, 2026a, p. 8).")
+para(doc, "Viabilidade: o monólito modular limita custo de infraestrutura e complexidade operacional, e a demonstração usa serviços sem licença ou em plano gratuito. Gratuidade não é custo zero: o esforço de implementação e de operação existe e não foi medido. A equipe júnior consegue manter um único implantável com fronteiras testadas. Custos, prazos e infraestrutura de produção não foram informados; vencimento em 10 dias, faturamento por ciclos iniciados, SLA contado da abertura e preparação de 72 h são premissas a validar; a adoção real depende de levantar a linha de base dos indicadores (tempo entre ativação e cobrança, recadastros, chamados com SLA incorreto e tempo de diagnóstico). Como afirma o enunciado, \"uma boa arquitetura não é apenas tecnicamente adequada, mas também precisa fazer sentido para o negócio\" (ARCHCORP, 2026a, p. 8).")
 
 # 13 Análise e considerações finais
 doc.add_heading("4.10 Análise dos resultados", level=2)

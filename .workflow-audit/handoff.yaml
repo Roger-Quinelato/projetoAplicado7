@@ -1,0 +1,45 @@
+schema: workflow-audit/handoff
+version: 1
+project: archcorp-projeto-aplicado-7
+base: {branch: viabilidade-e-documentos, commit: f8945f3}
+mode: review
+generated: "2026-10-20"
+file_timestamps:
+  src/archcorp/contracts/routes.py: "2026-10-20 11:52:11"
+  src/archcorp/finance/service.py: "2026-10-19 22:01:14"
+  src/archcorp/finance/routes.py: "2026-10-19 22:01:14"
+  src/archcorp/support/service.py: "2026-10-19 22:01:14"
+  src/archcorp/workflow/routes.py: "2026-10-20 11:52:11"
+  web/src/contexts/Contracts.tsx: "2026-10-20 11:52:11"
+  web/src/contexts/Crm.tsx: "2026-10-20 11:52:06"
+  web/src/contexts/Support.tsx: "2026-10-20 02:20:17"
+  web/src/contexts/Finance.tsx: "2026-10-20 11:52:06"
+  web/src/contexts/Workflow.tsx: "2026-10-19 22:01:14"
+  src/archcorp/finance/domain.py: "2026-10-19 22:01:14"
+  src/archcorp/contracts/service.py: "2026-10-20 11:52:11"
+  src/archcorp/support/domain.py: "2026-10-19 22:01:14"
+  src/archcorp/workflow/domain.py: "2026-10-20 11:52:11"
+  src/archcorp/schemas.py: "2026-10-20 11:52:11"
+  web/src/App.tsx: "2026-10-20 11:52:06"
+  tools/build_presentation.mjs: "2026-10-20 13:27:02"
+findings:
+  # urgency/risk_fix/risk_nofix: low|medium|high ; roi: marginal|good|excellent ; effort: trivial|small|medium
+  - {id: 1, urgency: high, risk_fix: medium, risk_nofix: high, roi: good, blast_files: 12, effort: medium, group_hint: paginacao_compartilhada, adr_required: false}
+  - {id: 2, urgency: high, risk_fix: low, risk_nofix: high, roi: excellent, blast_files: 4, effort: small, group_hint: paginacao_compartilhada, adr_required: false}
+  - {id: 3, urgency: high, risk_fix: high, risk_nofix: medium, roi: good, blast_files: 6, effort: medium, group_hint: dominio_comum, adr_required: true}
+  - {id: 4, urgency: medium, risk_fix: high, risk_nofix: low, roi: marginal, blast_files: 8, effort: medium, group_hint: kernel_compartilhado, adr_required: true}
+  - {id: 5, urgency: medium, risk_fix: medium, risk_nofix: medium, roi: good, blast_files: 7, effort: small, group_hint: kernel_compartilhado, adr_required: true}
+  - {id: 6, urgency: medium, risk_fix: low, risk_nofix: medium, roi: good, blast_files: 20, effort: medium, group_hint: higiene, adr_required: false, status: partial}
+  - {id: 7, urgency: medium, risk_fix: medium, risk_nofix: medium, roi: marginal, blast_files: 4, effort: medium, group_hint: dominio_comum, adr_required: false}
+  - {id: 8, urgency: low, risk_fix: medium, risk_nofix: low, roi: marginal, blast_files: 5, effort: small, group_hint: higiene, adr_required: false}
+  - {id: 9, urgency: low, risk_fix: low, risk_nofix: low, roi: good, blast_files: 4, effort: trivial, group_hint: dominio_comum, adr_required: false}
+  - {id: 10, urgency: low, risk_fix: low, risk_nofix: low, roi: good, blast_files: 7, effort: small, group_hint: higiene, adr_required: false}
+  - {id: 11, urgency: low, risk_fix: low, risk_nofix: low, roi: good, blast_files: 7, effort: small, group_hint: higiene, adr_required: false}
+  - {id: 12, urgency: low, risk_fix: low, risk_nofix: low, roi: good, blast_files: 3, effort: trivial, group_hint: higiene, adr_required: false}
+  - {id: 13, urgency: low, risk_fix: low, risk_nofix: low, roi: marginal, blast_files: 2, effort: trivial, group_hint: higiene, adr_required: false}
+  - {id: 14, urgency: low, risk_fix: low, risk_nofix: medium, roi: good, blast_files: 2, effort: trivial, group_hint: higiene, adr_required: false}
+groups:
+  paginacao_compartilhada: {findings: [1, 2], suggestion: "limit/offset e total em todas as listagens (padrão do CRM) e busca de clientes por ids na UI"}
+  dominio_comum: {findings: [3, 7, 9], suggestion: "catálogos e permissões expostos pelo dono do domínio (endpoint de catálogo ou campos allowedActions); nova versão ou ADR para fechar a validação"}
+  kernel_compartilhado: {findings: [4, 5], suggestion: "ADR antes de criar infrastructure/clock.py, money.py e idempotency.py"}
+  higiene: {findings: [6, 8, 10, 11, 12, 13, 14], suggestion: "PRs pequenos e independentes; o 14 pode ser só regenerar o PPTX ou deixar de versionar output/"}

@@ -1,6 +1,24 @@
 # Evidências de validação
 
-> Estado de execução em 27/09/2026: consulte [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
+> O estado atual de execução está no [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e no [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
+
+## Viabilidade e documentos (#63 e parte do #65, 2026-10-20)
+
+Base: branch `aceite-integrado` (B–F integrados). Ambiente: contêiner Linux, Python 3.13, LibreOffice para a conversão em PDF.
+
+| Verificação | Resultado |
+|---|---|
+| Suíte Python com PostgreSQL 16 e RabbitMQ 3.12 locais | 246 aprovados, 0 ignorados (só documentação mudou) |
+| Suíte Python com SQLite puro | 232 aprovados, 14 ignorados |
+| `tools/build_report.py` | DOCX regenerado com as contagens e o p95 de 20/10/2026. Renderizado pelo LibreOffice: **21 páginas, 20 sem a capa**. A paginação no Word pode variar; o limite de 15–20 p. depende de a capa contar e precisa ser conferido na exportação final |
+| `tools/build_presentation.mjs` | Fonte atualizada (246 testes, p95 até 45,1 ms, "serviços gratuitos (não custo zero)"). **PPTX não regenerado**: o gerador depende de `@oai/artifact-tool`, ausente neste ambiente. O `output/Apresentacao_Cenario_4.pptx` versionado ainda mostra "211 testes" e "p95 4,22 ms" e deve ser regenerado localmente |
+| Placeholders | Só "nomes a preencher" na capa do relatório e dos slides (`EQUIPE`, pacote J) |
+| Regressões documentais (grep) | Nenhum texto equipara correlação a tracing distribuído, descreve o RabbitMQ como executor dos consumidores ou dá o ADR-006 como aprovado (status: proposto) |
+| Afirmações de custo | "Custos zero" só aparece no título da T14 em `CRONOGRAMA_EXECUCAO.md` (igual ao da issue #17), sem afirmar economia. Relatório e slides passam a dizer "plano gratuito" e "não custo zero" |
+
+- `VISAO_NEGOCIO.md` separa três custos (serviços, implementação e operação), liga cada benefício ao que o protótipo mede hoje e lista as quatro premissas para validação docente, com o código e o teste de cada uma.
+- O aviso de "estado de execução em 27/09/2026", repetido em 17 documentos, perdeu a data vencida e passa a só apontar para o estado e o cronograma.
+- Não verificado: contagem de páginas no Word, PPTX regenerado e publicação (T20, #64).
 
 ## Aceite integrado e operacional local (#62, 2026-10-20)
 
