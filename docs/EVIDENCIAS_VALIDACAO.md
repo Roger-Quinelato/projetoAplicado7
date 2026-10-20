@@ -2,6 +2,15 @@
 
 > Estado de execução em 27/09/2026: consulte [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
 
+## Lacunas da interface e feedback por papel (#61, 2026-10-20)
+
+Ambiente: Linux (contêiner), Node 22, Chromium 1194, API local com SQLite novo. Base: branch do PR #57 (`3b49988`).
+
+- `web/e2e/papeis-e-feedback.spec.ts`: **10 roteiros aprovados**; a suíte Playwright completa teve **19 bloqueantes aprovados** e a varredura axe informativa sem violações.
+- Achado durante a validação: o fundo em gradiente de `.shell` fazia o axe classificar como “incompleto” todo texto fora dos cartões (título, introdução, rodapé), então o contraste dessa área não era medido. Com fundo sólido em `main` (sem mudança visual), o axe passou a medir e encontrou o rodapé abaixo de 4,5:1 (`#66768a` sobre `#f4f7fb`), corrigido para `#526175`. Uma injeção de cor de baixo contraste confirmou que o teste reprova quando há violação.
+- `npm test` (12 aprovados) e `npm run build` aprovados. Backend inalterado.
+- Não verificado: leitor de tela, navegação completa só por teclado e a regra de contraste em estados de foco e hover.
+
 ## Criação ambígua e seleção de clientes na interface (#34, 2026-10-20)
 
 Ambiente: Linux (contêiner), Python 3.13, Node 22, SQLite, Chromium 1194. Base: `main` em `cf155ee`.
