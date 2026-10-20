@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { ApiError, asApiError, describeIssue, errorHeadline, uuid, type Api, type ApiResult } from './api'
 
 // ---------- Sessão compartilhada ----------
@@ -34,8 +34,12 @@ export function money(value: unknown, currency = 'BRL'): string {
   try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(number) }
   catch { return `${currency} ${number.toFixed(2)}` }
 }
+/** Data e hora locais no formato dd/mm/aaaa hh:mm. */
 export function dateTime(value: string | null | undefined): string {
-  return value ? new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'
+  if (!value) return '—'
+  const d = new Date(value)
+  const two = (n: number) => String(n).padStart(2, '0')
+  return `${two(d.getDate())}/${two(d.getMonth() + 1)}/${d.getFullYear()} ${two(d.getHours())}:${two(d.getMinutes())}`
 }
 export function date(value: string | null | undefined): string {
   if (!value) return '—'
@@ -135,17 +139,23 @@ export function useActions() {
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const run = useCallback(async <T,>(label: string, action: () => Promise<ApiResult<T>>, describe?: (data: T) => string): Promise<ApiResult<T> | null> => {
+  /**
+   * Executa um comando. Com `messages`, os avisos usam frases completas (ex.: "Cliente X cadastrado." e
+   * "Não foi possível cadastrar o cliente."); sem elas, o padrão é "<rótulo>: concluído." e "<rótulo>: não concluído.".
+   */
+  const run = useCallback(async <T,>(label: string, action: () => Promise<ApiResult<T>>, describe?: (data: T) => string,
+    messages?: { success: (data: T) => string, failure: string }): Promise<ApiResult<T> | null> => {
     setBusy(true)
     setFeedback(null)
     try {
       const result = await action()
       const suffix = describe ? ` ${describe(result.data)}` : ''
-      setFeedback({ kind: 'success', message: `${label}: concluído.${suffix}`, correlationId: result.correlationId, replayed: result.replayed })
+      const message = messages ? messages.success(result.data) : `${label}: concluído.${suffix}`
+      setFeedback({ kind: 'success', message, correlationId: result.correlationId, replayed: result.replayed })
       commandDone()
       return result
     } catch (error) {
-      setFeedback({ kind: 'error', message: `${label}: não concluído.`, error: asApiError(error) })
+      setFeedback({ kind: 'error', message: messages ? messages.failure : `${label}: não concluído.`, error: asApiError(error) })
       return null
     } finally {
       setBusy(false)
@@ -263,22 +273,26 @@ export function TextArea({ name, label, required = true, defaultValue }: { name:
 }
 
 export interface Option { value: string, label: string }
-export function SelectField({ name, label, options, required = true, placeholder = 'Selecione', defaultValue, value, onChange, hint }: {
+export function SelectField({ name, label, options, required = true, placeholder = 'Selecione', defaultValue, value, onChange, hint, error }: {
   name: string, label: string, options: Option[], required?: boolean, placeholder?: string, defaultValue?: string,
   /** Quando informado, o campo é controlado pelo estado do componente pai. */
   value?: string,
   onChange?: (value: string) => void, hint?: string,
+  /** Erro do campo em texto, além da borda; substitui a dica enquanto existir. */
+  error?: string,
 }) {
   const id = useId()
+  const note = error || hint
   return <div className="field">
     <label htmlFor={id}>{label}{!required && <span className="optional"> (opcional)</span>}</label>
     {/* Remonta quando as opções assíncronas chegam, para que o valor padrão (ex.: cliente pré-selecionado) seja aplicado. */}
     <select key={value === undefined ? `${defaultValue ?? ''}|${options.length > 0}` : 'controlled'} id={id} name={name} required={required}
-      {...(value === undefined ? { defaultValue: defaultValue ?? '' } : { value })} onChange={e => onChange?.(e.target.value)} aria-describedby={hint ? `${id}-hint` : undefined}>
+      {...(value === undefined ? { defaultValue: defaultValue ?? '' } : { value })} onChange={e => onChange?.(e.target.value)}
+      aria-describedby={note ? `${id}-note` : undefined} aria-invalid={error ? true : undefined} className={error ? 'invalid' : undefined}>
       <option value="">{placeholder}</option>
       {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
-    {hint && <small id={`${id}-hint`}>{hint}</small>}
+    {note && <small id={`${id}-note`} className={error ? 'field-error' : undefined}>{error ? `⚠ ${error}` : hint}</small>}
   </div>
 }
 
@@ -318,4 +332,83 @@ export function Table<T>({ rows, columns, rowKey, caption }: { rows: T[], column
 
 export function PageIntro({ children }: { children: ReactNode }) {
   return <p className="intro">{children}</p>
+}
+
+/** Célula com uma linha principal e uma secundária (ex.: nome e e-mail). */
+export function Stack({ main, sub }: { main: ReactNode, sub?: ReactNode }) {
+  return <div className="stack"><span>{main}</span>{sub && <small>{sub}</small>}</div>
+}
+
+/** Cartão de formulário aberto por um botão do cabeçalho; recebe o foco ao abrir e fecha por "Fechar". */
+export function Panel({ title, onClose, children }: { title: string, onClose: () => void, children: ReactNode }) {
+  const ref = useRef<HTMLElement>(null)
+  useEffect(() => { ref.current?.focus() }, [])
+  const id = useId()
+  return <section ref={ref} tabIndex={-1} className="card panel" aria-labelledby={id}>
+    <div className="card-head">
+      <h2 id={id}>{title}</h2>
+      <button type="button" className="link" onClick={onClose}>Fechar</button>
+    </div>
+    {children}
+  </section>
+}
+
+export interface MenuItem { label: string, onSelect: () => void, danger?: boolean, disabled?: boolean }
+
+/** Menu "Mais" das linhas de tabela: setas navegam, Esc fecha e devolve o foco ao botão. */
+export function MoreMenu({ items, label }: { items: MenuItem[], label: string }) {
+  const [open, setOpen] = useState(false)
+  const button = useRef<HTMLButtonElement>(null)
+  const menu = useRef<HTMLDivElement>(null)
+  const id = useId()
+
+  useEffect(() => {
+    if (!open) return
+    menu.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus()
+    const outside = (e: MouseEvent) => { if (!menu.current?.contains(e.target as Node) && e.target !== button.current) setOpen(false) }
+    document.addEventListener('mousedown', outside)
+    return () => document.removeEventListener('mousedown', outside)
+  }, [open])
+
+  function keys(e: KeyboardEvent) {
+    const options = [...(menu.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? [])]
+    const at = options.indexOf(document.activeElement as HTMLButtonElement)
+    if (e.key === 'Escape') { e.preventDefault(); setOpen(false); button.current?.focus() }
+    if (e.key === 'ArrowDown') { e.preventDefault(); options[(at + 1) % options.length]?.focus() }
+    if (e.key === 'ArrowUp') { e.preventDefault(); options[(at - 1 + options.length) % options.length]?.focus() }
+  }
+
+  return <div className="more">
+    <button ref={button} type="button" className="inline quiet" aria-haspopup="menu" aria-expanded={open} aria-controls={id}
+      aria-label={`Mais ações: ${label}`} onClick={() => setOpen(o => !o)}>Mais ▾</button>
+    {open && <div ref={menu} id={id} role="menu" className="more-menu" onKeyDown={keys}>
+      {items.map(item => <button key={item.label} type="button" role="menuitem" disabled={item.disabled} className={item.danger ? 'danger-text' : undefined}
+        onClick={() => { setOpen(false); item.onSelect() }}>{item.label}</button>)}
+    </div>}
+  </div>
+}
+
+export interface ConfirmOptions { title: string, body: string, confirm: string, cancel: string }
+
+/**
+ * Confirmação com botões nomeados ("Cancelar reserva" / "Manter reserva") no lugar de `window.confirm`.
+ * Renderize `dialog` na tela e aguarde `ask(...)`: `true` quando a ação é confirmada.
+ */
+export function useConfirm() {
+  const [pending, setPending] = useState<{ options: ConfirmOptions, resolve: (ok: boolean) => void } | null>(null)
+  const ref = useRef<HTMLDialogElement>(null)
+  const id = useId()
+  useEffect(() => { if (pending && ref.current && !ref.current.open) ref.current.showModal() }, [pending])
+  const ask = useCallback((options: ConfirmOptions) => new Promise<boolean>(resolve => setPending({ options, resolve })), [])
+  const close = (ok: boolean) => { pending?.resolve(ok); ref.current?.close(); setPending(null) }
+  const dialog = pending && <dialog ref={ref} className="confirm" aria-labelledby={`${id}-t`} aria-describedby={`${id}-b`}
+    onCancel={e => { e.preventDefault(); close(false) }}>
+    <h2 id={`${id}-t`}>{pending.options.title}</h2>
+    <p id={`${id}-b`}>{pending.options.body}</p>
+    <div className="dialog-actions">
+      <button type="button" className="secondary" autoFocus onClick={() => close(false)}>{pending.options.cancel}</button>
+      <button type="button" className="danger" onClick={() => close(true)}>{pending.options.confirm}</button>
+    </div>
+  </dialog>
+  return { ask, dialog }
 }

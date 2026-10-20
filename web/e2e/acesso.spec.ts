@@ -7,11 +7,12 @@ test('papel sem permissão recebe a negativa ao cadastrar cliente', async ({ pag
   await expect(page.getByText('Perfil local: support').first()).toBeVisible()
 
   await irPara(page, 'CRM')
+  await page.getByRole('button', { name: 'Novo cliente' }).click()
   const form = page.getByRole('form', { name: 'Novo cliente' })
   await form.getByLabel('Nome (fictício)').fill(nome)
   await form.getByLabel('E-mail sintético').fill(email)
   await form.getByRole('button', { name: 'Cadastrar cliente' }).click()
-  await expect(page.getByRole('alert').filter({ hasText: 'Cadastro de cliente' }))
+  await expect(page.getByRole('alert').filter({ hasText: 'Não foi possível cadastrar o cliente.' }))
     .toContainText('Seu papel não tem permissão para esta operação.')
 })
 

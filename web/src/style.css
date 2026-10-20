@@ -178,6 +178,39 @@ code { font-size: 12px; color: #2f5b8a; background: #f1f5f9; border-radius: 4px;
 .flow-steps small { font-size: 12px; color: var(--muted); }
 .empty strong { display: block; color: var(--ink); margin-bottom: 4px; }
 
+/* Componentes do redesenho */
+.stack { display: grid; gap: 2px; }
+.stack span { color: var(--ink); font-weight: 500; }
+.stack small { color: var(--muted); font-size: 12px; }
+.card-head .head-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.panel:focus { outline: none; }
+.panel:focus-visible { outline: 3px solid var(--focus); }
+button.link { background: none; color: var(--link); padding: 4px 2px; font-size: 13px; font-weight: 700; text-decoration: underline; }
+button.danger { background: var(--bad-bg); color: var(--bad); }
+button.inline.quiet.danger, button.danger-text { color: var(--bad); }
+.more { position: relative; }
+.more-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 5; min-width: 190px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 10px; box-shadow: 0 12px 32px #142c4626; padding: 6px; display: grid; }
+.more-menu button { background: none; color: var(--ink); text-align: left; font-weight: 600; padding: 9px 10px; border-radius: 7px; }
+.more-menu button:hover:not(:disabled), .more-menu button:focus-visible { background: var(--neutral-bg); filter: none; }
+.more-menu button.danger-text { color: var(--bad); }
+dialog.confirm { border: 1px solid var(--line); border-radius: 16px; padding: 26px 28px 22px; max-width: 440px; box-shadow: 0 16px 48px #03112133; color: var(--ink); }
+dialog.confirm::backdrop { background: #08152e66; }
+dialog.confirm h2 { font-size: 20px; letter-spacing: -.02em; margin: 0 0 10px; color: var(--ink-strong); }
+dialog.confirm p { color: var(--text); font-size: 14px; line-height: 1.6; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.field small.field-error { color: var(--bad); font-weight: 700; }
+select.invalid, input.invalid { border: 2px solid var(--bad); }
+tr.selected td { background: var(--brand-soft); }
+.summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.summary div { background: #f7f9fc; border-radius: 10px; padding: 12px 16px; display: grid; gap: 2px; }
+.summary span, .summary small { color: var(--muted); font-size: 12px; }
+.summary span { font-weight: 700; }
+.summary strong { font-size: 22px; letter-spacing: -.03em; color: var(--ink-strong); }
+.inline-filter { display: flex; align-items: center; gap: 8px; }
+.inline-filter label { font-size: 12px; font-weight: 700; color: var(--muted); }
+.inline-filter select { width: auto; min-height: 34px; padding: 6px 10px; }
+.muted { color: var(--muted); }
+
 /* Tela de credencial */
 .gate { min-height: 100vh; background: radial-gradient(circle at 15% 20%, #1d5772 0, transparent 28%), linear-gradient(135deg, #08152e, #13304d); display: grid; place-items: center; padding: 20px; }
 .gate-card { background: #fff; max-width: 440px; padding: 36px; border-radius: 20px; box-shadow: 0 25px 80px #03112177; }

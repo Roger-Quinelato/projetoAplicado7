@@ -7,13 +7,14 @@ test('F1: cliente elegível → reserva → rascunho de contrato para o mesmo cl
 
   await test.step('cadastra o cliente no CRM', async () => {
     await irPara(page, 'CRM')
+    await page.getByRole('button', { name: 'Novo cliente' }).click()
     const form = page.getByRole('form', { name: 'Novo cliente' })
     await form.getByLabel('Nome (fictício)').fill(nome)
     await form.getByLabel('E-mail sintético').fill(email)
     await form.getByLabel('Elegível para contratar').check()
     await form.getByLabel('Consentimento de serviço').check()
     await form.getByRole('button', { name: 'Cadastrar cliente' }).click()
-    await expect(page.getByRole('status').filter({ hasText: 'Cadastro de cliente' })).toContainText(nome)
+    await expect(page.getByRole('status').filter({ hasText: nome })).toContainText(`Cliente ${nome} cadastrado.`)
     await expect(page.getByRole('row').filter({ hasText: email })).toBeVisible()
   })
 
