@@ -105,7 +105,7 @@ class ReservationInput(BaseModel):
 class ContractCloseInput(BaseModel):
     model_config = ConfigDict(json_schema_extra={"examples": [{"endsOn": "2027-01-08", "reason": "Devolução do veículo"}]})
 
-    endsOn: date | None = Field(default=None, description="Data de encerramento; padrão é a data atual ou o início do contrato, o que for posterior.")
+    endsOn: date | None = Field(default=None, description="Data de encerramento; padrão é a data atual em UTC ou o início do contrato, o que for posterior.")
     reason: str | None = Field(default=None, min_length=3, max_length=200)
 
 

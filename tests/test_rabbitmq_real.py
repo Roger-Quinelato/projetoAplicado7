@@ -62,3 +62,39 @@ def test_fila_cheia_recusa_publicacao_e_evento_fica_pendente(broker, monkeypatch
         assert session.get(OutboxEvent, first).status == "PUBLISHED"
         assert len(session.scalars(select(AuditLog)).all()) == 1
     assert broker.queue_declare(queue=BROKER_QUEUE, passive=True).method.message_count == 1
+
+
+def test_prontidao_informa_listener_amqp_ativo(broker, client):
+    response = client.get("/health/ready")
+    assert response.status_code == 200
+    assert response.json()["broker"] == "UP"
+
+
+def test_broker_indisponivel_nao_deixa_efeito_e_reprocessamento_recupera(broker, client, admin_headers, integrated_contract, monkeypatch):
+    """Roteiro de falha e reprocessamento (plano, seção 6) com o RabbitMQ real na recuperação."""
+    _, contract = integrated_contract
+    contract_id = contract["contractId"]
+    assert client.post(f"/api/v1/contracts/{contract_id}/activate", headers={**admin_headers, "Idempotency-Key": "real-act"}).status_code == 200
+    monkeypatch.setattr(settings, "rabbitmq_url", "amqp://guest:guest@127.0.0.1:1/%2F")  # listener AMQP inalcançável
+    assert client.get("/health/ready").json()["broker"] == "DOWN"
+
+    for _ in range(settings.retry_limit):
+        assert client.post("/api/v1/integration/outbox/dispatch", headers=admin_headers).json() == {"processed": 0, "failed": 1}
+    [failure] = client.get("/api/v1/integration/failures", headers=admin_headers).json()
+    assert (failure["eventType"], failure["attempts"]) == ("ContractActivated.v1", settings.retry_limit)
+    # Sem efeitos parciais: os consumidores foram desfeitos junto com a publicação recusada.
+    assert client.get("/api/v1/finance/invoices", headers=admin_headers, params={"contractId": contract_id}).json() == []
+    assert [p for p in client.get("/api/v1/workflow/processes", headers=admin_headers).json() if p["referenceId"] == contract_id] == []
+
+    monkeypatch.setattr(settings, "rabbitmq_url", RABBITMQ_URL)
+    assert client.get("/health/ready").json()["broker"] == "UP"
+    assert client.post(f"/api/v1/integration/failures/{failure['eventId']}/reprocess", headers=admin_headers).status_code == 200
+    assert client.post("/api/v1/integration/outbox/dispatch", headers=admin_headers).json() == {"processed": 1, "failed": 0}
+    assert client.post("/api/v1/integration/outbox/dispatch", headers=admin_headers).json() == {"processed": 0, "failed": 0}
+
+    assert len(client.get("/api/v1/finance/invoices", headers=admin_headers, params={"contractId": contract_id}).json()) == 1
+    assert len([p for p in client.get("/api/v1/workflow/processes", headers=admin_headers).json() if p["referenceId"] == contract_id]) == 1
+    assert broker.queue_declare(queue=BROKER_QUEUE, passive=True).method.message_count == 1
+    method, _, body = broker.basic_get(queue=BROKER_QUEUE, auto_ack=True)
+    assert method.routing_key == "ContractActivated.v1"
+    assert json.loads(body)["eventId"] == failure["eventId"]

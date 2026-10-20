@@ -242,7 +242,7 @@ function notes(slide, text) {
     ["Confiabilidade", "Cobrança dupla", "Outbox, inbox e idempotência", "Um efeito por fato"],
     ["Disponibilidade", "Chamado perdido", "Estado pendente", "Reconciliação"],
     ["Manutenibilidade", "Acoplamento", "Portas e teste de fronteira", "Mudança local"],
-    ["Desempenho", "Latência", "API sem estado", "p95 local 4,22 ms"],
+    ["Desempenho", "Latência", "API sem estado", "p95 local até 45,1 ms"],
   ];
   const xs = [70, 360, 640, 960], ws = [280, 270, 310, 260];
   head.forEach((h, j) => textbox(slide, h, { left: xs[j], top: 125, width: ws[j], height: 40 }, 22, C.teal, true));
@@ -272,18 +272,18 @@ function notes(slide, text) {
   bullets(slide, ["Mudança no contexto proprietário", "Novos sistemas por adaptadores", "Testes de contrato e de fronteira"], { left: 465, top: 200, width: 360, height: 300 }, 21);
   textbox(slide, "Evolução", { left: 860, top: 140, width: 340, height: 45 }, 26, C.teal, true);
   bullets(slide, ["Contratos aditivos; quebra cria v2", "Migrações aditivas (ADR-002)", "Atualização gradual por versão"], { left: 855, top: 200, width: 360, height: 300 }, 21);
-  textbox(slide, "Viabilidade: um implantável, componentes gratuitos e equipe júnior; custos reais a levantar", { left: 110, top: 540, width: 1060, height: 70 }, 23, C.rust, true);
+  textbox(slide, "Viabilidade: um implantável, serviços gratuitos (não custo zero) e equipe júnior; custos reais a levantar", { left: 110, top: 540, width: 1060, height: 70 }, 23, C.rust, true);
   notes(slide, "Fonte: docs/EVOLUCAO_MANUTENCAO.md (sete perguntas do enunciado) e docs/VISAO_NEGOCIO.md. Indicadores: tempo de ativação, recadastro, SLA incorreto, falhas por integração e tempo de diagnóstico.");
 }
 
 // 14
 {
   const slide = base("Demonstração e resultados");
-  textbox(slide, "211 testes aprovados", { left: 105, top: 145, width: 520, height: 60 }, 34, C.green, true);
-  textbox(slide, "p95  4,22 ms", { left: 800, top: 145, width: 330, height: 60 }, 34, C.green, true);
+  textbox(slide, "246 testes aprovados", { left: 105, top: 145, width: 520, height: 60 }, 34, C.green, true);
+  textbox(slide, "p95 ≤ 45,1 ms", { left: 800, top: 145, width: 330, height: 60 }, 34, C.green, true);
   bullets(slide, ["F1 cria rascunho sem recadastro: 20 de 20", "F2 cria uma cobrança e uma preparação de retirada: 14 de 14", "F3 registra SLA, resolve e conclui o processo: 15 de 15", "Falha controlada preserva e reconcilia o chamado", "Rastreabilidade reúne auditoria e eventos"], { left: 170, top: 250, width: 960, height: 300 }, 26);
   textbox(slide, "Premissas do AS IS seguem para validação com a organização", { left: 250, top: 590, width: 800, height: 42 }, 23, C.rust, true);
-  notes(slide, "Fonte: docs/EVIDENCIAS_VALIDACAO.md. Em 17/10/2026: 211 testes aprovados e 10 ignorados (PostgreSQL/RabbitMQ reais); roteiros demo_f1/f2/f3 contra uvicorn local; p95 de 200 consultas de prontidão em Windows 11, Python 3.12, SQLite.");
+  notes(slide, "Fonte: docs/EVIDENCIAS_VALIDACAO.md. Em 20/10/2026: 246 testes aprovados com PostgreSQL 16 e RabbitMQ 3.12 reais (232 aprovados e 14 ignorados em SQLite puro); 22 roteiros de navegador aprovados; roteiros demo_f1/f2/f3 contra uvicorn local; p95 máximo de 45,1 ms (faturas, PostgreSQL) em 10 consultas de negócio, 60 clientes e 100 amostras, em contêiner Linux, Python 3.13. Não representa hospedagem pública.");
 }
 
 // 15

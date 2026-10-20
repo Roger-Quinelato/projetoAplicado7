@@ -1,6 +1,100 @@
 # Evidências de validação
 
-> Estado de execução em 27/09/2026: consulte [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
+> O estado atual de execução está no [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e no [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
+
+## Viabilidade e documentos (#63 e parte do #65, 2026-10-20)
+
+Base: branch `aceite-integrado` (B–F integrados). Ambiente: contêiner Linux, Python 3.13, LibreOffice para a conversão em PDF.
+
+| Verificação | Resultado |
+|---|---|
+| Suíte Python com PostgreSQL 16 e RabbitMQ 3.12 locais | 246 aprovados, 0 ignorados (só documentação mudou) |
+| Suíte Python com SQLite puro | 232 aprovados, 14 ignorados |
+| `tools/build_report.py` | DOCX regenerado com as contagens e o p95 de 20/10/2026. Renderizado pelo LibreOffice: **21 páginas, 20 sem a capa**. A paginação no Word pode variar; o limite de 15–20 p. depende de a capa contar e precisa ser conferido na exportação final |
+| `tools/build_presentation.mjs` | Fonte atualizada (246 testes, p95 até 45,1 ms, "serviços gratuitos (não custo zero)"). **PPTX não regenerado**: o gerador depende de `@oai/artifact-tool`, ausente neste ambiente. O `output/Apresentacao_Cenario_4.pptx` versionado ainda mostra "211 testes" e "p95 4,22 ms" e deve ser regenerado localmente |
+| Placeholders | Só "nomes a preencher" na capa do relatório e dos slides (`EQUIPE`, pacote J) |
+| Regressões documentais (grep) | Nenhum texto equipara correlação a tracing distribuído, descreve o RabbitMQ como executor dos consumidores ou dá o ADR-006 como aprovado (status: proposto) |
+| Afirmações de custo | "Custos zero" só aparece no título da T14 em `CRONOGRAMA_EXECUCAO.md` (igual ao da issue #17), sem afirmar economia. Relatório e slides passam a dizer "plano gratuito" e "não custo zero" |
+
+- `VISAO_NEGOCIO.md` separa três custos (serviços, implementação e operação), liga cada benefício ao que o protótipo mede hoje e lista as quatro premissas para validação docente, com o código e o teste de cada uma.
+- O aviso de "estado de execução em 27/09/2026", repetido em 17 documentos, perdeu a data vencida e passa a só apontar para o estado e o cronograma.
+- Não verificado: contagem de páginas no Word, PPTX regenerado e publicação (T20, #64).
+
+## Aceite integrado e operacional local (#62, 2026-10-20)
+
+Versão: branch `aceite-integrado`, commit `eb7ca1b` (pacote F) sobre a integração de #57, #68, #69 e #70 (merge `9d08a0a`). Ambiente: Linux (contêiner), Python 3.13, Node 22, Chromium 1194, **PostgreSQL 16.15** e **RabbitMQ 3.12.1** locais, descartáveis, com dados sintéticos. Docker indisponível no contêiner: o Compose foi validado só com `docker compose config`.
+
+| Verificação | Comando | Resultado |
+|---|---|---|
+| Suíte Python, PostgreSQL + RabbitMQ reais | `TEST_DATABASE_URL=… TEST_RABBITMQ_URL=… PYTHONPATH=src python -m pytest -q -rs` | **246 aprovados, 0 ignorados** |
+| Suíte Python, SQLite + RabbitMQ real | idem, sem `TEST_DATABASE_URL` | 236 aprovados, 10 ignorados (exigem PostgreSQL) |
+| Suíte Python, SQLite puro (como no job `application`) | `PYTHONPATH=src python -m pytest -q` | 232 aprovados, 14 ignorados (PostgreSQL/RabbitMQ) |
+| Contrato REST | `python tools/export_openapi.py --check` | atualizado |
+| Frontend | `npm test`; `npm run build` | 12 aprovados; build aprovado |
+| Navegador, API com SQLite novo (como no job `e2e`) | `npm run test:e2e`; `npm run test:a11y` | 21 bloqueantes + axe bloqueante: **22 aprovados** |
+| Navegador, API com **PostgreSQL + RabbitMQ** (`E2E_BASE_URL`, `broker: UP`) | mesmos roteiros | **22 aprovados**, incluindo F1, F2 e F3 pela interface |
+| Desempenho RNF-07 (60 clientes, 100 amostras por consulta) | `python scripts/performance_smoke.py` | todas as 10 consultas com p95 < 500 ms; maior p95: faturas, 23,9 ms (SQLite) e 45,1 ms (PostgreSQL) |
+
+- **Prontidão AMQP reproduzida:** com o RabbitMQ iniciando, `rabbitmq-diagnostics ping` respondeu no 2º segundo, a porta 5672 só aceitou conexão no 3º e `check_port_connectivity` passou no 4º. Compose e CI passam a usar `check_port_connectivity`.
+- **Broker parado e religado de verdade** (API com PostgreSQL, `rabbitmqctl stop`): prontidão `broker: DOWN` com `status: UP`; despacho `failed: 1` e nenhuma fatura do contrato; listener AMQP de volta em ~4 s; despacho `processed: 1`, novo despacho `processed: 0`; uma fatura e um processo para o contrato.
+- **Automatizado:** `test_broker_indisponivel_nao_deixa_efeito_e_reprocessamento_recupera` leva o evento a `FAILED` no limite (3), sem fatura nem processo para o contrato; após a volta do broker, o reprocessamento gera um único conjunto de efeitos e uma mensagem na fila `archcorp.events`.
+- Os 10 ignorados do SQLite são os testes que exigem PostgreSQL (locks, concorrência de pagamento e convergência de migrações em PostgreSQL); todos rodaram na linha PostgreSQL acima.
+- Observação de desempenho: a listagem de faturas é a mais lenta (calcula o saldo por fatura); continua duas ordens de grandeza abaixo da meta.
+- Não verificado: Compose com Docker real, URL pública (T20), PostgreSQL gerenciado, leitor de tela.
+
+## Lacunas da interface e feedback por papel (#61, 2026-10-20)
+
+Ambiente: Linux (contêiner), Node 22, Chromium 1194, API local com SQLite novo. Base: branch do PR #57 (`3b49988`).
+
+- `web/e2e/papeis-e-feedback.spec.ts`: **10 roteiros aprovados**; a suíte Playwright completa teve **19 bloqueantes aprovados** e a varredura axe informativa sem violações.
+- Achado durante a validação: o fundo em gradiente de `.shell` fazia o axe classificar como “incompleto” todo texto fora dos cartões (título, introdução, rodapé), então o contraste dessa área não era medido. Com fundo sólido em `main` (sem mudança visual), o axe passou a medir e encontrou o rodapé abaixo de 4,5:1 (`#66768a` sobre `#f4f7fb`), corrigido para `#526175`. Uma injeção de cor de baixo contraste confirmou que o teste reprova quando há violação.
+- `npm test` (12 aprovados) e `npm run build` aprovados. Backend inalterado.
+- Não verificado: leitor de tela, navegação completa só por teclado e a regra de contraste em estados de foco e hover.
+
+## Criação ambígua e seleção de clientes na interface (#34, 2026-10-20)
+
+Ambiente: Linux (contêiner), Python 3.13, Node 22, SQLite, Chromium 1194. Base: `main` em `cf155ee`.
+
+- `npm test` (web): **12 testes aprovados**, incluindo 8 novos em `web/tests/intents.test.ts` (classificação de falha ambígua, resposta perdida seguida de repetição com a mesma chave e um único registro, recusa de corpo diferente sem chamar a API, descarte explícito, liberação da chave após `4xx` e `503 SERVICE_UNAVAILABLE`).
+- `npm run build` (inclui `tsc -b` estrito): aprovado.
+- Playwright contra a API local com SQLite novo: **9 roteiros bloqueantes aprovados** (2 novos em `web/e2e/selecao-e-ambiguidade.spec.ts`, com 205 clientes de lote) e varredura axe sem violações A/AA nos seis contextos (informativa).
+- `PYTHONPATH=src python -m pytest -q`: **213 aprovados e 10 ignorados** (PostgreSQL e RabbitMQ reais ausentes). O backend não foi alterado.
+- Mudança de comportamento em relação à verificação de 14/10/2026 (seção T10): reenviar com campo corrigido depois de falha ambígua não usa mais chave nova automaticamente; o envio é recusado até o usuário repetir o pedido original ou descartá-lo.
+- Não verificado: URL pública, PostgreSQL, uso por leitor de tela e execução no GitHub Actions.
+
+## Estados finais, auditoria e prazos do Workflow (#59, 2026-10-20)
+
+Ambiente: Linux (contêiner), Python 3.13, SQLite. Base: `main` em `cf155ee`, branch `workflow-estados-prazos`.
+
+- `tests/test_workflow.py`: **13 aprovados**. Com as rotas e o serviço da `main` anterior, **5 falham**: reabertura de tarefa final com outra tarefa ativa, troca de responsável em tarefa final, cancelamento do processo quando todas as tarefas são finais com algum cancelamento, auditoria de criação/transição e prazo de preparação contado do `occurredAt` (despacho atrasado).
+- `PYTHONPATH=src python -m pytest -q`: **226 aprovados e 10 ignorados** (PostgreSQL e RabbitMQ reais ausentes).
+- `tools/export_openapi.py`: OpenAPI regenerado; só mudam descrições das rotas de tarefa (nenhum campo, status ou código removido).
+- Não verificado localmente: PostgreSQL (o job `postgresql` do CI cobre a suíte), interface além das ações já existentes.
+
+## Integridade de F2/F3 e migrações (#60, 2026-10-20)
+
+Ambiente: Linux (contêiner), Python 3.13, SQLite e **PostgreSQL 16 local** (instância descartável, dados sintéticos, `TEST_DATABASE_URL`). Base: `main` em `cf155ee`, branch `f2-f3-integridade-migracoes`. RabbitMQ real não disponível.
+
+- Linha de base da `main` no PostgreSQL local, antes das mudanças: 221 aprovados e 2 ignorados (RabbitMQ).
+- Com as mudanças, PostgreSQL: **227 aprovados e 2 ignorados**; SQLite: **217 aprovados e 12 ignorados** (PostgreSQL/RabbitMQ).
+- Novo `tests/test_integridade_f2_f3.py`:
+  - data padrão de encerramento em UTC (31/12 23h30 em Brasília = 01/01 UTC); **falha com o serviço anterior**, que usava `date.today()` local;
+  - novo evento com outro `eventId` para o mesmo fato (`ContractActivated.v1`, `TicketOpened.v1`) não cria segunda fatura, preparação ou processo de resolução;
+  - pagamentos concorrentes de 1.500 numa fatura de 2.500: um é aceito e o outro recusado com `409`, saldo final 1.000 (somente PostgreSQL).
+- `tests/test_migration_convergence.py`: banco vazio → head única sem divergência dos modelos, em SQLite e PostgreSQL; as convergências a partir de `0003` e de cada `0004` e o bloqueio do downgrade com fatura `FINAL` passaram nos dois bancos.
+- Já cobertos por testes existentes e reexecutados aqui: frações de centavo (`422`), pagamento acima do saldo (`409`), transições que impedem reabrir fatura paga, fatura cancelada não recobrada no acerto final, valor final zero sem fatura, reentrega do mesmo `eventId`, replay e histórico do Support.
+- Não verificado: RabbitMQ real e PostgreSQL gerenciado do provedor.
+
+## Criação ambígua e seleção de clientes na interface (#34, 2026-10-20)
+
+Ambiente: Linux (contêiner), Python 3.13, Node 22, SQLite, Chromium 1194. Base: `main` em `cf155ee`.
+
+- `npm test` (web): **12 testes aprovados**, incluindo 8 novos em `web/tests/intents.test.ts` (classificação de falha ambígua, resposta perdida seguida de repetição com a mesma chave e um único registro, recusa de corpo diferente sem chamar a API, descarte explícito, liberação da chave após `4xx` e `503 SERVICE_UNAVAILABLE`).
+- `npm run build` (inclui `tsc -b` estrito): aprovado.
+- Playwright contra a API local com SQLite novo: **9 roteiros bloqueantes aprovados** (2 novos em `web/e2e/selecao-e-ambiguidade.spec.ts`, com 205 clientes de lote) e varredura axe sem violações A/AA nos seis contextos (informativa).
+- `PYTHONPATH=src python -m pytest -q`: **213 aprovados e 10 ignorados** (PostgreSQL e RabbitMQ reais ausentes). O backend não foi alterado.
+- Mudança de comportamento em relação à verificação de 14/10/2026 (seção T10): reenviar com campo corrigido depois de falha ambígua não usa mais chave nova automaticamente; o envio é recusado até o usuário repetir o pedido original ou descartá-lo.
+- Não verificado: URL pública, PostgreSQL, uso por leitor de tela e execução no GitHub Actions.
 
 ## Verificação em 17/10/2026 (entrega de 19/10)
 

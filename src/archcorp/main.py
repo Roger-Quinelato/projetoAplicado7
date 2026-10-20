@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.routing import APIRoute
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -23,7 +24,7 @@ from archcorp.finance.service import FinanceService, count_invoices
 from archcorp.finance.routes import configure as configure_finance, router as finance_router
 from archcorp.infrastructure.db import engine, get_session, protect_public_demo_tables
 from archcorp.infrastructure.migrate import upgrade_to_head
-from archcorp.integration.service import EventDispatcher
+from archcorp.integration.service import EventDispatcher, broker_status
 from archcorp.integration.public import LegacyIdService
 from archcorp.integration.routes import configure as configure_integration, router as integration_router
 from archcorp.observability import correlation_id_var, logger, metrics_middleware, render_metrics
@@ -76,7 +77,20 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Localiza Integração Cenário 4", version="1.0.0", description="API demonstrativa para CRM, reservas e contratos, financeiro e faturamento, atendimento e assistência 24h, workflow e integração.", lifespan=lifespan)
+def operation_id(route: APIRoute) -> str:
+    """operationId em camelCase a partir do nome do handler (ex.: list_contracts → listContracts); os nomes são únicos."""
+    first, *rest = route.name.split("_")
+    return first + "".join(part.capitalize() for part in rest)
+
+
+app = FastAPI(
+    title="Localiza Integração Cenário 4", version="1.0.0",
+    description="API demonstrativa para CRM, reservas e contratos, financeiro e faturamento, atendimento e assistência 24h, workflow e integração.",
+    # Caminhos absolutos (/api/v1/..., /health/...) na mesma origem da interface, local ou na demonstração.
+    servers=[{"url": "/", "description": "Mesma origem da interface"}],
+    generate_unique_id_function=operation_id,
+    lifespan=lifespan,
+)
 app.middleware("http")(metrics_middleware)
 register_error_handlers(app)
 install_problem_openapi(app)
@@ -118,16 +132,17 @@ def live() -> dict:
 @app.get(
     "/health/ready",
     response_model=HealthResponse,
+    response_model_exclude_none=True,
     tags=["Operação"],
     responses={503: {"description": "Banco indisponível."}},
 )
 def ready(session: Session = Depends(get_session)) -> dict:
-    """Informa se o banco responde; 503 quando indisponível."""
+    """Informa se o banco responde (503 quando indisponível) e, com RABBITMQ_URL, o estado do listener AMQP."""
     try:
         session.execute(text("SELECT 1"))
-        return {"status": "UP", "database": "UP"}
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Banco indisponível") from exc
+    return {"status": "UP", "database": "UP", "broker": broker_status()}
 
 
 @app.get(

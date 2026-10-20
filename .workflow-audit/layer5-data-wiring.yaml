@@ -1,0 +1,18 @@
+# Camada 5: o que a UI consome × o que a API expõe (achados 1, 2, 3 e 7)
+wiring:
+  - ui: nome do cliente nas tabelas (Crm, Contracts, Support)
+    api: GET /api/v1/crm/customers?active=true (até 200, sem filtro por ids)
+    gap: cliente inativo ou além de 200 aparece como UUID; 3 a 5 consultas de clientes por tela
+    finding: 2
+  - ui: tabelas de reservas, contratos, faturas, pagamentos, chamados, processos e tarefas
+    api: listagens sem limit/offset, cortadas em 200
+    gap: truncamento silencioso; a UI não sabe que há mais itens
+    finding: 1
+  - ui: selects de grupo de veículo, proteção e categoria
+    api: texto livre (vehicleGroup, protectionCode, category); só HIGH_PRIORITY_CATEGORIES no domínio
+    gap: valor fora do catálogo da UI é aceito pela API e exibido cru
+    finding: 3
+  - ui: botões Pagar/Cancelar fatura e filtro de processos abertos
+    api: estado da fatura e do processo, sem ações permitidas
+    gap: regra de transição copiada na UI (payableStatus, cancellable, CLOSED)
+    finding: 7

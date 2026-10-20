@@ -1,6 +1,6 @@
 # Plano de conclusão da documentação do Cenário 4
 
-> Registro histórico da rodada de documentação de setembro. Os estados “Concluído” abaixo referem-se àquela rodada e não representam o aceite da entrega S14. Para a execução atual, consulte `docs/CRONOGRAMA_EXECUCAO.md` e `docs/ESTADO_IMPLEMENTACAO.md`; a suíte atual tem 17 testes e a hospedagem pública ainda não foi validada.
+> Registro histórico da rodada de documentação de setembro. Os estados “Concluído” abaixo referem-se àquela rodada e não representam o aceite da entrega S14. Para a execução atual, consulte `docs/CRONOGRAMA_EXECUCAO.md` e `docs/ESTADO_IMPLEMENTACAO.md`. As contagens de testes e o estado da hospedagem pública ficam só em `docs/EVIDENCIAS_VALIDACAO.md` e `docs/ESTADO_IMPLEMENTACAO.md`.
 
 ## Objetivo
 

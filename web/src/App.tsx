@@ -37,10 +37,34 @@ function storeToken(token: string) {
 
 type GateState = { status: 'idle' } | { status: 'checking' } | { status: 'error', error: ApiError, message?: string }
 
+/** Conectividade observada nas respostas da API; não é inferida da autenticação. */
+type Link = { status: 'unknown' } | { status: 'up' | 'down' | 'degraded', at: Date }
+
+function time(at: Date): string {
+  return at.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
+function LinkStatus({ link, onCheck }: { link: Link, onCheck: () => void }) {
+  const text = link.status === 'up' ? `API respondeu às ${time(link.at)}`
+    : link.status === 'down' ? `Sem resposta da API às ${time(link.at)}`
+    : link.status === 'degraded' ? `API respondeu às ${time(link.at)}, mas o banco está indisponível`
+    : 'Conexão com a API ainda não observada'
+  // O horário muda a cada resposta; o leitor de tela só é avisado quando o estado muda.
+  const announced = { unknown: 'não observada', up: 'respondendo', down: 'sem resposta', degraded: 'banco indisponível' }[link.status]
+  return <div className="link-status">
+    <span className={`link-dot ${link.status}`} aria-hidden="true" />
+    <span className="link-text">{text}</span>
+    <span className="sr-only" role="status">Conexão com a API: {announced}</span>
+    <button type="button" onClick={onCheck}>Verificar</button>
+  </div>
+}
+
 export default function App() {
   const [token, setToken] = useState('')
   const [gate, setGate] = useState<GateState>({ status: 'idle' })
   const [route, setRoute] = useState(parseHash)
+  const [link, setLink] = useState<Link>({ status: 'unknown' })
+  const reach = useCallback((reachable: boolean) => setLink({ status: reachable ? 'up' : 'down', at: new Date() }), [])
   const heading = useRef<HTMLHeadingElement>(null)
   const firstRender = useRef(true)
 
@@ -48,7 +72,7 @@ export default function App() {
   const verify = useCallback(async (candidate: string) => {
     setGate({ status: 'checking' })
     try {
-      await createApi(candidate).demoState()
+      await createApi(candidate, undefined, reach).demoState()
     } catch (error) {
       const apiError = asApiError(error)
       if (apiError.status !== 403) {
@@ -61,7 +85,7 @@ export default function App() {
     storeToken(candidate)
     setToken(candidate)
     setGate({ status: 'idle' })
-  }, [])
+  }, [reach])
 
   useEffect(() => {
     const stored = readStoredToken()
@@ -89,8 +113,8 @@ export default function App() {
   const [eventsVersion, setEventsVersion] = useState(0)
   const dispatched = useCallback(() => setDataVersion(v => v + 1), [])
   const commandDone = useCallback(() => setEventsVersion(v => v + 1), [])
-  // A API fica estável entre versões: só a credencial recria o cliente e recarrega tudo.
-  const api = useMemo(() => token ? createApi(token) : null, [token])
+  // A API fica estável entre versões: só a credencial (ou o observador de conectividade) recria o cliente e recarrega tudo.
+  const api = useMemo(() => token ? createApi(token, undefined, reach) : null, [token, reach])
   const session = useMemo<Session | null>(() => api ? { api, signOut, navigate, dataVersion, eventsVersion, dispatched, commandDone } : null,
     [api, signOut, navigate, dataVersion, eventsVersion, dispatched, commandDone])
 
@@ -109,9 +133,14 @@ export default function App() {
           {ROUTES.map(r => <a key={r.path} href={`#${r.path}`} aria-current={r.path === current.path ? 'page' : undefined}>{r.label}</a>)}
         </nav>
         <div className="side-bottom">
-          <span className="online-dot" aria-hidden="true" />
-          <span>{profile}</span>
-          <button type="button" onClick={signOut}>Sair</button>
+          <LinkStatus link={link} onCheck={() => void session.api.readiness().catch(error => {
+            // Falha de rede já chegou pelo sinal de conectividade; 503 é API no ar com banco indisponível.
+            if (asApiError(error).status === 503) setLink({ status: 'degraded', at: new Date() })
+          })} />
+          <div className="side-profile">
+            <span>{profile}</span>
+            <button type="button" onClick={signOut}>Sair</button>
+          </div>
         </div>
       </aside>
       <main id="conteudo">
