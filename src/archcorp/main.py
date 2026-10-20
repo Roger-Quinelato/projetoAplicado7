@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.routing import APIRoute
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -76,7 +77,20 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Localiza Integração Cenário 4", version="1.0.0", description="API demonstrativa para CRM, reservas e contratos, financeiro e faturamento, atendimento e assistência 24h, workflow e integração.", lifespan=lifespan)
+def operation_id(route: APIRoute) -> str:
+    """operationId em camelCase a partir do nome do handler (ex.: list_contracts → listContracts); os nomes são únicos."""
+    first, *rest = route.name.split("_")
+    return first + "".join(part.capitalize() for part in rest)
+
+
+app = FastAPI(
+    title="Localiza Integração Cenário 4", version="1.0.0",
+    description="API demonstrativa para CRM, reservas e contratos, financeiro e faturamento, atendimento e assistência 24h, workflow e integração.",
+    # Caminhos absolutos (/api/v1/..., /health/...) na mesma origem da interface, local ou na demonstração.
+    servers=[{"url": "/", "description": "Mesma origem da interface"}],
+    generate_unique_id_function=operation_id,
+    lifespan=lifespan,
+)
 app.middleware("http")(metrics_middleware)
 register_error_handlers(app)
 install_problem_openapi(app)

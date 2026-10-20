@@ -4,6 +4,9 @@ info:
   description: API demonstrativa para CRM, reservas e contratos, financeiro e faturamento,
     atendimento e assistência 24h, workflow e integração.
   version: 1.0.0
+servers:
+- url: /
+  description: Mesma origem da interface
 paths:
   /health/live:
     get:
@@ -11,7 +14,7 @@ paths:
       - Operação
       summary: Live
       description: Informa que o processo está no ar.
-      operationId: live_health_live_get
+      operationId: live
       responses:
         '200':
           description: Successful Response
@@ -27,7 +30,7 @@ paths:
       summary: Ready
       description: Informa se o banco responde (503 quando indisponível) e, com RABBITMQ_URL,
         o estado do listener AMQP.
-      operationId: ready_health_ready_get
+      operationId: ready
       responses:
         '200':
           description: Successful Response
@@ -56,7 +59,7 @@ paths:
       - Operação
       summary: Metrics
       description: Expõe contadores e latência no formato de texto do Prometheus.
-      operationId: metrics_metrics_get
+      operationId: metrics
       responses:
         '200':
           description: Contadores e latência no formato de texto do Prometheus, rotulados
@@ -120,7 +123,7 @@ paths:
       - Demonstração
       summary: Demo State
       description: Resume a quantidade de registros de cada módulo.
-      operationId: demo_state_api_v1_demo_state_get
+      operationId: demoState
       responses:
         '200':
           description: Successful Response
@@ -172,7 +175,7 @@ paths:
       tags:
       - Integração
       summary: Dispatch Outbox
-      operationId: dispatch_outbox_api_v1_integration_outbox_dispatch_post
+      operationId: dispatchOutbox
       security:
       - HTTPBearer: []
       responses:
@@ -249,7 +252,7 @@ paths:
       tags:
       - Integração
       summary: List Failures
-      operationId: list_failures_api_v1_integration_failures_get
+      operationId: listFailures
       security:
       - HTTPBearer: []
       responses:
@@ -261,7 +264,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/FailureResponse'
-                title: Response List Failures Api V1 Integration Failures Get
+                title: Response Listfailures
               example:
               - eventId: cccccccc-cccc-4ccc-8ccc-cccccccccccc
                 eventType: ContractActivated.v1
@@ -332,7 +335,7 @@ paths:
       tags:
       - Integração
       summary: Reprocess
-      operationId: reprocess_api_v1_integration_failures__event_id__reprocess_post
+      operationId: reprocess
       security:
       - HTTPBearer: []
       parameters:
@@ -452,7 +455,7 @@ paths:
       tags:
       - Integração
       summary: Resolve Legacy Id
-      operationId: resolve_legacy_id_api_v1_integration_legacy_ids__source_system___legacy_id__get
+      operationId: resolveLegacyId
       security:
       - HTTPBearer: []
       parameters:
@@ -561,7 +564,7 @@ paths:
       tags:
       - Integração
       summary: Operation Trace
-      operationId: operation_trace_api_v1_operations__correlation_id__get
+      operationId: operationTrace
       security:
       - HTTPBearer: []
       parameters:
@@ -689,7 +692,7 @@ paths:
       summary: Create Customer
       description: Cadastra cliente com identificador global e, opcionalmente, o identificador
         legado do CRM.
-      operationId: create_customer_api_v1_crm_customers_post
+      operationId: createCustomer
       security:
       - HTTPBearer: []
       requestBody:
@@ -787,7 +790,7 @@ paths:
       summary: List Customers
       description: Lista clientes com filtros por e-mail, identificador legado e situação,
         com paginação.
-      operationId: list_customers_api_v1_crm_customers_get
+      operationId: listCustomers
       security:
       - HTTPBearer: []
       parameters:
@@ -851,7 +854,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/CustomerResponse'
-                title: Response List Customers Api V1 Crm Customers Get
+                title: Response Listcustomers
         '401':
           description: Token ausente ou inválido.
           content:
@@ -903,7 +906,7 @@ paths:
       - CRM
       summary: Get Customer
       description: Consulta um cliente pelo identificador global.
-      operationId: get_customer_api_v1_crm_customers__customer_id__get
+      operationId: getCustomer
       security:
       - HTTPBearer: []
       parameters:
@@ -994,7 +997,7 @@ paths:
       summary: Update Customer
       description: Altera nome, e-mail, elegibilidade ou consentimento; nome ou e-mail
         alterados publicam CustomerUpdated.v1.
-      operationId: update_customer_api_v1_crm_customers__customer_id__patch
+      operationId: updateCustomer
       security:
       - HTTPBearer: []
       parameters:
@@ -1106,7 +1109,7 @@ paths:
       summary: Deactivate Customer
       description: Inativa o cliente sem apagar o histórico; cliente inativo não origina
         reserva nem contrato.
-      operationId: deactivate_customer_api_v1_crm_customers__customer_id__deactivate_post
+      operationId: deactivateCustomer
       security:
       - HTTPBearer: []
       parameters:
@@ -1197,7 +1200,7 @@ paths:
       - CRM
       summary: Create Contact
       description: Cadastra contato de um cliente existente.
-      operationId: create_contact_api_v1_crm_contacts_post
+      operationId: createContact
       security:
       - HTTPBearer: []
       requestBody:
@@ -1300,7 +1303,7 @@ paths:
       - CRM
       summary: List Contacts
       description: Lista contatos, com filtro opcional por cliente.
-      operationId: list_contacts_api_v1_crm_contacts_get
+      operationId: listContacts
       security:
       - HTTPBearer: []
       parameters:
@@ -1330,7 +1333,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ContactResponse'
-                title: Response List Contacts Api V1 Crm Contacts Get
+                title: Response Listcontacts
         '401':
           description: Token ausente ou inválido.
           content:
@@ -1382,7 +1385,7 @@ paths:
       - CRM
       summary: Get Contact
       description: Consulta um contato.
-      operationId: get_contact_api_v1_crm_contacts__contact_id__get
+      operationId: getContact
       security:
       - HTTPBearer: []
       parameters:
@@ -1472,7 +1475,7 @@ paths:
       - CRM
       summary: Update Contact
       description: Altera nome, e-mail ou telefone do contato.
-      operationId: update_contact_api_v1_crm_contacts__contact_id__patch
+      operationId: updateContact
       security:
       - HTTPBearer: []
       parameters:
@@ -1582,7 +1585,7 @@ paths:
       - CRM
       summary: Delete Contact
       description: Remove o contato.
-      operationId: delete_contact_api_v1_crm_contacts__contact_id__delete
+      operationId: deleteContact
       security:
       - HTTPBearer: []
       parameters:
@@ -1669,7 +1672,7 @@ paths:
       - CRM
       summary: Create Opportunity
       description: Cria oportunidade em aberto para um cliente existente.
-      operationId: create_opportunity_api_v1_crm_opportunities_post
+      operationId: createOpportunity
       security:
       - HTTPBearer: []
       requestBody:
@@ -1758,7 +1761,7 @@ paths:
       - CRM
       summary: List Opportunities
       description: Lista oportunidades, com filtros por cliente e estado.
-      operationId: list_opportunities_api_v1_crm_opportunities_get
+      operationId: listOpportunities
       security:
       - HTTPBearer: []
       parameters:
@@ -1800,7 +1803,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/OpportunityResponse'
-                title: Response List Opportunities Api V1 Crm Opportunities Get
+                title: Response Listopportunities
         '401':
           description: Token ausente ou inválido.
           content:
@@ -1852,7 +1855,7 @@ paths:
       - CRM
       summary: Get Opportunity
       description: Consulta uma oportunidade.
-      operationId: get_opportunity_api_v1_crm_opportunities__opportunity_id__get
+      operationId: getOpportunity
       security:
       - HTTPBearer: []
       parameters:
@@ -1943,7 +1946,7 @@ paths:
       summary: Update Opportunity
       description: Altera estado, título ou notas; OPEN pode ir para WON ou LOST,
         que são finais.
-      operationId: update_opportunity_api_v1_crm_opportunities__opportunity_id__patch
+      operationId: updateOpportunity
       security:
       - HTTPBearer: []
       parameters:
@@ -2055,7 +2058,7 @@ paths:
       summary: Create Reservation
       description: Registra reserva para cliente elegível; com Idempotency-Key, repetir
         a chamada devolve a mesma reserva.
-      operationId: create_reservation_api_v1_contracts_reservations_post
+      operationId: createReservation
       security:
       - HTTPBearer: []
       parameters:
@@ -2194,7 +2197,7 @@ paths:
       summary: List Reservations
       description: Lista até 200 reservas, das mais recentes para as mais antigas,
         com filtro opcional por cliente.
-      operationId: list_reservations_api_v1_contracts_reservations_get
+      operationId: listReservations
       security:
       - HTTPBearer: []
       parameters:
@@ -2224,7 +2227,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ReservationResponse'
-                title: Response List Reservations Api V1 Contracts Reservations Get
+                title: Response Listreservations
         '401':
           description: Token ausente ou inválido.
           content:
@@ -2276,7 +2279,7 @@ paths:
       - Reservas e contratos
       summary: Get Reservation
       description: Consulta uma reserva pelo identificador global.
-      operationId: get_reservation_api_v1_contracts_reservations__reservation_id__get
+      operationId: getReservation
       security:
       - HTTPBearer: []
       parameters:
@@ -2368,7 +2371,7 @@ paths:
       summary: Draft From Reservation
       description: Gera o rascunho de contrato a partir da reserva, sem recadastrar
         o cliente, na mesma transação.
-      operationId: draft_from_reservation_api_v1_contracts_reservations__reservation_id__draft_post
+      operationId: draftFromReservation
       security:
       - HTTPBearer: []
       parameters:
@@ -2504,7 +2507,7 @@ paths:
       summary: Cancel Reservation
       description: Cancela reserva solicitada ou com rascunho; o rascunho vinculado
         também é cancelado.
-      operationId: cancel_reservation_api_v1_contracts_reservations__reservation_id__cancel_post
+      operationId: cancelReservation
       security:
       - HTTPBearer: []
       parameters:
@@ -2610,7 +2613,7 @@ paths:
       summary: List Contracts
       description: Lista até 200 contratos, dos mais recentes para os mais antigos,
         com filtro opcional por cliente.
-      operationId: list_contracts_api_v1_contracts_get
+      operationId: listContracts
       security:
       - HTTPBearer: []
       parameters:
@@ -2640,7 +2643,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ContractResponse'
-                title: Response List Contracts Api V1 Contracts Get
+                title: Response Listcontracts
         '401':
           description: Token ausente ou inválido.
           content:
@@ -2692,7 +2695,7 @@ paths:
       - Reservas e contratos
       summary: Get Contract
       description: Consulta um contrato pelo identificador global.
-      operationId: get_contract_api_v1_contracts__contract_id__get
+      operationId: getContract
       security:
       - HTTPBearer: []
       parameters:
@@ -2783,7 +2786,7 @@ paths:
       - Reservas e contratos
       summary: Close Contract
       description: Encerra contrato ativo, encerra a reserva vinculada e publica ContractClosed.v1.
-      operationId: close_contract_api_v1_contracts__contract_id__close_post
+      operationId: closeContract
       security:
       - HTTPBearer: []
       parameters:
@@ -2913,7 +2916,7 @@ paths:
       tags:
       - Reservas e contratos
       summary: Create Contract Draft
-      operationId: create_contract_draft_api_v1_contracts_drafts_post
+      operationId: createContractDraft
       security:
       - HTTPBearer: []
       parameters:
@@ -3107,7 +3110,7 @@ paths:
       tags:
       - Reservas e contratos
       summary: Activate Contract
-      operationId: activate_contract_api_v1_contracts__contract_id__activate_post
+      operationId: activateContract
       security:
       - HTTPBearer: []
       parameters:
@@ -3295,7 +3298,7 @@ paths:
       tags:
       - Reservas e contratos
       summary: Entitlement
-      operationId: entitlement_api_v1_contracts__contract_id__entitlement_get
+      operationId: entitlement
       security:
       - HTTPBearer: []
       parameters:
@@ -3430,7 +3433,7 @@ paths:
       tags:
       - Financeiro e faturamento
       summary: List Invoices
-      operationId: list_invoices_api_v1_finance_invoices_get
+      operationId: listInvoices
       security:
       - HTTPBearer: []
       parameters:
@@ -3460,7 +3463,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/InvoiceResponse'
-                title: Response List Invoices Api V1 Finance Invoices Get
+                title: Response Listinvoices
         '401':
           description: Token ausente ou inválido.
           content:
@@ -3517,7 +3520,7 @@ paths:
 
         Comando explícito e idempotente pelo estado: repetir não marca de novo nem
         duplica auditoria por fatura.'
-      operationId: check_overdue_api_v1_finance_invoices_overdue_check_post
+      operationId: checkOverdue
       requestBody:
         content:
           application/json:
@@ -3593,7 +3596,7 @@ paths:
       tags:
       - Financeiro e faturamento
       summary: Get Invoice
-      operationId: get_invoice_api_v1_finance_invoices__invoice_id__get
+      operationId: getInvoice
       security:
       - HTTPBearer: []
       parameters:
@@ -3685,7 +3688,7 @@ paths:
       summary: Record Payment
       description: 'Registra pagamento simulado (sem PSP): valida moeda, saldo e estado
         da fatura e atualiza o saldo.'
-      operationId: record_payment_api_v1_finance_invoices__invoice_id__payments_post
+      operationId: recordPayment
       security:
       - HTTPBearer: []
       parameters:
@@ -3850,7 +3853,7 @@ paths:
       summary: Cancel Invoice
       description: Cancela fatura em aberto e sem pagamento; repetir devolve a fatura
         cancelada.
-      operationId: cancel_invoice_api_v1_finance_invoices__invoice_id__cancel_post
+      operationId: cancelInvoice
       security:
       - HTTPBearer: []
       parameters:
@@ -3961,7 +3964,7 @@ paths:
       - Financeiro e faturamento
       summary: List Payments
       description: Lista pagamentos, com filtro opcional por fatura.
-      operationId: list_payments_api_v1_finance_payments_get
+      operationId: listPayments
       security:
       - HTTPBearer: []
       parameters:
@@ -3991,7 +3994,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PaymentResponse'
-                title: Response List Payments Api V1 Finance Payments Get
+                title: Response Listpayments
         '401':
           description: Token ausente ou inválido.
           content:
@@ -4042,7 +4045,7 @@ paths:
       tags:
       - Atendimento e assistência 24h
       summary: List Tickets
-      operationId: list_tickets_api_v1_support_tickets_get
+      operationId: listTickets
       security:
       - HTTPBearer: []
       responses:
@@ -4054,7 +4057,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/TicketDetailResponse'
-                title: Response List Tickets Api V1 Support Tickets Get
+                title: Response Listtickets
         '401':
           description: Token ausente ou inválido.
           content:
@@ -4096,7 +4099,7 @@ paths:
       tags:
       - Atendimento e assistência 24h
       summary: Open Ticket
-      operationId: open_ticket_api_v1_support_tickets_post
+      operationId: openTicket
       security:
       - HTTPBearer: []
       parameters:
@@ -4288,7 +4291,7 @@ paths:
       summary: Reconcile Pending
       description: Reconcilia explicitamente os chamados em PENDING_ENTITLEMENT depois
         que Contracts volta a responder.
-      operationId: reconcile_pending_api_v1_support_tickets_reconcile_pending_post
+      operationId: reconcilePending
       security:
       - HTTPBearer: []
       parameters:
@@ -4382,7 +4385,7 @@ paths:
       tags:
       - Atendimento e assistência 24h
       summary: Get Ticket
-      operationId: get_ticket_api_v1_support_tickets__ticket_id__get
+      operationId: getTicket
       security:
       - HTTPBearer: []
       parameters:
@@ -4474,7 +4477,7 @@ paths:
       summary: Ticket History
       description: Histórico de abertura, atribuições, reconciliação e resolução,
         com papel e correlação de cada ação.
-      operationId: ticket_history_api_v1_support_tickets__ticket_id__history_get
+      operationId: ticketHistory
       security:
       - HTTPBearer: []
       parameters:
@@ -4502,8 +4505,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/TicketHistoryEntry'
-                title: Response Ticket History Api V1 Support Tickets  Ticket Id  History
-                  Get
+                title: Response Tickethistory
               example:
               - occurredAt: '2026-10-01T10:10:00Z'
                 action: OPENED
@@ -4602,7 +4604,7 @@ paths:
       summary: Assign Ticket
       description: Atribui ou reatribui o responsável; repetir o mesmo responsável
         não altera o histórico.
-      operationId: assign_ticket_api_v1_support_tickets__ticket_id__assign_post
+      operationId: assignTicket
       security:
       - HTTPBearer: []
       parameters:
@@ -4714,7 +4716,7 @@ paths:
       summary: Resolve Ticket
       description: Resolve chamado aberto; a mesma Idempotency-Key recupera a resposta
         original. Sem chave, preserva os conflitos v1.
-      operationId: resolve_ticket_api_v1_support_tickets__ticket_id__resolve_post
+      operationId: resolveTicket
       security:
       - HTTPBearer: []
       parameters:
@@ -4874,7 +4876,7 @@ paths:
       summary: Reconcile Ticket
       description: Reconcilia pendência; replay persistido exige a mesma Idempotency-Key.
         Sem chave, preserva os conflitos v1.
-      operationId: reconcile_ticket_api_v1_support_tickets__ticket_id__reconcile_post
+      operationId: reconcileTicket
       security:
       - HTTPBearer: []
       parameters:
@@ -5061,7 +5063,7 @@ paths:
       - Gestão de processos
       summary: List Processes
       description: Lista até 200 processos.
-      operationId: list_processes_api_v1_workflow_processes_get
+      operationId: listProcesses
       responses:
         '200':
           description: Successful Response
@@ -5071,7 +5073,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/ProcessResponse'
                 type: array
-                title: Response List Processes Api V1 Workflow Processes Get
+                title: Response Listprocesses
         '401':
           description: Token ausente ou inválido.
           content:
@@ -5117,7 +5119,7 @@ paths:
       - Gestão de processos
       summary: Get Process
       description: Consulta um processo.
-      operationId: get_process_api_v1_workflow_processes__process_id__get
+      operationId: getProcess
       security:
       - HTTPBearer: []
       parameters:
@@ -5208,7 +5210,7 @@ paths:
       - Gestão de processos
       summary: List Tasks
       description: Lista até 200 tarefas, com filtro opcional por processo.
-      operationId: list_tasks_api_v1_workflow_tasks_get
+      operationId: listTasks
       security:
       - HTTPBearer: []
       parameters:
@@ -5238,7 +5240,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/TaskResponse'
-                title: Response List Tasks Api V1 Workflow Tasks Get
+                title: Response Listtasks
         '401':
           description: Token ausente ou inválido.
           content:
@@ -5290,7 +5292,7 @@ paths:
       summary: Create Task
       description: Cria tarefa em processo não encerrado, com o prazo do processo;
         a criação é auditada.
-      operationId: create_task_api_v1_workflow_tasks_post
+      operationId: createTask
       security:
       - HTTPBearer: []
       requestBody:
@@ -5397,7 +5399,7 @@ paths:
         tarefa concluída ou cancelada é final e repetir o estado e o responsável vigentes
         não tem efeito. O processo é concluído quando todas as tarefas terminam e
         cancelado quando todas são finais com algum cancelamento.
-      operationId: change_task_api_v1_workflow_tasks__task_id__patch
+      operationId: changeTask
       security:
       - HTTPBearer: []
       parameters:
