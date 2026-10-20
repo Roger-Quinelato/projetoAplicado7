@@ -26,9 +26,10 @@ test('F2: ativação → uma fatura paga em duas parcelas e uma preparação de 
     await linha.getByRole('button', { name: 'Ativar' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Ativação de contrato: concluído.' })).toBeVisible()
     await expect(linha).toContainText('Ativo')
-    await irPara(page, 'Visão geral')
-    await page.getByRole('button', { name: 'Despachar eventos pendentes' }).click()
-    await expect(page.getByRole('status').filter({ hasText: 'Despacho da outbox: concluído.' })).toContainText('1 evento(s) processado(s), 0 com falha.')
+    // Barra global de eventos (#67), visível em todas as telas.
+    const barra = page.getByRole('region', { name: 'Eventos de integração' })
+    await barra.getByRole('button', { name: 'Despachar eventos' }).click()
+    await expect(barra).toContainText('1 evento entregue, nenhuma falha.')
   })
 
   await test.step('paga a fatura em duas parcelas com centavos', async () => {
@@ -50,9 +51,9 @@ test('F2: ativação → uma fatura paga em duas parcelas e uma preparação de 
   })
 
   await test.step('a preparação de retirada existe uma única vez, mesmo com novo despacho', async () => {
-    await irPara(page, 'Visão geral')
-    await page.getByRole('button', { name: 'Despachar eventos pendentes' }).click()
-    await expect(page.getByRole('status').filter({ hasText: 'Nenhum evento pendente.' })).toBeVisible()
+    const barra = page.getByRole('region', { name: 'Eventos de integração' })
+    await expect(barra).toContainText('Nenhum evento aguardando despacho')
+    await expect(barra.getByRole('button', { name: 'Despachar eventos' })).toBeDisabled()
     await irPara(page, 'Workflow')
     await expect(page.getByRole('region', { name: 'Tabela: Processos' }).getByRole('row').filter({ hasText: curto })).toHaveCount(1)
     const faturas = await (await page.request.get(`/api/v1/finance/invoices?contractId=${contrato.contractId}`, { headers: ADMIN })).json()
