@@ -241,3 +241,6 @@ tr.selected td { background: var(--brand-soft); }
   .events-row { flex-wrap: wrap; }
   .events-text { flex-basis: calc(100% - 24px); }
 }
+
+.field-error-text { color: var(--bad); }
+@media (max-width: 900px) { .summary { grid-template-columns: 1fr; } .card-head { flex-wrap: wrap; } }

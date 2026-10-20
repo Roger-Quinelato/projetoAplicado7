@@ -320,12 +320,16 @@ export function ActionForm({ submit, busy, onSubmit, children, label, reset = fo
 }
 
 export interface Column<T> { key: string, label: string, render: (row: T) => ReactNode }
-export function Table<T>({ rows, columns, rowKey, caption }: { rows: T[], columns: Column<T>[], rowKey: (row: T) => string, caption: string }) {
+export function Table<T>({ rows, columns, rowKey, caption, rowClass }: {
+  rows: T[], columns: Column<T>[], rowKey: (row: T) => string, caption: string
+  /** Classe opcional por linha (ex.: `selected` para a linha escolhida). */
+  rowClass?: (row: T) => string | undefined
+}) {
   return <div className="table-wrap" tabIndex={0} role="region" aria-label={`Tabela: ${caption}`}>
     <table>
       <caption className="sr-only">{caption}</caption>
       <thead><tr>{columns.map(c => <th key={c.key} scope="col">{c.label}</th>)}</tr></thead>
-      <tbody>{rows.map(row => <tr key={rowKey(row)}>{columns.map(c => <td key={c.key}>{c.render(row)}</td>)}</tr>)}</tbody>
+      <tbody>{rows.map(row => <tr key={rowKey(row)} className={rowClass?.(row)}>{columns.map(c => <td key={c.key}>{c.render(row)}</td>)}</tr>)}</tbody>
     </table>
   </div>
 }
