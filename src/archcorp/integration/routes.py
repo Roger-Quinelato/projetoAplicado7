@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from uuid import UUID
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from archcorp.infrastructure.db import get_session
 from archcorp.observability import correlation_id_var
 from archcorp.security import require_roles
-from archcorp.api_docs import CORRELATION_REQUEST_PARAMETER, DISPATCH_RESPONSES, FAILURE_LIST_RESPONSES, REPROCESS_RESPONSES, OPERATION_TRACE_RESPONSES, COMMON_API_ERRORS
+from archcorp.api_docs import CORRELATION_REQUEST_PARAMETER, DISPATCH_RESPONSES, OUTBOX_SUMMARY_RESPONSES, FAILURE_LIST_RESPONSES, REPROCESS_RESPONSES, OPERATION_TRACE_RESPONSES, COMMON_API_ERRORS
 from archcorp.errors import problem_content, problem_example
-from archcorp.integration.schemas import DispatchResponse, FailureResponse, ReprocessResponse, LegacyIdResponse, OperationTraceResponse
+from archcorp.integration.schemas import DispatchResponse, OutboxSummaryResponse, FailureResponse, ReprocessResponse, LegacyIdResponse, OperationTraceResponse
 from archcorp.integration.models import AuditLog, OutboxEvent
 from archcorp.integration.service import EventDispatcher, LegacyIdService, audit
 router = APIRouter(tags=["Integração"])
@@ -30,6 +30,18 @@ def dispatcher_service() -> EventDispatcher:
 )
 def dispatch_outbox(session: Session = Depends(get_session), dispatcher: EventDispatcher = Depends(dispatcher_service)) -> dict:
     return dispatcher.dispatch_pending(session)
+
+
+@router.get(
+    "/api/v1/integration/outbox/summary",
+    response_model=OutboxSummaryResponse,
+    dependencies=[Depends(require_roles("operations", "admin"))],
+    responses=OUTBOX_SUMMARY_RESPONSES,
+    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
+)
+def outbox_summary(session: Session = Depends(get_session)) -> dict:
+    counts = dict(session.execute(select(OutboxEvent.status, func.count()).where(OutboxEvent.status.in_(("PENDING", "FAILED"))).group_by(OutboxEvent.status)).all())
+    return {"pending": counts.get("PENDING", 0), "failed": counts.get("FAILED", 0)}
 
 
 @router.get(

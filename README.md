@@ -166,6 +166,7 @@ O workflow `Verify` roda em cada PR:
 | `GET /metrics` | Contadores e latência no formato Prometheus, rotulados pelo template da rota; exige `operations` ou `admin` |
 | `GET /api/v1/operations/{correlationId}` | Trilha de auditoria de uma operação |
 | `POST /api/v1/integration/outbox/dispatch` | Despacho explícito da outbox, também disponível na interface |
+| `GET /api/v1/integration/outbox/summary` | Quantidade de eventos pendentes e com falha permanente; alimenta a barra de eventos da interface e exige `operations` ou `admin` |
 | `GET /api/v1/integration/failures` | Eventos com falha permanente |
 | `POST /api/v1/integration/failures/{eventId}/reprocess` | Reprocessamento auditável, sem duplicar efeitos |
 | `GET /api/v1/integration/legacy-ids/{sourceSystem}/{legacyId}` | UUID global de um identificador legado |

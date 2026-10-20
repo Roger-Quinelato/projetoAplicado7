@@ -8,6 +8,12 @@ export interface Session {
   /** Volta à tela de credencial (usado em respostas 401). */
   signOut: () => void
   navigate: (route: string) => void
+  /** Muda após cada despacho; as consultas de todas as telas recarregam quando ela muda. */
+  dataVersion: number
+  /** Muda após cada comando concluído; a barra de eventos reconsulta a outbox quando ela muda. */
+  eventsVersion: number
+  dispatched: () => void
+  commandDone: () => void
 }
 
 export const SessionContext = createContext<Session | null>(null)
@@ -75,7 +81,7 @@ export type Resource<T> =
 
 /** Carrega um recurso da API com estados explícitos de carregamento, sucesso e erro. */
 export function useResource<T>(load: (api: Api) => Promise<ApiResult<T>>, deps: unknown[]): Resource<T> {
-  const { api } = useSession()
+  const { api, dataVersion } = useSession()
   const [state, setState] = useState<{ status: 'loading' | 'success' | 'error', data?: T, error?: ApiError }>({ status: 'loading' })
   const sequence = useRef(0)
   const loader = useRef(load)
@@ -92,7 +98,7 @@ export function useResource<T>(load: (api: Api) => Promise<ApiResult<T>>, deps: 
     }
   }, [api])
 
-  useEffect(() => { void reload() }, [reload, ...deps])
+  useEffect(() => { void reload() }, [reload, dataVersion, ...deps])
   return { ...state, reload } as Resource<T>
 }
 
@@ -125,6 +131,7 @@ export type Feedback =
 
 /** Executa comandos com estado de envio e feedback legível de sucesso ou erro. */
 export function useActions() {
+  const { commandDone } = useSession()
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -135,6 +142,7 @@ export function useActions() {
       const result = await action()
       const suffix = describe ? ` ${describe(result.data)}` : ''
       setFeedback({ kind: 'success', message: `${label}: concluído.${suffix}`, correlationId: result.correlationId, replayed: result.replayed })
+      commandDone()
       return result
     } catch (error) {
       setFeedback({ kind: 'error', message: `${label}: não concluído.`, error: asApiError(error) })
@@ -142,7 +150,7 @@ export function useActions() {
     } finally {
       setBusy(false)
     }
-  }, [])
+  }, [commandDone])
 
   return { feedback, busy, run, clear: () => setFeedback(null) }
 }

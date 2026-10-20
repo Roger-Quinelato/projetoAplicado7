@@ -243,6 +243,84 @@ paths:
           type: string
           format: uuid
         example: 11111111-1111-4111-8111-111111111111
+  /api/v1/integration/outbox/summary:
+    get:
+      tags:
+      - Integração
+      summary: Outbox Summary
+      operationId: outbox_summary_api_v1_integration_outbox_summary_get
+      security:
+      - HTTPBearer: []
+      responses:
+        '200':
+          description: Quantidade de eventos aguardando despacho e de eventos com
+            falha permanente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutboxSummaryResponse'
+              example:
+                pending: 3
+                failed: 0
+          headers:
+            X-Correlation-ID:
+              description: UUID usado para correlacionar a requisição, os logs e os
+                eventos.
+              schema:
+                type: string
+                format: uuid
+              example: 11111111-1111-4111-8111-111111111111
+        '400':
+          description: Cabeçalho de correlação inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:bad-request
+                title: Requisição inválida
+                status: 400
+                detail: X-Correlation-ID deve ser UUID
+                instance: /api/v1/contracts/drafts
+                code: BAD_REQUEST
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/contracts/drafts
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/contracts/drafts
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+      parameters:
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
   /api/v1/integration/failures:
     get:
       tags:
@@ -6479,6 +6557,19 @@ components:
       - status: WON
       - notes: Revisar volume
         title: Renovação de frota 2027 - fase 2
+    OutboxSummaryResponse:
+      properties:
+        pending:
+          type: integer
+          title: Pending
+        failed:
+          type: integer
+          title: Failed
+      type: object
+      required:
+      - pending
+      - failed
+      title: OutboxSummaryResponse
     OverdueCheckInput:
       properties:
         asOf:
