@@ -1,0 +1,125 @@
+# Camada 3: achados classificados (auditoria de excesso, não compartilhamento e redundância)
+# Base: branch viabilidade-e-documentos @ f8945f3 (aceite-integrado + PR #72). Modo revisão: nada corrigido.
+findings:
+  - id: 1
+    title: Listagens com limite fixo de 200 sem paginação
+    kind: bug
+    category: nao_compartilhado
+    urgency: high
+    receipts:
+      - src/archcorp/contracts/routes.py:200  # reservas .limit(200)
+      - src/archcorp/contracts/routes.py:252  # contratos .limit(200)
+      - src/archcorp/finance/service.py:210   # faturas
+      - src/archcorp/finance/routes.py:235    # pagamentos .limit(200)
+      - src/archcorp/support/service.py:246   # list_tickets(limit=200)
+      - src/archcorp/workflow/routes.py:99    # processos
+      - src/archcorp/workflow/routes.py:114   # tarefas .limit(200)
+    note: Só o CRM tem limit/offset (MAX_PAGE_SIZE). Acima de 200 itens a lista é truncada em silêncio.
+  - id: 2
+    title: customerName montado por cópia em três telas
+    kind: bug
+    category: redundante
+    urgency: high
+    receipts:
+      - web/src/contexts/Crm.tsx:24-28
+      - web/src/contexts/Contracts.tsx:26-30
+      - web/src/contexts/Support.tsx:63
+    note: Cada tela chama listCustomers({active:true}), que traz até 200 clientes. Acima disso, ou com cliente inativo, aparece só o UUID.
+  - id: 3
+    title: Catálogos de domínio (grupo, proteção, categoria) só existem na UI
+    kind: design
+    category: dominio_comum_sem_dono
+    urgency: high
+    receipts:
+      - web/src/contexts/Contracts.tsx:12-16      # GROUPS, PROTECTIONS (ECONOMICO, BASICA)
+      - web/src/contexts/Support.tsx:46-47        # CATEGORIES, prioridade repetida no rótulo
+      - src/archcorp/contracts/routes.py:85        # vehicleGroup texto livre; exemplo "SUV-COMPACTO"
+      - src/archcorp/support/schemas.py:28         # category texto livre
+      - src/archcorp/support/domain.py:57          # HIGH_PRIORITY_CATEGORIES (dono real da regra)
+      - tests/test_extended_modules.py:11          # "Economico" × ECONOMICO na UI
+    note: Fechar a lista muda a validação da v1; exige nova versão ou exceção em ADR.
+  - id: 4
+    title: IdempotencyStore e audit transversais ficam em integration
+    kind: design
+    category: kernel_compartilhado
+    urgency: medium
+    receipts: [docs/adr/ADR-003-financeiro-fatura-final-e-excecao-aditiva.md, docs/ESTADO_IMPLEMENTACAO.md:9]
+    note: Dívida já registrada; extração para infrastructure exige ADR.
+  - id: 5
+    title: UTC e normalização monetária reimplementados
+    kind: stale_code
+    category: redundante
+    urgency: medium
+    receipts:
+      - src/archcorp/finance/domain.py:24-39   # utc_now, as_utc, utc_today, money -> Decimal
+      - src/archcorp/contracts/service.py:19-35 # money -> str, utc_now, utc_today
+      - src/archcorp/support/domain.py:75       # as_utc
+      - src/archcorp/workflow/domain.py:24      # parse_utc
+    note: money diverge (Decimal × str). Núcleo comum exige ADR (fronteiras).
+  - id: 6
+    title: Documentação redundante e desatualizada
+    kind: stale_code
+    category: excesso
+    urgency: medium
+    status: parcialmente_corrigido_no_PR_72
+    receipts: [docs/PRD_LOCALIZA.md, docs/VISAO_NEGOCIO.md, docs/REQUISITOS.md, docs/TDD_LOCALIZA.md, docs/ARQUITETURA_CONTRATOS.md, docs/INTEGRACOES.md, docs/BACKLOG_TASKS_SUBTASKS.md, docs/CRONOGRAMA_EXECUCAO.md, docs/governanca/]
+    note: Aviso de 27/09 (17 documentos) e contagem de termino1.md corrigidos no #72; sobreposições PRD/VISÃO/REQUISITOS, TDD/ARQUITETURA/INTEGRAÇÕES e BACKLOG/CRONOGRAMA/PLANO continuam.
+  - id: 7
+    title: UI recalcula permissões do domínio
+    kind: design
+    category: redundante
+    urgency: medium
+    receipts:
+      - web/src/contexts/Finance.tsx:9-11   # payableStatus, cancellable
+      - web/src/contexts/Workflow.tsx:13    # CLOSED
+      - src/archcorp/finance/domain.py
+      - src/archcorp/workflow/domain.py:18-19
+  - id: 8
+    title: Consultas e serialização nas rotas, não no serviço
+    kind: design
+    category: inconsistente
+    urgency: low
+    receipts: [src/archcorp/contracts/routes.py:200, src/archcorp/workflow/routes.py:99, src/archcorp/finance/routes.py:235]
+  - id: 9
+    title: Ciclo de cobrança declarado em quatro lugares
+    kind: stale_code
+    category: redundante
+    urgency: low
+    receipts: [src/archcorp/contracts/schemas.py:14, src/archcorp/contracts/routes.py:92, src/archcorp/finance/domain.py:19, web/src/contexts/Contracts.tsx:8]
+  - id: 10
+    title: Shim archcorp/schemas.py ainda importado
+    kind: stale_code
+    category: excesso
+    urgency: low
+    receipts: [src/archcorp/main.py, src/archcorp/errors.py, src/archcorp/crm/routes.py, src/archcorp/contracts/routes.py, src/archcorp/finance/routes.py, src/archcorp/support/routes.py, src/archcorp/workflow/routes.py]
+  - id: 11
+    title: Helpers de teste copiados
+    kind: stale_code
+    category: redundante
+    urgency: low
+    receipts: [tests/test_foundation.py:19, tests/test_f1_cliente_reserva_contrato.py:42, tests/test_t15_atendimento.py:113, web/e2e/f2-f3.spec.ts:5, web/e2e/papeis-e-feedback.spec.ts, web/e2e/selecao-e-ambiguidade.spec.ts]
+  - id: 12
+    title: HTTPException ao lado de DomainError
+    kind: stale_code
+    category: inconsistente
+    urgency: low
+    receipts: [src/archcorp/workflow/routes.py:107, src/archcorp/integration/routes.py:57, src/archcorp/integration/routes.py:82]
+    note: security.py (401/403) e main.py (503/404) são borda HTTP e podem ficar.
+  - id: 13
+    title: Gate e SlaBadge reimplementam ErrorPanel e Status
+    kind: stale_code
+    category: redundante
+    urgency: low
+    receipts: [web/src/App.tsx, web/src/contexts/Support.tsx]
+  - id: 14
+    title: Artefatos gerados versionados divergem das fontes
+    kind: bug
+    category: excesso
+    urgency: low
+    receipts: [output/Apresentacao_Cenario_4.pptx, tools/build_presentation.mjs]
+    note: 134 arquivos, 6,4 MB. Já há divergência real; o PPTX ainda mostra "211 testes" e "p95 4,22 ms", e a fonte, 246 e 45,1 ms (#72).
+no_finding:
+  - Confirmação antes de toda ação destrutiva
+  - Navegação sem destinos mortos (contrato → chamado, cliente → reserva)
+  - DispatchButton repetido em 4 telas é intencional e compartilhado
+  - Integration não é dona de regra de negócio
