@@ -7,6 +7,8 @@ import {
 import { DispatchButton } from './shared'
 
 const payableStatus = (i: Invoice) => i.status !== 'PAID' && i.status !== 'CANCELLED'
+/** Regra do domínio (ADR-003): só fatura em aberto, sem pagamento, pode ser cancelada. */
+const cancellable = (i: Invoice) => i.status === 'OPEN' && i.paidAmount === 0
 
 export default function Finance() {
   const { api } = useSession()
@@ -15,6 +17,7 @@ export default function Finance() {
   const [version, refresh] = useReducer((x: number) => x + 1, 0)
   const [statusFilter, setStatusFilter] = useState<'' | InvoiceStatus>('')
   const [selected, setSelected] = useState<Invoice | null>(null)
+  const [cancelling, setCancelling] = useState<Invoice | null>(null)
   const [reference, setReference] = useState(() => `SIM-${Date.now()}`)
 
   const invoices = useResource(a => a.listInvoices(), [version])
@@ -52,7 +55,17 @@ export default function Finance() {
         </ActionForm>
       </Card>
 
-      <Card title="Como a fatura nasce" roles="despacho: operations, admin">
+      {cancelling ? <Card title={`Cancelar fatura ${cancelling.invoiceId.slice(0, 8)}`} roles="finance, admin">
+        <p>Cancelamento é definitivo: a fatura não recebe pagamento e o faturamento final do contrato não recobra o valor. O motivo fica na auditoria; não inclua dados pessoais ou sensíveis.</p>
+        <ActionForm key={cancelling.invoiceId} submit="Confirmar cancelamento" busy={busy} label="Cancelar fatura" onSubmit={async f => {
+          const result = await run('Cancelamento de fatura', () => api.cancelInvoice(cancelling.invoiceId, text(f, 'reason')))
+          if (result) { setCancelling(null); setSelected(null); refresh() }
+          return result !== null
+        }}>
+          <Field name="reason" label="Motivo" defaultValue="Emitida em duplicidade (cenário fictício)" hint="De 3 a 200 caracteres." />
+        </ActionForm>
+        <button type="button" className="secondary small spaced" onClick={() => setCancelling(null)}>Voltar</button>
+      </Card> : <Card title="Como a fatura nasce" roles="despacho: operations, admin">
         <ol className="steps">
           <li>Ative um contrato em Reservas e contratos.</li>
           <li>Despache a outbox: o consumidor financeiro cria a primeira fatura com vencimento na data UTC do evento mais 10 dias (prazo é premissa a validar).</li>
@@ -60,7 +73,7 @@ export default function Finance() {
           <li>Encerre o contrato e despache: a fatura final cobra os ciclos iniciados ainda não faturados (regra é premissa a validar).</li>
         </ol>
         <DispatchButton busy={busy} run={run} onDone={refresh} />
-      </Card>
+      </Card>}
     </div>
 
     <Card title="Verificar vencimento e registrar inadimplência" roles="finance, operations, admin">
@@ -94,8 +107,11 @@ export default function Finance() {
           { key: 'delinquency', label: 'Inadimplência', render: r => r.delinquent
             ? <>Registrada em {dateTime(r.overdueSince)}</>
             : r.overdueSince ? <>Quitada após atraso</> : r.status === 'OVERDUE' ? <>Vencida, não registrada</> : <>—</> },
-          { key: 'actions', label: 'Ações', render: r => <button type="button" className="inline" aria-pressed={selected?.invoiceId === r.invoiceId}
-            onClick={() => { setSelected(r); clear() }}>{r.status === 'PAID' ? 'Ver pagamentos' : 'Selecionar'}</button> },
+          { key: 'actions', label: 'Ações', render: r => <div className="row-actions">
+            <button type="button" className="inline" aria-pressed={selected?.invoiceId === r.invoiceId}
+              onClick={() => { setSelected(r); clear() }}>{r.status === 'PAID' ? 'Ver pagamentos' : 'Selecionar'}</button>
+            {cancellable(r) && <button type="button" className="inline quiet" disabled={busy} onClick={() => { setCancelling(r); clear() }}>Cancelar…</button>}
+          </div> },
         ]} />}
       </ResourceView>
     </Card>

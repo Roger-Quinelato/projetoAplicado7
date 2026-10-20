@@ -1,5 +1,5 @@
 import { useReducer, useState } from 'react'
-import type { Customer, CustomerUpdate, OpportunityStatus } from '../api'
+import type { Contact, ContactUpdate, Customer, CustomerUpdate, OpportunityStatus } from '../api'
 import {
   ActionForm, Card, Checkbox, CustomerPicker, Field, FeedbackBanner, Id, PageIntro, ResourceView, SelectField, Status, Table, TextArea,
   text, useActions, useResource, useSession,
@@ -15,6 +15,7 @@ export default function Crm() {
   const [contactCustomer, setContactCustomer] = useState('')
   const [opportunityStatus, setOpportunityStatus] = useState<'' | OpportunityStatus>('')
   const [editing, setEditing] = useState<Customer | null>(null)
+  const [editingContact, setEditingContact] = useState<Contact | null>(null)
 
   const customers = useResource(api => api.listCustomers({
     email: filters.email || undefined, active: filters.active === '' ? undefined : filters.active === 'true',
@@ -123,7 +124,27 @@ export default function Crm() {
 
     <div className="grid two">
       <Card title="Contatos" roles="commercial, admin">
-        <ActionForm submit="Adicionar contato" busy={busy} label="Novo contato" onSubmit={async f => after(await run('Inclusão de contato',
+        {editingContact ? <>
+          <h3 className="subhead">Editar contato · {editingContact.name}</h3>
+          <ActionForm key={editingContact.contactId} submit="Salvar contato" busy={busy} label="Editar contato" onSubmit={async f => {
+            // Envia só o que mudou; telefone vazio remove o telefone (null).
+            const changes: ContactUpdate = {}
+            const name = text(f, 'name'), email = text(f, 'email'), phone = text(f, 'phone') || null
+            if (name !== editingContact.name) changes.name = name
+            if (email !== editingContact.email) changes.email = email
+            if (phone !== editingContact.phone) changes.phone = phone
+            const result = await run('Alteração de contato', () => api.updateContact(editingContact.contactId, changes))
+            if (result) setEditingContact(null)
+            return after(result)
+          }}>
+            <Field name="name" label="Nome do contato" defaultValue={editingContact.name} />
+            <div className="form-grid">
+              <Field name="email" label="E-mail" type="email" defaultValue={editingContact.email} />
+              <Field name="phone" label="Telefone" type="tel" required={false} defaultValue={editingContact.phone ?? ''} hint="Formato E.164; vazio remove o telefone." />
+            </div>
+          </ActionForm>
+          <button type="button" className="secondary small spaced" onClick={() => setEditingContact(null)}>Cancelar edição</button>
+        </> : <ActionForm submit="Adicionar contato" busy={busy} label="Novo contato" onSubmit={async f => after(await run('Inclusão de contato',
           () => api.createContact({ customerId: text(f, 'customerId'), name: text(f, 'name'), email: text(f, 'email'), phone: text(f, 'phone') || null })))}>
           <CustomerPicker label="Cliente" />
           <Field name="name" label="Nome do contato" />
@@ -131,7 +152,7 @@ export default function Crm() {
             <Field name="email" label="E-mail" type="email" />
             <Field name="phone" label="Telefone" type="tel" required={false} hint="Formato E.164, ex.: +5531999990000" />
           </div>
-        </ActionForm>
+        </ActionForm>}
         <div className="divider" />
         <CustomerPicker name="contactFilter" label="Mostrar contatos de" required={false} placeholder="Todos os clientes" value={contactCustomer} onChange={setContactCustomer} />
         <ResourceView resource={contacts} label="contatos" empty="Nenhum contato cadastrado.">
@@ -140,9 +161,12 @@ export default function Crm() {
             { key: 'customer', label: 'Cliente', render: r => customerName(r.customerId) },
             { key: 'email', label: 'E-mail', render: r => r.email },
             { key: 'phone', label: 'Telefone', render: r => r.phone ?? '—' },
-            { key: 'actions', label: 'Ações', render: r => <button type="button" className="inline quiet" disabled={busy} onClick={() => {
-              if (window.confirm(`Remover o contato ${r.name}?`)) void run('Remoção de contato', () => api.deleteContact(r.contactId)).then(after)
-            }}>Remover</button> },
+            { key: 'actions', label: 'Ações', render: r => <div className="row-actions">
+              <button type="button" className="inline" disabled={busy} onClick={() => { setEditingContact(r); clear() }}>Editar</button>
+              <button type="button" className="inline quiet" disabled={busy} onClick={() => {
+                if (window.confirm(`Remover o contato ${r.name}?`)) void run('Remoção de contato', () => api.deleteContact(r.contactId)).then(after)
+              }}>Remover</button>
+            </div> },
           ]} />}
         </ResourceView>
       </Card>
