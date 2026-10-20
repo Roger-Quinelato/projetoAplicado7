@@ -26,6 +26,10 @@ DIAGRAMS = {
     "f1_cliente_contrato": ("docs/arquitetura/FLUXOS_INTEGRACAO.md", 0),
     "f2_ativacao_cobranca": ("docs/arquitetura/FLUXOS_INTEGRACAO.md", 1),
     "f3_chamado_sla": ("docs/arquitetura/FLUXOS_INTEGRACAO.md", 2),
+    "adr005_fronteiras": ("docs/adr/ADR-005-fronteiras-http-e-integracao-publica.md", 0),
+    "adr005_ida_volta_http": ("docs/adr/ADR-005-fronteiras-http-e-integracao-publica.md", 1),
+    "adr005_volta_assincrona": ("docs/adr/ADR-005-fronteiras-http-e-integracao-publica.md", 2),
+    "adr005_ciclo_outbox": ("docs/adr/ADR-005-fronteiras-http-e-integracao-publica.md", 3),
 }
 
 BLOCK = re.compile(r"```mermaid\n(.*?)```", re.S)
