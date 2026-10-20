@@ -308,8 +308,13 @@ export function CustomerPicker({ name = 'customerId', label, value, defaultValue
   const selectedRef = useRef(selected)
   selectedRef.current = selected
 
-  const customers = useResource(a => a.listCustomers({ active: true, email: page.email || undefined, limit: CUSTOMER_PAGE_SIZE, offset: page.offset }), [page.offset, page.email])
-  const rows = customers.data ?? []
+  // Cada resposta guarda a página que a pediu: a faixa e o bloqueio dependem do que chegou, não do último clique.
+  const customers = useResource(async a => {
+    const result = await a.listCustomers({ active: true, email: page.email || undefined, limit: CUSTOMER_PAGE_SIZE, offset: page.offset })
+    return { ...result, data: { offset: page.offset, email: page.email, rows: result.data } }
+  }, [page.offset, page.email])
+  const loaded = customers.data
+  const rows = loaded?.rows ?? []
   const inPage = rows.find(c => c.customerId === selected)
 
   // Cliente selecionado fora da página atual: consulta direta pelo UUID.
@@ -339,11 +344,11 @@ export function CustomerPicker({ name = 'customerId', label, value, defaultValue
     setPage({ offset: 0, email: emailRef.current?.value.trim() ?? '' })
   }
 
-  // Enquanto a página carrega, a navegação fica bloqueada: cliques seguidos pulariam páginas.
-  const loading = customers.status === 'loading'
+  // Até chegar a página pedida, a navegação fica bloqueada: cliques seguidos pulariam páginas.
+  const loading = customers.status === 'loading' || (customers.status === 'success' && (loaded?.offset !== page.offset || loaded?.email !== page.email))
   const extra = known && known.customerId === selected && !inPage ? [known] : []
   const options = [...extra, ...rows]
-  const first = rows.length ? page.offset + 1 : 0
+  const first = rows.length && loaded ? loaded.offset + 1 : 0
   return <div className="field customer-picker">
     <label htmlFor={id}>{label}{!required && <span className="optional"> (opcional)</span>}</label>
     <select ref={selectRef} id={id} name={name} required={required} value={selected} onChange={e => choose(e.target.value)} aria-describedby={`${id}-hint`}>
@@ -363,8 +368,8 @@ export function CustomerPicker({ name = 'customerId', label, value, defaultValue
         : lookupError ? `Não foi possível carregar o cliente selecionado: ${errorHeadline(lookupError)}`
         // Durante o carregamento as opções ainda são da página anterior: a faixa só aparece com os dados novos.
         : loading ? 'Carregando clientes…'
-        : rows.length ? `Clientes ativos ${first}–${page.offset + rows.length}${page.email ? ` com e-mail ${page.email}` : ''}.`
-        : customers.data ? (page.email ? 'Nenhum cliente ativo com esse e-mail.' : 'Nenhum cliente ativo nesta página.') : 'Carregando clientes…'}
+        : rows.length && loaded ? `Clientes ativos ${first}–${loaded.offset + rows.length}${loaded.email ? ` com e-mail ${loaded.email}` : ''}.`
+        : loaded ? (loaded.email ? 'Nenhum cliente ativo com esse e-mail.' : 'Nenhum cliente ativo nesta página.') : 'Carregando clientes…'}
       {hint && <> {hint}</>}
     </small>
   </div>
