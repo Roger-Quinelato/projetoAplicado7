@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { ApiError, asApiError, describeIssue, errorHeadline, uuid, type Api, type ApiResult } from './api'
+import { createContext, useCallback, useContext, useEffect, useId, useReducer, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { ApiError, asApiError, describeIssue, errorHeadline, type Api, type ApiResult, type Customer } from './api'
+import { IdempotentIntents, isAmbiguous } from './intents'
 
 // ---------- Sessão compartilhada ----------
 
@@ -137,7 +138,8 @@ export function useActions() {
       setFeedback({ kind: 'success', message: `${label}: concluído.${suffix}`, correlationId: result.correlationId, replayed: result.replayed })
       return result
     } catch (error) {
-      setFeedback({ kind: 'error', message: `${label}: não concluído.`, error: asApiError(error) })
+      const message = isAmbiguous(error) ? `${label}: não foi possível confirmar; a operação pode ter sido registrada.` : `${label}: não concluído.`
+      setFeedback({ kind: 'error', message, error: asApiError(error) })
       return null
     } finally {
       setBusy(false)
@@ -147,40 +149,45 @@ export function useActions() {
   return { feedback, busy, run, clear: () => setFeedback(null) }
 }
 
-/** JSON com chaves ordenadas: o mesmo corpo sempre gera a mesma impressão digital. */
-export function fingerprint(value: unknown): string {
-  return JSON.stringify(value ?? null, (_key, v: unknown) => v && typeof v === 'object' && !Array.isArray(v)
-    ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)))
-    : v)
+/**
+ * Chaves de idempotência por intenção e corpo, com intenções pendentes após falha ambígua
+ * (regras em `intents.ts`). O componente é renderizado de novo quando a lista de pendências muda.
+ */
+export function useIdempotencyKeys() {
+  const [, rerender] = useReducer((x: number) => x + 1, 0)
+  const intents = useRef<IdempotentIntents | null>(null)
+  if (!intents.current) intents.current = new IdempotentIntents(rerender)
+  return intents.current
 }
 
 /**
- * Chaves de idempotência por intenção e corpo. A chave anterior só é reaproveitada quando a nova
- * tentativa da mesma intenção envia exatamente o mesmo corpo (duplo clique, nova tentativa após
- * falha ambígua de rede); se o usuário corrigir um campo, gera-se uma chave nova. A chave é
- * descartada após sucesso e após `409 IDEMPOTENCY_CONFLICT`.
+ * Pedidos sem confirmação: o usuário consulta os registros e então repete o pedido original
+ * (mesmo corpo e mesma chave) ou o descarta explicitamente.
  */
-export function useIdempotencyKeys() {
-  const keys = useRef(new Map<string, { fingerprint: string, key: string }>())
-  return {
-    keyFor(intent: string, body: unknown): string {
-      const print = fingerprint(body)
-      let entry = keys.current.get(intent)
-      if (!entry || entry.fingerprint !== print) { entry = { fingerprint: print, key: uuid() }; keys.current.set(intent, entry) }
-      return entry.key
-    },
-    async send<T>(intent: string, body: unknown, call: (key: string) => Promise<ApiResult<T>>): Promise<ApiResult<T>> {
-      const key = this.keyFor(intent, body)
-      try {
-        const result = await call(key)
-        keys.current.delete(intent)
-        return result
-      } catch (error) {
-        if (error instanceof ApiError && error.code === 'IDEMPOTENCY_CONFLICT') keys.current.delete(intent)
-        throw error
-      }
-    },
-  }
+export function PendingIntents({ keys, busy, run, onCheck }: {
+  keys: IdempotentIntents
+  busy: boolean
+  run: <T>(label: string, action: () => Promise<ApiResult<T>>) => Promise<ApiResult<T> | null>
+  onCheck: () => void
+}) {
+  const pending = keys.pending()
+  if (pending.length === 0) return null
+  return <div className="pending-region">
+    {pending.map(p => <div key={p.intent} className="notice warn" role="status" aria-label={`Pedido sem confirmação: ${p.label}`}>
+      <div>
+        <strong>{p.label}: não foi possível confirmar; a operação pode ter sido registrada.</strong>
+        <p>O pedido original está preservado com os mesmos dados e a mesma chave de idempotência. Consulte os registros antes de decidir: repetir o pedido original não duplica o registro; dados diferentes só podem ser enviados depois de descartar este pedido.</p>
+        <p className="meta">Chave: <code title={p.key}>{p.key.slice(0, 8)}</code>{p.correlationId && <> · Correlação: <code>{p.correlationId}</code></>}</p>
+        <div className="notice-actions">
+          <button type="button" className="secondary small" disabled={busy} onClick={onCheck}>Consultar registros</button>
+          <button type="button" className="secondary small" disabled={busy} onClick={() => void run(p.label, () => keys.retry(p.intent)).then(r => { if (r) onCheck() })}>Repetir pedido original</button>
+          <button type="button" className="secondary small" disabled={busy} onClick={() => {
+            if (window.confirm('Descarte somente depois de confirmar nos registros que o pedido não foi gravado. Um novo envio usará outra chave e pode duplicar o registro se o original tiver sido gravado.')) keys.discard(p.intent)
+          }}>Descartar pedido</button>
+        </div>
+      </div>
+    </div>)}
+  </div>
 }
 
 export function FeedbackBanner({ feedback, onClose }: { feedback: Feedback | null, onClose: () => void }) {
@@ -209,7 +216,7 @@ export function ErrorPanel({ error, context, onRetry, onClose }: { error: ApiErr
       {detail && <p>{detail}</p>}
       {error.issues.length > 0 && <ul className="issues">{error.issues.map((issue, i) => <li key={i}>{describeIssue(issue)}</li>)}</ul>}
       <p className="meta">
-        {error.kind === 'network' ? 'Sem resposta do servidor' : <>HTTP {error.status} · código <code>{error.code}</code></>}
+        {error.kind === 'network' ? 'Sem resposta do servidor' : error.status === 0 ? <>Verificação no navegador · código <code>{error.code}</code></> : <>HTTP {error.status} · código <code>{error.code}</code></>}
         {error.correlationId && <> · Correlação: <code>{error.correlationId}</code></>}
       </p>
       <div className="notice-actions">
@@ -271,6 +278,91 @@ export function SelectField({ name, label, options, required = true, placeholder
       {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
     {hint && <small id={`${id}-hint`}>{hint}</small>}
+  </div>
+}
+
+export const CUSTOMER_PAGE_SIZE = 50
+
+function customerLabel(c: Customer): string {
+  return `${c.name} · ${c.email}${c.active === false ? ' (inativo)' : ''}`
+}
+
+/**
+ * Seleção de cliente ativo do CRM além da primeira página (#34): navega pelas páginas da consulta
+ * paginada, busca por e-mail exato e carrega pelo UUID o cliente já selecionado (ex.: vindo da URL),
+ * que continua disponível ao mudar de página. Sem `value`, o próprio campo guarda a seleção.
+ */
+export function CustomerPicker({ name = 'customerId', label, value, defaultValue = '', onChange, required = true, placeholder = 'Selecione', hint }: {
+  name?: string, label: string, value?: string, defaultValue?: string, onChange?: (value: string) => void,
+  required?: boolean, placeholder?: string, hint?: string,
+}) {
+  const id = useId()
+  const { api } = useSession()
+  const [own, setOwn] = useState(defaultValue)
+  const selected = value ?? own
+  const [page, setPage] = useState<{ offset: number, email: string }>({ offset: 0, email: '' })
+  const [known, setKnown] = useState<Customer | null>(null)
+  const [lookupError, setLookupError] = useState<ApiError | null>(null)
+  const emailRef = useRef<HTMLInputElement>(null)
+  const selectRef = useRef<HTMLSelectElement>(null)
+  const selectedRef = useRef(selected)
+  selectedRef.current = selected
+
+  const customers = useResource(a => a.listCustomers({ active: true, email: page.email || undefined, limit: CUSTOMER_PAGE_SIZE, offset: page.offset }), [page.offset, page.email])
+  const rows = customers.data ?? []
+  const inPage = rows.find(c => c.customerId === selected)
+
+  // Cliente selecionado fora da página atual: consulta direta pelo UUID.
+  useEffect(() => {
+    setLookupError(null)
+    if (!selected || inPage || known?.customerId === selected) return
+    let current = true
+    api.getCustomer(selected).then(r => { if (current) setKnown(r.data) }, e => { if (current) setLookupError(asApiError(e)) })
+    return () => { current = false }
+  }, [api, selected, inPage, known?.customerId])
+  useEffect(() => { if (inPage) setKnown(inPage) }, [inPage])
+
+  // `form.reset()` após sucesso não apaga o cliente escolhido: a seleção pertence ao estado do campo.
+  useEffect(() => {
+    const form = selectRef.current?.form
+    if (!form) return
+    const restore = () => setTimeout(() => { if (selectRef.current) selectRef.current.value = selectedRef.current })
+    form.addEventListener('reset', restore)
+    return () => form.removeEventListener('reset', restore)
+  }, [])
+
+  function choose(next: string) {
+    if (value === undefined) setOwn(next)
+    onChange?.(next)
+  }
+  function search() {
+    setPage({ offset: 0, email: emailRef.current?.value.trim() ?? '' })
+  }
+
+  const extra = known && known.customerId === selected && !inPage ? [known] : []
+  const options = [...extra, ...rows]
+  const first = rows.length ? page.offset + 1 : 0
+  return <div className="field customer-picker">
+    <label htmlFor={id}>{label}{!required && <span className="optional"> (opcional)</span>}</label>
+    <select ref={selectRef} id={id} name={name} required={required} value={selected} onChange={e => choose(e.target.value)} aria-describedby={`${id}-hint`}>
+      <option value="">{customers.status === 'loading' && !customers.data ? 'Carregando…' : placeholder}</option>
+      {selected && !options.some(c => c.customerId === selected) && <option value={selected}>{lookupError ? `Cliente ${selected.slice(0, 8)} não carregado` : `Carregando cliente ${selected.slice(0, 8)}…`}</option>}
+      {options.map(c => <option key={c.customerId} value={c.customerId}>{customerLabel(c)}</option>)}
+    </select>
+    <div className="picker-tools" role="group" aria-label="Paginação e busca de clientes">
+      <input ref={emailRef} type="email" aria-label="Buscar por e-mail exato" placeholder="E-mail exato" autoComplete="off"
+        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); search() } }} />
+      <button type="button" className="secondary small" onClick={search}>Buscar</button>
+      <button type="button" className="secondary small" disabled={page.offset === 0} onClick={() => setPage(p => ({ ...p, offset: Math.max(0, p.offset - CUSTOMER_PAGE_SIZE) }))}>Anteriores</button>
+      <button type="button" className="secondary small" disabled={rows.length < CUSTOMER_PAGE_SIZE} onClick={() => setPage(p => ({ ...p, offset: p.offset + CUSTOMER_PAGE_SIZE }))}>Próximos</button>
+    </div>
+    <small id={`${id}-hint`} role="status">
+      {customers.status === 'error' ? <>Falha ao carregar clientes ({errorHeadline(customers.error)}) <button type="button" className="inline" onClick={() => void customers.reload()}>Tentar novamente</button></>
+        : lookupError ? `Não foi possível carregar o cliente selecionado: ${errorHeadline(lookupError)}`
+        : rows.length ? `Clientes ativos ${first}–${page.offset + rows.length}${page.email ? ` com e-mail ${page.email}` : ''}.`
+        : customers.data ? (page.email ? 'Nenhum cliente ativo com esse e-mail.' : 'Nenhum cliente ativo nesta página.') : 'Carregando clientes…'}
+      {hint && <> {hint}</>}
+    </small>
   </div>
 }
 

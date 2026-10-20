@@ -1,6 +1,6 @@
 # Testes de interface (Playwright)
 
-Estado em 17/10/2026. Os roteiros exercitam a interface React/Vite (`web/`) contra a **API real** (FastAPI servindo `web/dist`), com dados sintéticos e tokens locais `demo-*`. Eles não tocam sistemas reais da Localiza.
+Estado em 17/10/2026, atualizado em 20/10/2026. Os roteiros exercitam a interface React/Vite (`web/`) contra a **API real** (FastAPI servindo `web/dist`), com dados sintéticos e tokens locais `demo-*`. Eles não tocam sistemas reais da Localiza.
 
 ## O que existe
 
@@ -9,11 +9,12 @@ Estado em 17/10/2026. Os roteiros exercitam a interface React/Vite (`web/`) cont
 | `web/e2e/f1.spec.ts` | F1 pela UI: cliente elegível → reserva → rascunho de contrato para o mesmo cliente | Sim |
 | `web/e2e/acesso.spec.ts` | `demo-support` recebe a negativa ao cadastrar cliente; credencial inválida; "Sair" limpa a sessão | Sim |
 | `web/e2e/navegacao.spec.ts` | Seis contextos por menu e por URL com hash; hash desconhecido volta à Visão geral | Sim |
+| `web/e2e/selecao-e-ambiguidade.spec.ts` | #34: com mais de 200 clientes ativos, reserva para cliente fora da primeira página (paginação do seletor) e chamado para contrato da URL (cliente carregado pelo UUID); resposta perdida após a gravação, recusa de dados editados e repetição do pedido original com a mesma chave, resultando em um único registro | Sim |
 | `web/e2e/a11y.spec.ts` | Varredura axe (WCAG 2 A/AA) de cada contexto | Não: informativo |
 
-O job `e2e` passou no GitHub Actions no PR #54 (run 39067995117, 17/10/2026). Ele só vira condição de merge se for configurado como check obrigatório na proteção da branch (não versionado aqui).
+O job `e2e` passou no GitHub Actions no PR #54 (run 39067995117, 17/10/2026). Em 20/10/2026, os nove roteiros bloqueantes e a varredura axe passaram localmente (Linux, Chromium 1194 pré-instalado indicado por `executablePath`); o resultado no GitHub Actions depende do PR correspondente. Ele só vira condição de merge se for configurado como check obrigatório na proteção da branch (não versionado aqui).
 
-Fora do escopo desta versão: F2, F3, cancelamento de reserva (`window.confirm`), ativação/encerramento de contrato e despacho da outbox pela UI.
+Fora do escopo desta versão: F2, F3 completo, cancelamento de reserva (`window.confirm`), ativação/encerramento de contrato e despacho da outbox pela UI.
 
 ## Rodar localmente
 

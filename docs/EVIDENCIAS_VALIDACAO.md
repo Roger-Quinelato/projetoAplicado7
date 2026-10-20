@@ -2,6 +2,17 @@
 
 > Estado de execução em 27/09/2026: consulte [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
 
+## Criação ambígua e seleção de clientes na interface (#34, 2026-10-20)
+
+Ambiente: Linux (contêiner), Python 3.13, Node 22, SQLite, Chromium 1194. Base: `main` em `cf155ee`.
+
+- `npm test` (web): **12 testes aprovados**, incluindo 8 novos em `web/tests/intents.test.ts` (classificação de falha ambígua, resposta perdida seguida de repetição com a mesma chave e um único registro, recusa de corpo diferente sem chamar a API, descarte explícito, liberação da chave após `4xx` e `503 SERVICE_UNAVAILABLE`).
+- `npm run build` (inclui `tsc -b` estrito): aprovado.
+- Playwright contra a API local com SQLite novo: **9 roteiros bloqueantes aprovados** (2 novos em `web/e2e/selecao-e-ambiguidade.spec.ts`, com 205 clientes de lote) e varredura axe sem violações A/AA nos seis contextos (informativa).
+- `PYTHONPATH=src python -m pytest -q`: **213 aprovados e 10 ignorados** (PostgreSQL e RabbitMQ reais ausentes). O backend não foi alterado.
+- Mudança de comportamento em relação à verificação de 14/10/2026 (seção T10): reenviar com campo corrigido depois de falha ambígua não usa mais chave nova automaticamente; o envio é recusado até o usuário repetir o pedido original ou descartá-lo.
+- Não verificado: URL pública, PostgreSQL, uso por leitor de tela e execução no GitHub Actions.
+
 ## Verificação em 17/10/2026 (entrega de 19/10)
 
 Ambiente: Windows 11 (10.0.26300), Python 3.12.10, SQLite, dependências de `requirements.txt` e `requirements-dev.txt` em ambiente limpo.
