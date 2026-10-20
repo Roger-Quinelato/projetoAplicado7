@@ -9,6 +9,11 @@ Estado em 17/10/2026. Os roteiros exercitam a interface React/Vite (`web/`) cont
 | `web/e2e/f1.spec.ts` | F1 pela UI: cliente elegível → reserva → rascunho de contrato para o mesmo cliente | Sim |
 | `web/e2e/acesso.spec.ts` | `demo-support` recebe a negativa ao cadastrar cliente; credencial inválida; "Sair" limpa a sessão | Sim |
 | `web/e2e/navegacao.spec.ts` | Seis contextos por menu e por URL com hash; hash desconhecido volta à Visão geral | Sim |
+| `web/e2e/crm.spec.ts` | Inativação pelo menu "Mais" com diálogo de botões nomeados (manter e confirmar); menu fecha com Esc e devolve o foco | Sim |
+| `web/e2e/reservas.spec.ts` | Painel "Nova reserva" aberto pelo CRM com o cliente escolhido; cancelamento com confirmação; ativação orienta o despacho e a barra de eventos mostra o pendente | Sim |
+| `web/e2e/financeiro.spec.ts` | Pagamento parcial pela linha da fatura (fica "Parcialmente paga"); painel de verificação de vencimento abre e fecha | Sim |
+| `web/e2e/atendimento.spec.ts` | Erro de campo em texto com `aria-invalid`; abertura pelo contrato, elegibilidade, resolução e histórico pelo menu "Mais" | Sim |
+| `web/e2e/workflow.spec.ts` | Processo com origem no contrato; tarefa criada, iniciada e cancelada com confirmação | Sim |
 | `web/e2e/a11y.spec.ts` | Varredura axe (WCAG 2 A/AA) de cada contexto | Não: informativo |
 
 O job `e2e` passou no GitHub Actions no PR #54 (run 39067995117, 17/10/2026). Ele só vira condição de merge se for configurado como check obrigatório na proteção da branch (não versionado aqui).
