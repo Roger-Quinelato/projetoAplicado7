@@ -2,6 +2,28 @@
 
 > Estado de execução em 27/09/2026: consulte [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
 
+## Aceite integrado e operacional local (#62, 2026-10-20)
+
+Versão: branch `aceite-integrado`, commit `eb7ca1b` (pacote F) sobre a integração de #57, #68, #69 e #70 (merge `9d08a0a`). Ambiente: Linux (contêiner), Python 3.13, Node 22, Chromium 1194, **PostgreSQL 16.15** e **RabbitMQ 3.12.1** locais, descartáveis, com dados sintéticos. Docker indisponível no contêiner: o Compose foi validado só com `docker compose config`.
+
+| Verificação | Comando | Resultado |
+|---|---|---|
+| Suíte Python, PostgreSQL + RabbitMQ reais | `TEST_DATABASE_URL=… TEST_RABBITMQ_URL=… PYTHONPATH=src python -m pytest -q -rs` | **246 aprovados, 0 ignorados** |
+| Suíte Python, SQLite + RabbitMQ real | idem, sem `TEST_DATABASE_URL` | 236 aprovados, 10 ignorados (exigem PostgreSQL) |
+| Suíte Python, SQLite puro (como no job `application`) | `PYTHONPATH=src python -m pytest -q` | 232 aprovados, 14 ignorados (PostgreSQL/RabbitMQ) |
+| Contrato REST | `python tools/export_openapi.py --check` | atualizado |
+| Frontend | `npm test`; `npm run build` | 12 aprovados; build aprovado |
+| Navegador, API com SQLite novo (como no job `e2e`) | `npm run test:e2e`; `npm run test:a11y` | 21 bloqueantes + axe bloqueante: **22 aprovados** |
+| Navegador, API com **PostgreSQL + RabbitMQ** (`E2E_BASE_URL`, `broker: UP`) | mesmos roteiros | **22 aprovados**, incluindo F1, F2 e F3 pela interface |
+| Desempenho RNF-07 (60 clientes, 100 amostras por consulta) | `python scripts/performance_smoke.py` | todas as 10 consultas com p95 < 500 ms; maior p95: faturas, 23,9 ms (SQLite) e 45,1 ms (PostgreSQL) |
+
+- **Prontidão AMQP reproduzida:** com o RabbitMQ iniciando, `rabbitmq-diagnostics ping` respondeu no 2º segundo, a porta 5672 só aceitou conexão no 3º e `check_port_connectivity` passou no 4º. Compose e CI passam a usar `check_port_connectivity`.
+- **Broker parado e religado de verdade** (API com PostgreSQL, `rabbitmqctl stop`): prontidão `broker: DOWN` com `status: UP`; despacho `failed: 1` e nenhuma fatura do contrato; listener AMQP de volta em ~4 s; despacho `processed: 1`, novo despacho `processed: 0`; uma fatura e um processo para o contrato.
+- **Automatizado:** `test_broker_indisponivel_nao_deixa_efeito_e_reprocessamento_recupera` leva o evento a `FAILED` no limite (3), sem fatura, processo ou inbox; após a volta do broker, o reprocessamento gera um único conjunto de efeitos e uma mensagem na fila `archcorp.events`.
+- Os 10 ignorados do SQLite são os testes que exigem PostgreSQL (locks, concorrência de pagamento e convergência de migrações em PostgreSQL); todos rodaram na linha PostgreSQL acima.
+- Observação de desempenho: a listagem de faturas é a mais lenta (calcula o saldo por fatura); continua duas ordens de grandeza abaixo da meta.
+- Não verificado: Compose com Docker real, URL pública (T20), PostgreSQL gerenciado, leitor de tela.
+
 ## Lacunas da interface e feedback por papel (#61, 2026-10-20)
 
 Ambiente: Linux (contêiner), Node 22, Chromium 1194, API local com SQLite novo. Base: branch do PR #57 (`3b49988`).
