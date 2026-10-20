@@ -23,7 +23,7 @@ from archcorp.finance.service import FinanceService, count_invoices
 from archcorp.finance.routes import configure as configure_finance, router as finance_router
 from archcorp.infrastructure.db import engine, get_session, protect_public_demo_tables
 from archcorp.infrastructure.migrate import upgrade_to_head
-from archcorp.integration.service import EventDispatcher
+from archcorp.integration.service import EventDispatcher, broker_status
 from archcorp.integration.public import LegacyIdService
 from archcorp.integration.routes import configure as configure_integration, router as integration_router
 from archcorp.observability import correlation_id_var, logger, metrics_middleware, render_metrics
@@ -118,16 +118,17 @@ def live() -> dict:
 @app.get(
     "/health/ready",
     response_model=HealthResponse,
+    response_model_exclude_none=True,
     tags=["Operação"],
     responses={503: {"description": "Banco indisponível."}},
 )
 def ready(session: Session = Depends(get_session)) -> dict:
-    """Informa se o banco responde; 503 quando indisponível."""
+    """Informa se o banco responde (503 quando indisponível) e, com RABBITMQ_URL, o estado do listener AMQP."""
     try:
         session.execute(text("SELECT 1"))
-        return {"status": "UP", "database": "UP"}
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Banco indisponível") from exc
+    return {"status": "UP", "database": "UP", "broker": broker_status()}
 
 
 @app.get(

@@ -149,7 +149,7 @@ Outras tarefas de desenvolvimento:
 - **Contrato REST:** depois de alterar rotas ou schemas, rode `python tools/export_openapi.py`. Com `--check`, o comando só compara e falha se o OpenAPI estiver desatualizado.
 - **Migrações:** o esquema é versionado com Alembic, e as migrações são aditivas ([ADR-002](docs/adr/ADR-002-migracoes-aditivas.md)).
 - **Dados sintéticos:** `scripts/seed_sintetico.py` é idempotente e segue as [regras de dados sintéticos](docs/DADOS_SINTETICOS.md).
-- **Desempenho:** `scripts/performance_smoke.py` mede a latência de `/health/ready` num banco SQLite temporário.
+- **Desempenho:** `scripts/performance_smoke.py` semeia dados sintéticos e mede o p95 das consultas de negócio dos cinco contextos (meta de 500 ms do RNF-07), em SQLite temporário ou no banco de `DATABASE_URL`, que é recriado.
 - **Erros:** todas as respostas de erro seguem `application/problem+json` (RFC 9457), com `code` e `correlationId`. Os erros `422` não ecoam a entrada recebida. Consulte o [contrato de erro](docs/INTEGRACOES.md#contrato-de-erro).
 
 ### Integração contínua
@@ -157,9 +157,9 @@ Outras tarefas de desenvolvimento:
 O workflow `Verify` roda em cada PR:
 
 - **`application`:** `pip-audit`, `pytest`, `npm audit --audit-level=moderate`, `npm test`, `npm run build` e o build da imagem Docker.
-- **`e2e`:** build do frontend, Chromium e roteiros Playwright contra a API real com SQLite novo; a varredura axe roda como informativa.
+- **`e2e`:** build do frontend, Chromium e roteiros Playwright contra a API real com SQLite novo, incluindo F1, F2 e F3 pela interface; a varredura axe (WCAG 2 A/AA) é bloqueante desde 20/10/2026.
 - **`postgresql`:** a suíte completa contra PostgreSQL 16, incluindo concorrência e convergência de migrações.
-- **`rabbitmq`:** a publicação confirmada contra um RabbitMQ real.
+- **`rabbitmq`:** a publicação confirmada contra um RabbitMQ real, a prontidão do listener AMQP e o roteiro de broker indisponível → `FAILED` → reprocessamento sem duplicar efeitos; o serviço só é considerado pronto com `check_port_connectivity`.
 
 ## Operação
 

@@ -1,3 +1,5 @@
+# Demonstração isolada (#62): `docker compose -p archcorp-demo up --build` cria contêineres e volume
+# próprios; ARCHCORP_API_PORT, ARCHCORP_POSTGRES_PORT e ARCHCORP_RABBITMQ_UI_PORT evitam colisão com outra pilha local.
 services:
   api:
     build: .
@@ -5,7 +7,7 @@ services:
       DATABASE_URL: postgresql+psycopg://archcorp:archcorp@postgres:5432/archcorp
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/%2F
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:${ARCHCORP_API_PORT:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -14,7 +16,7 @@ services:
   postgres:
     image: postgres:16-alpine
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${ARCHCORP_POSTGRES_PORT:-5432}:5432"
     environment:
       POSTGRES_DB: archcorp
       POSTGRES_USER: archcorp
@@ -29,9 +31,10 @@ services:
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
     ports:
-      - "127.0.0.1:15672:15672"
+      - "127.0.0.1:${ARCHCORP_RABBITMQ_UI_PORT:-15672}:15672"
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      # `ping` responde antes do listener AMQP (5672) aceitar conexões; a API só sobe com a porta pronta.
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
       interval: 5s
       timeout: 5s
       retries: 20

@@ -25,7 +25,8 @@ paths:
       tags:
       - Operação
       summary: Ready
-      description: Informa se o banco responde; 503 quando indisponível.
+      description: Informa se o banco responde (503 quando indisponível) e, com RABBITMQ_URL,
+        o estado do listener AMQP.
       operationId: ready_health_ready_get
       responses:
         '200':
@@ -6194,12 +6195,24 @@ components:
             const: UP
           - type: 'null'
           title: Database
+        broker:
+          anyOf:
+          - type: string
+            enum:
+            - UP
+            - DOWN
+          - type: 'null'
+          title: Broker
+          description: 'Listener AMQP do RabbitMQ, só quando RABBITMQ_URL está configurado.
+            Informativo: DOWN não torna a API não pronta, porque o despacho registra
+            a falha e tenta de novo.'
       type: object
       required:
       - status
       title: HealthResponse
       examples:
-      - database: UP
+      - broker: UP
+        database: UP
         status: UP
     InvoiceCancelInput:
       properties:

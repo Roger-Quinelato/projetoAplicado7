@@ -1,6 +1,6 @@
 """Compatibilidade dos imports públicos anteriores; schemas pertencem a cada módulo."""
 from typing import Literal
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ApiModel(BaseModel):
@@ -8,10 +8,13 @@ class ApiModel(BaseModel):
 
 
 class HealthResponse(BaseModel):
-    model_config = ConfigDict(json_schema_extra={"examples": [{"status": "UP", "database": "UP"}]})
+    model_config = ConfigDict(json_schema_extra={"examples": [{"status": "UP", "database": "UP", "broker": "UP"}]})
 
     status: Literal["UP"]
     database: Literal["UP"] | None = None
+    broker: Literal["UP", "DOWN"] | None = Field(default=None, description=(
+        "Listener AMQP do RabbitMQ, só quando RABBITMQ_URL está configurado. Informativo: "
+        "DOWN não torna a API não pronta, porque o despacho registra a falha e tenta de novo."))
 
 
 class DemoStateResponse(BaseModel):

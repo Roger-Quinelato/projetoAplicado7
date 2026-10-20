@@ -23,7 +23,15 @@ sequência](arquitetura/FLUXOS_INTEGRACAO.md) durante a apresentação.
    ```
 
    As duas respostas devem informar `status: UP`. A prontidão também deve informar
-   `database: UP`.
+   `database: UP` e, com `RABBITMQ_URL` configurado, `broker: UP` (listener AMQP
+   aceitando conexão). `broker: DOWN` não torna a API não pronta: o despacho registra
+   a falha e tenta de novo.
+
+   Para uma pilha isolada da demonstração, com contêineres e volume próprios, use
+   `docker compose -p archcorp-demo up -d --build`; `ARCHCORP_API_PORT`,
+   `ARCHCORP_POSTGRES_PORT` e `ARCHCORP_RABBITMQ_UI_PORT` mudam as portas publicadas.
+   O healthcheck do RabbitMQ usa `rabbitmq-diagnostics check_port_connectivity`, que
+   só passa quando a porta AMQP aceita conexões (o `ping` responde antes).
 
 3. Abra `http://localhost:8000/docs` para consultar o OpenAPI e
    `http://localhost:15672` para observar o RabbitMQ. O ambiente local usa
@@ -540,6 +548,26 @@ evento em `GET /api/v1/integration/failures` e o retorno ao estado `PENDING` por
 
 Cada chamada ao dispatcher representa uma tentativa. O protótipo não implementa
 agendamento, atraso exponencial ou jitter.
+
+### Com o broker indisponível
+
+Somente na pilha isolada da demonstração (`-p archcorp-demo`):
+
+1. Ative um contrato e pare o broker: `docker compose -p archcorp-demo stop rabbitmq`.
+2. `GET /health/ready` informa `broker: DOWN`; despache a outbox: `failed: 1`, sem
+   fatura nem processo para o contrato (os consumidores são desfeitos com a
+   publicação recusada).
+3. Repita o despacho até o limite de tentativas (3): o evento passa a `FAILED` e
+   aparece em Falhas de integração.
+4. Suba o broker (`docker compose -p archcorp-demo start rabbitmq`) e espere
+   `broker: UP` na prontidão.
+5. Reprocesse a falha e despache: `processed: 1`; um novo despacho devolve
+   `processed: 0`. Há uma fatura e um processo para o contrato, e uma cópia na fila
+   `archcorp.events`.
+
+O roteiro equivalente é automatizado em
+`tests/test_rabbitmq_real.py::test_broker_indisponivel_nao_deixa_efeito_e_reprocessamento_recupera`
+(job `rabbitmq` da CI). `FAILED` é estado da aplicação, não fila de erro do broker.
 
 ## Executar os fluxos pela interface
 
