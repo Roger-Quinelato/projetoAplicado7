@@ -48,9 +48,10 @@ test('reserva: cliente além dos 200 primeiros e resposta perdida geram um únic
     const opcao = cliente.locator(`option[value="${customerId}"]`)
     await expect(cliente.locator('option').nth(1)).toBeAttached()
     await expect(opcao).toHaveCount(0)
-    for (let pagina = 0; pagina < 10 && await opcao.count() === 0; pagina++) {
+    for (let pagina = 1; pagina <= 10 && await opcao.count() === 0; pagina++) {
       await form.getByRole('button', { name: 'Próximos' }).click()
-      await expect(form.getByText(/Clientes ativos \d+–\d+/)).toBeVisible()
+      // Espera a página pedida, não a anterior que continua na tela durante o carregamento.
+      await expect(form.getByText(`Clientes ativos ${pagina * 50 + 1}–`)).toBeVisible()
     }
     await cliente.selectOption(customerId)
   })
