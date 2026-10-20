@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     rabbitmq_blocked_timeout_seconds: float = 10.0
     rabbitmq_socket_timeout_seconds: float = 5.0
     rabbitmq_heartbeat_seconds: int = 30
+    # Prazo curto da verificação de prontidão: o health check não pode prender o probe.
+    rabbitmq_health_timeout_seconds: float = 2.0
     rabbitmq_queue_max_length: int = 10000
     contract_adapter_available: bool = True
     # Leitura do CRM por Contracts (ADR-006): prazo total, tentativas e atraso inicial da retentativa.

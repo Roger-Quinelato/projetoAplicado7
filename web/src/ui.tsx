@@ -122,20 +122,27 @@ export function ResourceView<T>({ resource, label, isEmpty, empty, children }: {
 
 export type Feedback =
   | { kind: 'success', message: string, correlationId: string, replayed: boolean | null }
+  /** HTTP 2xx cujo corpo relata falha parcial (ex.: despacho com `failed > 0`): nunca exibido como sucesso integral. */
+  | { kind: 'warning', message: string, correlationId: string }
   | { kind: 'error', message: string, error: ApiError }
 
-/** Executa comandos com estado de envio e feedback legível de sucesso ou erro. */
+/**
+ * Executa comandos com estado de envio e feedback legível de sucesso ou erro. `partial`, quando
+ * informado, examina o corpo da resposta: verdadeiro rebaixa o aviso de sucesso a resultado parcial.
+ */
 export function useActions() {
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const run = useCallback(async <T,>(label: string, action: () => Promise<ApiResult<T>>, describe?: (data: T) => string): Promise<ApiResult<T> | null> => {
+  const run = useCallback(async <T,>(label: string, action: () => Promise<ApiResult<T>>, describe?: (data: T) => string,
+    partial?: (data: T) => boolean): Promise<ApiResult<T> | null> => {
     setBusy(true)
     setFeedback(null)
     try {
       const result = await action()
       const suffix = describe ? ` ${describe(result.data)}` : ''
-      setFeedback({ kind: 'success', message: `${label}: concluído.${suffix}`, correlationId: result.correlationId, replayed: result.replayed })
+      if (partial?.(result.data)) setFeedback({ kind: 'warning', message: `${label}: concluído com falhas.${suffix}`, correlationId: result.correlationId })
+      else setFeedback({ kind: 'success', message: `${label}: concluído.${suffix}`, correlationId: result.correlationId, replayed: result.replayed })
       return result
     } catch (error) {
       const message = isAmbiguous(error) ? `${label}: não foi possível confirmar; a operação pode ter sido registrada.` : `${label}: não concluído.`
@@ -199,6 +206,13 @@ export function FeedbackBanner({ feedback, onClose }: { feedback: Feedback | nul
           {feedback.replayed === true && <span className="tag">Repetição idempotente: resposta original reaproveitada</span>}
           Correlação: <code>{feedback.correlationId}</code>
         </p>
+      </div>
+      <button type="button" className="close" aria-label="Fechar aviso" onClick={onClose}>×</button>
+    </div>}
+    {feedback?.kind === 'warning' && <div className="notice warn" role="alert">
+      <div>
+        <strong>{feedback.message}</strong>
+        <p className="meta">Correlação: <code>{feedback.correlationId}</code></p>
       </div>
       <button type="button" className="close" aria-label="Fechar aviso" onClick={onClose}>×</button>
     </div>}

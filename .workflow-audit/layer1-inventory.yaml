@@ -1,0 +1,17 @@
+# Camada 1: entradas da UI (rotas por hash em web/src/App.tsx) e rotas da API por módulo
+ui_screens:
+  - {hash: "/", file: web/src/contexts/Overview.tsx, context: Visão geral, actions: [Despachar eventos pendentes, reprocessar falha, consultar correlação, prontidão (LinkStatus)]}
+  - {hash: "/crm", file: web/src/contexts/Crm.tsx, actions: [criar cliente, editar contato, remover contato, inativar cliente, paginação e busca por e-mail], resources: [listCustomers paginado, listCustomers active (nome)]}
+  - {hash: "/reservas", file: web/src/contexts/Contracts.tsx, actions: [reservar, cancelar reserva, criar rascunho, ativar, encerrar], resources: [listCustomers active (nome), CustomerPicker, listReservations, listContracts]}
+  - {hash: "/financeiro", file: web/src/contexts/Finance.tsx, actions: [pagamento simulado, cancelar fatura, verificar vencimentos], resources: [listInvoices, listPayments]}
+  - {hash: "/atendimento", file: web/src/contexts/Support.tsx, actions: [consultar elegibilidade, abrir chamado, atribuir, resolver, reconciliar], resources: [listCustomers active (nome), CustomerPicker, listTickets]}
+  - {hash: "/workflow", file: web/src/contexts/Workflow.tsx, actions: [criar tarefa, mudar estado ou responsável, cancelar tarefa], resources: [listProcesses, listTasks]}
+api_modules:
+  crm: {paginated: true, prefix: /api/v1/crm}
+  contracts: {paginated: false, cap: 200, prefix: /api/v1/contracts}
+  finance: {paginated: false, cap: 200, prefix: /api/v1/finance}
+  support: {paginated: false, cap: 200, prefix: /api/v1/support}
+  workflow: {paginated: false, cap: 200, prefix: /api/v1/workflow}
+  integration: {prefix: /api/v1/integration, commands: [outbox/dispatch, "failures/{event_id}/reprocess"]}
+  operations: {prefix: "/api/v1/operations/{correlation_id}"}
+total_operations_openapi: 53

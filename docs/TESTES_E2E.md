@@ -10,11 +10,13 @@ Estado em 17/10/2026, atualizado em 20/10/2026. Os roteiros exercitam a interfac
 | `web/e2e/acesso.spec.ts` | `demo-support` recebe a negativa ao cadastrar cliente; credencial inválida; "Sair" limpa a sessão | Sim |
 | `web/e2e/navegacao.spec.ts` | Seis contextos por menu e por URL com hash; hash desconhecido volta à Visão geral | Sim |
 | `web/e2e/selecao-e-ambiguidade.spec.ts` | #34: com mais de 200 clientes ativos, reserva para cliente fora da primeira página (paginação do seletor) e chamado para contrato da URL (cliente carregado pelo UUID); resposta perdida após a gravação, recusa de dados editados e repetição do pedido original com a mesma chave, resultando em um único registro | Sim |
-| `web/e2e/a11y.spec.ts` | Varredura axe (WCAG 2 A/AA) de cada contexto | Não: informativo |
+| `web/e2e/papeis-e-feedback.spec.ts` | #61: cada papel `demo-*` usa seu contexto e vê a negativa `403` onde não tem permissão; despacho com falhas não é anunciado como sucesso; indicador de conexão (resposta, sem resposta, banco indisponível); edição de contato; cancelamento de fatura; contraste `color-contrast` sem violações com registros preenchidos nos seis contextos | Sim |
+| `web/e2e/f2-f3.spec.ts` | #62: F2 (ativação, despacho, uma fatura paga em duas parcelas com centavos, uma preparação, novo despacho sem efeito) e F3 (elegibilidade, chamado de prioridade alta, atribuição, resolução dentro do SLA, processo concluído) pela UI | Sim |
+| `web/e2e/a11y.spec.ts` | Varredura axe (WCAG 2 A/AA) de cada contexto | Sim, desde 20/10/2026 (#62); antes informativo |
 
 O job `e2e` passou no GitHub Actions no PR #54 (run 39067995117, 17/10/2026). Em 20/10/2026, os nove roteiros bloqueantes e a varredura axe passaram localmente (Linux, Chromium 1194 pré-instalado indicado por `executablePath`); o resultado no GitHub Actions depende do PR correspondente. Ele só vira condição de merge se for configurado como check obrigatório na proteção da branch (não versionado aqui).
 
-Fora do escopo desta versão: F2, F3 completo, cancelamento de reserva (`window.confirm`), ativação/encerramento de contrato e despacho da outbox pela UI.
+Fora do escopo desta versão: cancelamento de reserva (`window.confirm`) e encerramento de contrato pela UI.
 
 ## Rodar localmente
 
@@ -24,7 +26,7 @@ npm ci
 npm run build              # a API serve web/dist
 npx playwright install chromium
 npm run test:e2e           # bloqueantes
-npm run test:a11y          # informativo
+npm run test:a11y          # bloqueante desde 20/10/2026 (#62)
 ```
 
 - O roteiro sobe a própria API (`web/e2e/servidor.mjs`) na porta **8765**, com **SQLite temporário novo** a cada execução, sem RabbitMQ. A porta 8000 fica livre para o `docker compose up`.
