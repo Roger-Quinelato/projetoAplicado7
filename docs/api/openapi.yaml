@@ -5287,7 +5287,8 @@ paths:
       tags:
       - Gestão de processos
       summary: Create Task
-      description: Cria tarefa em processo não encerrado, com o prazo do processo.
+      description: Cria tarefa em processo não encerrado, com o prazo do processo;
+        a criação é auditada.
       operationId: create_task_api_v1_workflow_tasks_post
       security:
       - HTTPBearer: []
@@ -5347,7 +5348,7 @@ paths:
                 code: NOT_FOUND
                 correlationId: 11111111-1111-4111-8111-111111111111
         '409':
-          description: Processo concluído ou cancelado.
+          description: Processo concluído ou cancelado (`CONFLICT`).
           content:
             application/problem+json:
               schema:
@@ -5356,7 +5357,7 @@ paths:
                 type: urn:archcorp:problem:conflict
                 title: Conflito
                 status: 409
-                detail: Processo concluído ou cancelado
+                detail: Processo concluído ou cancelado (`CONFLICT`)
                 instance: /api/v1/workflow/tasks
                 code: CONFLICT
                 correlationId: 11111111-1111-4111-8111-111111111111
@@ -5391,8 +5392,10 @@ paths:
       tags:
       - Gestão de processos
       summary: Change Task
-      description: Altera estado ou responsável da tarefa; o processo é concluído
-        quando todas as tarefas terminam.
+      description: Altera estado ou responsável da tarefa e recalcula o processo;
+        tarefa concluída ou cancelada é final e repetir o estado e o responsável vigentes
+        não tem efeito. O processo é concluído quando todas as tarefas terminam e
+        cancelado quando todas são finais com algum cancelamento.
       operationId: change_task_api_v1_workflow_tasks__task_id__patch
       security:
       - HTTPBearer: []
@@ -5468,7 +5471,8 @@ paths:
                 code: NOT_FOUND
                 correlationId: 11111111-1111-4111-8111-111111111111
         '409':
-          description: Processo concluído ou cancelado.
+          description: Processo concluído ou cancelado (`CONFLICT`) ou tarefa concluída
+            ou cancelada (`INVALID_STATE`).
           content:
             application/problem+json:
               schema:
@@ -5477,7 +5481,8 @@ paths:
                 type: urn:archcorp:problem:conflict
                 title: Conflito
                 status: 409
-                detail: Processo concluído ou cancelado
+                detail: Processo concluído ou cancelado (`CONFLICT`) ou tarefa concluída
+                  ou cancelada (`INVALID_STATE`)
                 instance: /api/v1/workflow/tasks/{task_id}
                 code: CONFLICT
                 correlationId: 11111111-1111-4111-8111-111111111111

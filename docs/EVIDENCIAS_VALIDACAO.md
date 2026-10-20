@@ -2,6 +2,15 @@
 
 > Estado de execução em 27/09/2026: consulte [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
 
+## Estados finais, auditoria e prazos do Workflow (#59, 2026-10-20)
+
+Ambiente: Linux (contêiner), Python 3.13, SQLite. Base: `main` em `cf155ee`, branch `workflow-estados-prazos`.
+
+- `tests/test_workflow.py`: **13 aprovados**. Com as rotas e o serviço da `main` anterior, **5 falham**: reabertura de tarefa final com outra tarefa ativa, troca de responsável em tarefa final, cancelamento do processo quando todas as tarefas são finais com algum cancelamento, auditoria de criação/transição e prazo de preparação contado do `occurredAt` (despacho atrasado).
+- `PYTHONPATH=src python -m pytest -q`: **226 aprovados e 10 ignorados** (PostgreSQL e RabbitMQ reais ausentes).
+- `tools/export_openapi.py`: OpenAPI regenerado; só mudam descrições das rotas de tarefa (nenhum campo, status ou código removido).
+- Não verificado localmente: PostgreSQL (o job `postgresql` do CI cobre a suíte), interface além das ações já existentes.
+
 ## Verificação em 17/10/2026 (entrega de 19/10)
 
 Ambiente: Windows 11 (10.0.26300), Python 3.12.10, SQLite, dependências de `requirements.txt` e `requirements-dev.txt` em ambiente limpo.
