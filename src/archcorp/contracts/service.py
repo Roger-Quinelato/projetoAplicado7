@@ -1,4 +1,5 @@
-from datetime import date
+from collections.abc import Callable
+from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy import select, update
@@ -20,10 +21,21 @@ def money(value) -> str:
     return str(Decimal(str(value)).quantize(Decimal("0.01")))
 
 
+def utc_now() -> datetime:
+    """Relógio padrão: instante atual em UTC."""
+    return datetime.now(timezone.utc)
+
+
 class ContractService:
-    def __init__(self, customers: CustomerReader):
-        """Recebe a porta de leitura de clientes do CRM."""
+    def __init__(self, customers: CustomerReader, clock: Callable[[], datetime] = utc_now):
+        """Recebe a porta de leitura de clientes do CRM e o relógio (injetável nos testes)."""
         self.customers = customers
+        self.clock = clock
+
+    def utc_today(self) -> date:
+        """Data civil UTC do relógio do serviço, independente do fuso do servidor."""
+        moment = self.clock()
+        return (moment.replace(tzinfo=timezone.utc) if moment.tzinfo is None else moment.astimezone(timezone.utc)).date()
 
     def read_customer(self, session: Session, customer_id: str) -> CustomerData | None:
         """Lê o cliente pelo CRM; a indisponibilidade vira 503 antes de qualquer gravação (ADR-006)."""
@@ -120,7 +132,7 @@ class ContractService:
             if previous is not None:
                 return previous, True
         ensure_contract_transition(contract.status, ContractStatus.CLOSED)
-        ends_on = data.get("endsOn") or max(date.today(), contract.starts_on)
+        ends_on = data.get("endsOn") or max(self.utc_today(), contract.starts_on)
         if ends_on < contract.starts_on:
             raise BusinessRuleError("Data de encerramento anterior ao início do contrato")
         contract.status = ContractStatus.CLOSED
