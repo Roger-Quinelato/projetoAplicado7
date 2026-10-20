@@ -339,6 +339,8 @@ export function CustomerPicker({ name = 'customerId', label, value, defaultValue
     setPage({ offset: 0, email: emailRef.current?.value.trim() ?? '' })
   }
 
+  // Enquanto a página carrega, a navegação fica bloqueada: cliques seguidos pulariam páginas.
+  const loading = customers.status === 'loading'
   const extra = known && known.customerId === selected && !inPage ? [known] : []
   const options = [...extra, ...rows]
   const first = rows.length ? page.offset + 1 : 0
@@ -353,12 +355,14 @@ export function CustomerPicker({ name = 'customerId', label, value, defaultValue
       <input ref={emailRef} type="email" aria-label="Buscar por e-mail exato" placeholder="E-mail exato" autoComplete="off"
         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); search() } }} />
       <button type="button" className="secondary small" onClick={search}>Buscar</button>
-      <button type="button" className="secondary small" disabled={page.offset === 0} onClick={() => setPage(p => ({ ...p, offset: Math.max(0, p.offset - CUSTOMER_PAGE_SIZE) }))}>Anteriores</button>
-      <button type="button" className="secondary small" disabled={rows.length < CUSTOMER_PAGE_SIZE} onClick={() => setPage(p => ({ ...p, offset: p.offset + CUSTOMER_PAGE_SIZE }))}>Próximos</button>
+      <button type="button" className="secondary small" disabled={loading || page.offset === 0} onClick={() => setPage(p => ({ ...p, offset: Math.max(0, p.offset - CUSTOMER_PAGE_SIZE) }))}>Anteriores</button>
+      <button type="button" className="secondary small" disabled={loading || rows.length < CUSTOMER_PAGE_SIZE} onClick={() => setPage(p => ({ ...p, offset: p.offset + CUSTOMER_PAGE_SIZE }))}>Próximos</button>
     </div>
     <small id={`${id}-hint`} role="status">
       {customers.status === 'error' ? <>Falha ao carregar clientes ({errorHeadline(customers.error)}) <button type="button" className="inline" onClick={() => void customers.reload()}>Tentar novamente</button></>
         : lookupError ? `Não foi possível carregar o cliente selecionado: ${errorHeadline(lookupError)}`
+        // Durante o carregamento as opções ainda são da página anterior: a faixa só aparece com os dados novos.
+        : loading ? 'Carregando clientes…'
         : rows.length ? `Clientes ativos ${first}–${page.offset + rows.length}${page.email ? ` com e-mail ${page.email}` : ''}.`
         : customers.data ? (page.email ? 'Nenhum cliente ativo com esse e-mail.' : 'Nenhum cliente ativo nesta página.') : 'Carregando clientes…'}
       {hint && <> {hint}</>}
