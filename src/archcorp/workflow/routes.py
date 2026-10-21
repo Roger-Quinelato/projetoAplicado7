@@ -99,6 +99,19 @@ def list_processes(session: Session = Depends(get_session)) -> list[dict]:
     return [process_data(x) for x in session.scalars(select(ProcessInstance).order_by(ProcessInstance.process_id).limit(200))]
 
 
+class ProcessSummaryResponse(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [{"total": 250, "running": 40}]})
+
+    total: int = Field(description="Processos gravados, em qualquer estado.")
+    running: int = Field(description="Processos fora dos estados finais COMPLETED e CANCELLED.")
+
+
+@router.get("/processes/summary", response_model=ProcessSummaryResponse, dependencies=[Depends(require_roles("operations", "support", "contracts", "admin"))])
+def process_summary(session: Session = Depends(get_session)) -> dict:
+    """Processos gravados e em andamento, sem o limite de 200 da listagem; mudança aditiva na v1 (#73)."""
+    return service.process_summary(session)
+
+
 @router.get("/processes/{process_id}", response_model=ProcessResponse, responses={404: {"description": "Processo não encontrado."}}, dependencies=[Depends(require_roles("operations", "support", "contracts", "admin"))])
 def get_process(process_id: UUID, session: Session = Depends(get_session)) -> dict:
     """Consulta um processo."""

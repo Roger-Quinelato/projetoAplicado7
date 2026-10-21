@@ -145,6 +145,11 @@ export interface TaskChange { state: TaskState, owner?: string | null }
 export interface DemoState { customers: number, contracts: number, invoices: number, tickets: number, processes: number, legacyMappings: number }
 export interface DispatchResult { processed: number, failed: number }
 export interface OutboxSummary { pending: number, failed: number }
+/** Totais contados no servidor, sem o limite de 200 das listagens (#73). */
+export interface ContractSummary { total: number, active: number }
+export interface InvoiceSummary { receivable: number, balances: { currency: string, amount: number }[] }
+export interface TicketSummary { open: number, withinSla: number }
+export interface ProcessSummary { total: number, running: number }
 export interface Readiness { status: string }
 export interface Failure { eventId: Uuid, eventType: string, attempts: number, reason: string | null, correlationId: Uuid }
 export interface OperationTrace {
@@ -338,6 +343,7 @@ export function createApi(token: string, fetcher: typeof fetch = (...args) => fe
       request<ReservationDraft>('POST', `/api/v1/contracts/reservations/${id}/draft`, { idempotencyKey }),
     cancelReservation: (id: Uuid) => request<Reservation>('POST', `/api/v1/contracts/reservations/${id}/cancel`),
     listContracts: (customerId?: Uuid) => get<Contract[]>('/api/v1/contracts', { customerId }),
+    contractSummary: () => get<ContractSummary>('/api/v1/contracts/summary'),
     getContract: (id: Uuid) => get<Contract>(`/api/v1/contracts/${id}`),
     createDraft: (body: ContractDraftCreate, idempotencyKey: string) =>
       request<Contract>('POST', '/api/v1/contracts/drafts', { body, idempotencyKey }),
@@ -350,6 +356,7 @@ export function createApi(token: string, fetcher: typeof fetch = (...args) => fe
 
     // Financeiro
     listInvoices: (contractId?: Uuid) => get<Invoice[]>('/api/v1/finance/invoices', { contractId }),
+    invoiceSummary: () => get<InvoiceSummary>('/api/v1/finance/invoices/summary'),
     listPayments: (invoiceId?: Uuid) => get<Payment[]>('/api/v1/finance/payments', { invoiceId }),
     recordPayment: (invoiceId: Uuid, body: PaymentInput, idempotencyKey: string) =>
       request<PaymentResult>('POST', `/api/v1/finance/invoices/${invoiceId}/payments`, { body, idempotencyKey }),
@@ -360,6 +367,7 @@ export function createApi(token: string, fetcher: typeof fetch = (...args) => fe
 
     // Atendimento
     listTickets: () => get<Ticket[]>('/api/v1/support/tickets'),
+    ticketSummary: () => get<TicketSummary>('/api/v1/support/tickets/summary'),
     openTicket: (body: TicketCreate, idempotencyKey: string) =>
       request<Ticket>('POST', '/api/v1/support/tickets', { body, idempotencyKey }),
     assignTicket: (id: Uuid, owner: string) => request<Ticket>('POST', `/api/v1/support/tickets/${id}/assign`, { body: { owner } }),
@@ -371,6 +379,7 @@ export function createApi(token: string, fetcher: typeof fetch = (...args) => fe
 
     // Workflow
     listProcesses: () => get<Process[]>('/api/v1/workflow/processes'),
+    processSummary: () => get<ProcessSummary>('/api/v1/workflow/processes/summary'),
     listTasks: (processId?: Uuid) => get<Task[]>('/api/v1/workflow/tasks', { processId }),
     createTask: (body: TaskInput) => request<Task>('POST', '/api/v1/workflow/tasks', { body }),
     changeTask: (id: Uuid, body: TaskChange) => request<Task>('PATCH', `/api/v1/workflow/tasks/${id}`, { body }),

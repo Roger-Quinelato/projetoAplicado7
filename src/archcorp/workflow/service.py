@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from archcorp.exceptions import NotFoundError
 from archcorp.infrastructure.db import count_rows
 from archcorp.integration.public import audit
-from archcorp.workflow.domain import aggregate_process_state, ensure_process_open, parse_utc, preparation_due, task_change_needed
+from archcorp.workflow.domain import FINAL_PROCESS_STATES, aggregate_process_state, ensure_process_open, parse_utc, preparation_due, task_change_needed
 from archcorp.workflow.models import ProcessInstance, ProcessTask
 
 
@@ -90,6 +90,12 @@ def handle_ticket_resolved(session: Session, envelope: dict) -> None:
 def count_processes(session: Session) -> int:
     """Conta os processos gravados."""
     return count_rows(session, ProcessInstance)
+
+
+def process_summary(session: Session) -> dict:
+    """Processos gravados e em andamento (não finais), sem o limite da listagem (#73)."""
+    counts = dict(session.execute(select(ProcessInstance.state, func.count()).group_by(ProcessInstance.state)).all())
+    return {"total": sum(counts.values()), "running": sum(n for state, n in counts.items() if state not in FINAL_PROCESS_STATES)}
 
 
 def handle_contract_closed(session: Session, envelope: dict) -> None:

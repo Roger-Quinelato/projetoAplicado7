@@ -2,7 +2,7 @@ from collections.abc import Callable
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from archcorp.contracts.domain import ContractStatus, ReservationStatus, ensure_contract_transition, ensure_reservation_transition
@@ -163,6 +163,12 @@ class ContractService:
     def count(session: Session) -> int:
         """Conta os contratos gravados."""
         return count_rows(session, Contract)
+
+    @staticmethod
+    def summary(session: Session) -> dict:
+        """Totais de todos os contratos, sem o limite da listagem (indicadores da Visão geral, #73)."""
+        counts = dict(session.execute(select(Contract.status, func.count()).group_by(Contract.status)).all())
+        return {"total": sum(counts.values()), "active": counts.get(ContractStatus.ACTIVE, 0)}
 
     @staticmethod
     def require(session: Session, contract_id: str) -> Contract:
