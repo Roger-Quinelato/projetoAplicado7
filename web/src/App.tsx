@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { asApiError, createApi, errorHeadline, type ApiError } from './api'
 import { SessionContext, type Session } from './ui'
+import EventsBar from './EventsBar'
 import Overview from './contexts/Overview'
 import Crm from './contexts/Crm'
 import Contracts from './contexts/Contracts'
@@ -99,6 +100,7 @@ export default function App() {
 
   useEffect(() => {
     if (firstRender.current) { firstRender.current = false; return }
+    if (route.params.has('focus')) return // a tela de destino leva o foco ao elemento pedido
     heading.current?.focus()
   }, [route.raw])
 
@@ -108,7 +110,14 @@ export default function App() {
     setGate({ status: 'idle' })
   }, [])
   const navigate = useCallback((target: string) => { window.location.hash = target }, [])
-  const session = useMemo<Session | null>(() => token ? { api: createApi(token, undefined, reach), signOut, navigate } : null, [token, signOut, navigate, reach])
+  const [dataVersion, setDataVersion] = useState(0)
+  const [eventsVersion, setEventsVersion] = useState(0)
+  const dispatched = useCallback(() => setDataVersion(v => v + 1), [])
+  const commandDone = useCallback(() => setEventsVersion(v => v + 1), [])
+  // A API fica estável entre versões: só a credencial (ou o observador de conectividade) recria o cliente e recarrega tudo.
+  const api = useMemo(() => token ? createApi(token, undefined, reach) : null, [token, reach])
+  const session = useMemo<Session | null>(() => api ? { api, signOut, navigate, dataVersion, eventsVersion, dispatched, commandDone } : null,
+    [api, signOut, navigate, dataVersion, eventsVersion, dispatched, commandDone])
 
   if (!session) return <Gate state={gate} onSubmit={value => void verify(value)} />
 
@@ -146,6 +155,7 @@ export default function App() {
             <a href="/docs" target="_blank" rel="noreferrer">Documentação da API<span className="sr-only"> (abre em nova aba)</span> ↗</a>
           </div>
         </header>
+        <EventsBar />
         <div key={route.raw}>
           {current.path === '/' && <Overview params={route.params} />}
           {current.path === '/crm' && <Crm />}

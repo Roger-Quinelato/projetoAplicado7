@@ -94,6 +94,11 @@ motivo. O evento muda para `FAILED` ao alcançar `RETRY_LIMIT`, que vale três p
 padrão. O protótipo não agenda tentativas automaticamente e não implementa atraso
 exponencial ou jitter.
 
+`GET /api/v1/integration/outbox/summary` devolve quantos eventos estão `PENDING` e
+quantos estão `FAILED`, sem payload. A interface usa essa contagem na barra de
+eventos, que mostra o que aguarda despacho em todas as telas para os papéis
+`operations` e `admin`.
+
 O operador consulta `GET /api/v1/integration/failures` e, depois de corrigir a
 causa, usa `POST /api/v1/integration/failures/{eventId}/reprocess`. O comando muda
 o evento para `PENDING` e registra a ação na auditoria. Inbox e restrições únicas

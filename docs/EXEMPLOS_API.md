@@ -322,6 +322,26 @@ Finance registra uma cobrança, Workflow inicia uma preparação de retirada e c
 registra o `eventId` na inbox. Um novo despacho sem eventos pendentes devolve
 `{"processed": 0, "failed": 0}`.
 
+### Consultar o resumo da outbox
+
+```http
+GET /api/v1/integration/outbox/summary HTTP/1.1
+Authorization: Bearer demo-operations
+X-Correlation-ID: 11111111-1111-4111-8111-111111111111
+```
+
+Resposta `200 OK` antes do despacho acima:
+
+```json
+{
+  "pending": 1,
+  "failed": 0
+}
+```
+
+`pending` conta eventos `PENDING` e `failed` conta eventos `FAILED`, que já
+esgotaram as tentativas. Perfis sem `operations` ou `admin` recebem `403 FORBIDDEN`.
+
 ### Repetir com idempotência
 
 Repita a ativação com `Idempotency-Key: demo-activate-001`. A API devolve o mesmo

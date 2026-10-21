@@ -144,6 +144,7 @@ export interface TaskChange { state: TaskState, owner?: string | null }
 
 export interface DemoState { customers: number, contracts: number, invoices: number, tickets: number, processes: number, legacyMappings: number }
 export interface DispatchResult { processed: number, failed: number }
+export interface OutboxSummary { pending: number, failed: number }
 export interface Readiness { status: string }
 export interface Failure { eventId: Uuid, eventType: string, attempts: number, reason: string | null, correlationId: Uuid }
 export interface OperationTrace {
@@ -379,6 +380,7 @@ export function createApi(token: string, fetcher: typeof fetch = (...args) => fe
     readiness: () => get<Readiness>('/health/ready'),
     demoState: () => get<DemoState>('/api/v1/demo/state'),
     dispatchOutbox: () => request<DispatchResult>('POST', '/api/v1/integration/outbox/dispatch'),
+    outboxSummary: () => get<OutboxSummary>('/api/v1/integration/outbox/summary'),
     listFailures: () => get<Failure[]>('/api/v1/integration/failures'),
     reprocessFailure: (eventId: Uuid) => request<{ eventId: Uuid, status: string }>('POST', `/api/v1/integration/failures/${eventId}/reprocess`),
     operationTrace: (correlationId: Uuid) => get<OperationTrace>(`/api/v1/operations/${correlationId}`),

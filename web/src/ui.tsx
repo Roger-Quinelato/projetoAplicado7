@@ -9,6 +9,12 @@ export interface Session {
   /** Volta à tela de credencial (usado em respostas 401). */
   signOut: () => void
   navigate: (route: string) => void
+  /** Muda após cada despacho; as consultas de todas as telas recarregam quando ela muda. */
+  dataVersion: number
+  /** Muda após cada comando concluído; a barra de eventos reconsulta a outbox quando ela muda. */
+  eventsVersion: number
+  dispatched: () => void
+  commandDone: () => void
 }
 
 export const SessionContext = createContext<Session | null>(null)
@@ -76,7 +82,7 @@ export type Resource<T> =
 
 /** Carrega um recurso da API com estados explícitos de carregamento, sucesso e erro. */
 export function useResource<T>(load: (api: Api) => Promise<ApiResult<T>>, deps: unknown[]): Resource<T> {
-  const { api } = useSession()
+  const { api, dataVersion } = useSession()
   const [state, setState] = useState<{ status: 'loading' | 'success' | 'error', data?: T, error?: ApiError }>({ status: 'loading' })
   const sequence = useRef(0)
   const loader = useRef(load)
@@ -93,7 +99,7 @@ export function useResource<T>(load: (api: Api) => Promise<ApiResult<T>>, deps: 
     }
   }, [api])
 
-  useEffect(() => { void reload() }, [reload, ...deps])
+  useEffect(() => { void reload() }, [reload, dataVersion, ...deps])
   return { ...state, reload } as Resource<T>
 }
 
@@ -131,6 +137,7 @@ export type Feedback =
  * informado, examina o corpo da resposta: verdadeiro rebaixa o aviso de sucesso a resultado parcial.
  */
 export function useActions() {
+  const { commandDone } = useSession()
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -143,6 +150,7 @@ export function useActions() {
       const suffix = describe ? ` ${describe(result.data)}` : ''
       if (partial?.(result.data)) setFeedback({ kind: 'warning', message: `${label}: concluído com falhas.${suffix}`, correlationId: result.correlationId })
       else setFeedback({ kind: 'success', message: `${label}: concluído.${suffix}`, correlationId: result.correlationId, replayed: result.replayed })
+      commandDone()
       return result
     } catch (error) {
       const message = isAmbiguous(error) ? `${label}: não foi possível confirmar; a operação pode ter sido registrada.` : `${label}: não concluído.`
@@ -151,7 +159,7 @@ export function useActions() {
     } finally {
       setBusy(false)
     }
-  }, [])
+  }, [commandDone])
 
   return { feedback, busy, run, clear: () => setFeedback(null) }
 }
@@ -244,11 +252,12 @@ export function ErrorPanel({ error, context, onRetry, onClose }: { error: ApiErr
 
 // ---------- Layout e formulários ----------
 
-export function Card({ title, roles, children, aside, className }: { title: string, roles?: string, children: ReactNode, aside?: ReactNode, className?: string }) {
-  const id = useId()
-  return <section className={`card ${className ?? ''}`} aria-labelledby={id}>
+/** `id`, quando informado, torna o cartão um destino de link que pode receber o foco. */
+export function Card({ title, roles, children, aside, className, id }: { title: string, roles?: string, children: ReactNode, aside?: ReactNode, className?: string, id?: string }) {
+  const headingId = useId()
+  return <section id={id} tabIndex={id ? -1 : undefined} className={`card ${className ?? ''}`} aria-labelledby={headingId}>
     <div className="card-head">
-      <div><h2 id={id}>{title}</h2>{roles && <p className="roles">Papéis: {roles}</p>}</div>
+      <div><h2 id={headingId}>{title}</h2>{roles && <p className="roles">Papéis: {roles}</p>}</div>
       {aside}
     </div>
     {children}

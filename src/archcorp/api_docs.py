@@ -246,6 +246,18 @@ DISPATCH_RESPONSES = {
 }
 
 
+OUTBOX_SUMMARY_RESPONSES = {
+    **COMMON_API_ERRORS,
+    200: {
+        "description": "Quantidade de eventos aguardando despacho e de eventos com falha permanente.",
+        "headers": {"X-Correlation-ID": CORRELATION_RESPONSE_HEADER},
+        "content": {
+            "application/json": {"example": {"pending": 3, "failed": 0}}
+        },
+    },
+}
+
+
 FAILURE_LIST_RESPONSES = {
     **COMMON_API_ERRORS,
     200: {

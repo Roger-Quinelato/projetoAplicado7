@@ -32,6 +32,11 @@ class DispatchResponse(BaseModel):
     failed: int
 
 
+class OutboxSummaryResponse(BaseModel):
+    pending: int
+    failed: int
+
+
 class FailureResponse(BaseModel):
     eventId: UUID
     eventType: str

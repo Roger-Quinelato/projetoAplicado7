@@ -42,18 +42,22 @@ for (const { token, contexto, cartao } of PAPEIS) {
     await irPara(page, contexto)
     await cartaoCarregado(page, cartao)
     await irPara(page, 'Visão geral')
-    await expect(page.getByRole('region', { name: 'Totais do ambiente' }).getByRole('alert')).toContainText('Seu papel não tem permissão')
+    // Visão geral (#67): indicador proibido mostra o motivo no lugar do número, nunca um zero ou lista vazia.
+    await expect(page.getByRole('region', { name: 'Situação da demonstração' })).toContainText('sem permissão para este perfil')
   })
 }
 
 test('despacho com falhas não é anunciado como sucesso', async ({ page }) => {
-  await entrar(page, 'demo-admin')
+  // As respostas simuladas valem desde a entrada: a barra consulta o resumo ao abrir a sessão.
+  await page.route('**/api/v1/integration/outbox/summary', route => route.fulfill({ status: 200, json: { pending: 3, failed: 0 } }))
   await page.route('**/api/v1/integration/outbox/dispatch', route => route.fulfill({ status: 200, json: { processed: 1, failed: 2 } }))
-  await page.getByRole('button', { name: 'Despachar eventos pendentes' }).click()
-  const aviso = page.getByRole('alert').filter({ hasText: 'Despacho da outbox' })
-  await expect(aviso).toContainText('concluído com falhas. 1 evento(s) processado(s), 2 com falha.')
-  await expect(aviso).toContainText('Falhas de integração')
-  await expect(page.getByText('Despacho da outbox: concluído.')).toHaveCount(0)
+  await entrar(page, 'demo-admin')
+  // Barra global de eventos (#67): o resultado do despacho fica na própria barra, com o caminho para as falhas.
+  const barra = page.getByRole('region', { name: 'Eventos de integração' })
+  await barra.getByRole('button', { name: 'Despachar eventos' }).click()
+  await expect(barra).toContainText('1 evento entregue, 2 tentativas com falha.')
+  await expect(barra.getByRole('link', { name: /Falhas/ })).toBeVisible()
+  await expect(page.getByText('Despacho dos eventos: concluído.')).toHaveCount(0)
 })
 
 test('indicador de conexão reflete a resposta observada da API, não a autenticação', async ({ page }) => {
