@@ -100,6 +100,7 @@ export default function App() {
 
   useEffect(() => {
     if (firstRender.current) { firstRender.current = false; return }
+    if (route.params.has('focus')) return // a tela de destino leva o foco ao elemento pedido
     heading.current?.focus()
   }, [route.raw])
 

@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { asApiError, type ApiError, type ApiResult, type Api, type OperationTrace } from '../api'
+import { FAILURES_CARD } from '../EventsBar'
 import {
   contractIndicator, failureIndicator, invoiceIndicator, processIndicator, ticketIndicator, type Indicator,
 } from '../indicators'
 import {
   Card, ErrorPanel, Field, FeedbackBanner, Id, PageIntro, ResourceView, Status, Table, dateTime, text, useActions, useResource, useSession,
+  type Resource,
 } from '../ui'
 
 /** Passos de cada fluxo e a tela onde são feitos; sem rota, o passo é feito na barra de eventos. */
@@ -19,7 +21,10 @@ const DESTINATIONS: Record<string, string> = {
 
 /** Um indicador calculado a partir de uma lista; sem permissão ou com erro, mostra o motivo no lugar do número. */
 function IndicatorTile<T>({ label, load, compute }: { label: string, load: (api: Api) => Promise<ApiResult<T>>, compute: (data: T) => Indicator }) {
-  const resource = useResource(load, [])
+  return <IndicatorView label={label} resource={useResource(load, [])} compute={compute} />
+}
+
+function IndicatorView<T>({ label, resource, compute }: { label: string, resource: Resource<T>, compute: (data: T) => Indicator }) {
   const value = resource.data === undefined ? null : compute(resource.data)
   const detail = resource.status === 'error'
     ? (resource.error.status === 403 ? 'sem permissão para este perfil' : 'não foi possível carregar')
@@ -36,6 +41,15 @@ export default function Overview({ params }: { params: URLSearchParams }) {
   const { feedback, busy, run, clear } = useActions()
   const [trace, setTrace] = useState<{ status: 'idle' | 'loading' | 'success' | 'error', data?: OperationTrace, error?: ApiError }>({ status: 'idle' })
   const failures = useResource(a => a.listFailures(), [])
+  const focus = params.get('focus')
+
+  // Destino do link "Falhas" da barra de eventos.
+  useEffect(() => {
+    if (focus !== FAILURES_CARD) return
+    const card = document.getElementById(FAILURES_CARD)
+    card?.scrollIntoView({ block: 'start' })
+    card?.focus()
+  }, [focus])
 
   async function lookup(correlationId: string) {
     setTrace({ status: 'loading' })
@@ -53,7 +67,7 @@ export default function Overview({ params }: { params: URLSearchParams }) {
         <IndicatorTile label="Faturas em aberto" load={a => a.listInvoices()} compute={invoiceIndicator} />
         <IndicatorTile label="Chamados no prazo" load={a => a.listTickets()} compute={ticketIndicator} />
         <IndicatorTile label="Processos em andamento" load={a => a.listProcesses()} compute={processIndicator} />
-        <IndicatorTile label="Falhas de integração" load={a => a.listFailures()} compute={failureIndicator} />
+        <IndicatorView label="Falhas de integração" resource={failures} compute={failureIndicator} />
       </div>
     </Card>
 
@@ -96,7 +110,7 @@ export default function Overview({ params }: { params: URLSearchParams }) {
         </div>
       </Card>
 
-      <Card title="Falhas de integração">
+      <Card title="Falhas de integração" id={FAILURES_CARD}>
         {failures.status === 'error' && failures.error.status === 403
           ? <p className="empty">As falhas de integração ficam visíveis para os perfis operations e admin.</p>
           : <ResourceView resource={failures} label="falhas"

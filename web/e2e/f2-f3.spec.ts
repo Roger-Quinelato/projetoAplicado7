@@ -53,7 +53,8 @@ test('F2: ativação → uma fatura paga em duas parcelas e uma preparação de 
   await test.step('a preparação de retirada existe uma única vez, mesmo com novo despacho', async () => {
     const barra = page.getByRole('region', { name: 'Eventos de integração' })
     await expect(barra).toContainText('Nenhum evento aguardando despacho')
-    await expect(barra.getByRole('button', { name: 'Despachar eventos' })).toBeDisabled()
+    await barra.getByRole('button', { name: 'Despachar eventos' }).click()
+    await expect(barra).toContainText('0 eventos entregues, nenhuma falha.')
     await irPara(page, 'Workflow')
     await expect(page.getByRole('region', { name: 'Tabela: Processos' }).getByRole('row').filter({ hasText: curto })).toHaveCount(1)
     const faturas = await (await page.request.get(`/api/v1/finance/invoices?contractId=${contrato.contractId}`, { headers: ADMIN })).json()

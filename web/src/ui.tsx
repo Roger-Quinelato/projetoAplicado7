@@ -252,11 +252,12 @@ export function ErrorPanel({ error, context, onRetry, onClose }: { error: ApiErr
 
 // ---------- Layout e formulários ----------
 
-export function Card({ title, roles, children, aside, className }: { title: string, roles?: string, children: ReactNode, aside?: ReactNode, className?: string }) {
-  const id = useId()
-  return <section className={`card ${className ?? ''}`} aria-labelledby={id}>
+/** `id`, quando informado, torna o cartão um destino de link que pode receber o foco. */
+export function Card({ title, roles, children, aside, className, id }: { title: string, roles?: string, children: ReactNode, aside?: ReactNode, className?: string, id?: string }) {
+  const headingId = useId()
+  return <section id={id} tabIndex={id ? -1 : undefined} className={`card ${className ?? ''}`} aria-labelledby={headingId}>
     <div className="card-head">
-      <div><h2 id={id}>{title}</h2>{roles && <p className="roles">Papéis: {roles}</p>}</div>
+      <div><h2 id={headingId}>{title}</h2>{roles && <p className="roles">Papéis: {roles}</p>}</div>
       {aside}
     </div>
     {children}
