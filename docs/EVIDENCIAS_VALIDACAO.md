@@ -12,7 +12,7 @@ Base: `main` em `486404a`. Ambiente: contêiner Linux, Python 3.13, Node 22, Chr
 | `pytest` com PostgreSQL + RabbitMQ / SQLite puro | 256 aprovados / 242 aprovados e 14 ignorados |
 | `tools/export_openapi.py --check` | atualizado. Quatro rotas aditivas: `contractSummary`, `invoiceSummary`, `ticketSummary` e `processSummary` |
 | `npm test` e `npm run build` | 19 aprovados; build aprovado |
-| Playwright (API com SQLite novo) | 24 aprovados, axe incluído |
+| Playwright (API com SQLite novo) | 26 aprovados, axe incluído. `e2e/indicadores.spec.ts` cria 205 contratos e mostra o total do resumo; com o build anterior (contagem sobre a listagem), o roteiro falha |
 
 - Não verificado: volumes reais (os registros são sintéticos e inseridos diretamente pelos modelos) e o desempenho com milhares de faturas. A contagem de faturas e de chamados percorre as linhas em aberto no serviço para reaproveitar as regras do domínio.
 
