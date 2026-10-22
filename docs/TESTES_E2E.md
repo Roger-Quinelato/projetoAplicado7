@@ -1,6 +1,6 @@
 # Testes de interface (Playwright)
 
-Estado em 17/10/2026, atualizado em 20/10/2026. Os roteiros exercitam a interface React/Vite (`web/`) contra a **API real** (FastAPI servindo `web/dist`), com dados sintéticos e tokens locais `demo-*`. Eles não tocam sistemas reais da Localiza.
+Estado em 17/10/2026, atualizado em 20/10/2026 e revisado em 22/10/2026. Os roteiros exercitam a interface React/Vite (`web/`) contra a **API real** (FastAPI servindo `web/dist`), com dados sintéticos e tokens locais `demo-*`. Eles não tocam sistemas reais da Localiza.
 
 ## O que existe
 
@@ -48,7 +48,7 @@ Os tokens `demo-*` são públicos e locais; não coloque credenciais reais no `.
 
 ## Limites conhecidos
 
-- A prova de que a interface funciona vale para o ambiente de teste (SQLite local, sem broker). Não comprova a URL HTTPS pública, o PostgreSQL de produção, o RabbitMQ nem a persistência após reinício.
-- O teste axe não tem asserção: ele anexa o resumo (`axe-resumo.json`) ao relatório e só falha por erro de execução. A última execução local reportou 0 violações A/AA, sem arquivo versionado desse resultado.
+- No CI, a prova vale para o ambiente de teste (SQLite local, sem broker). Em 20/10/2026 (#62), os mesmos roteiros passaram localmente com `E2E_BASE_URL` apontando para uma API com PostgreSQL e RabbitMQ reais (ver `EVIDENCIAS_VALIDACAO.md`). Nenhuma das execuções comprova a URL HTTPS pública, o PostgreSQL gerenciado nem a persistência após reinício no provedor.
+- Desde 20/10/2026 (#62), o teste axe exige zero violações WCAG 2 A/AA em cada contexto (`expect(resumo).toEqual(...)`) e também anexa o resumo `axe-resumo.json` ao relatório do Playwright, que não é versionado.
 - A varredura axe cobre as telas no estado inicial (banco vazio, sem diálogos nem erros); não substitui auditoria formal de acessibilidade nem teste com leitor de tela.
 - A UI não tem `data-testid`; os roteiros dependem de roles, labels e textos em português. Mudar um rótulo exige atualizar o roteiro.

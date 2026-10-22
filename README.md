@@ -64,6 +64,15 @@ O Compose publica todas as portas somente em `127.0.0.1`:
 
 A aplicação executa as migrações Alembic (`upgrade head`) ao iniciar, e os dados ficam no volume `archcorp-data`. Para parar a stack sem perder dados, use `docker compose down`. Não use `down -v`, que apaga o volume.
 
+Para uma demonstração isolada de outra stack local, use um nome de projeto próprio, que cria contêineres e volume separados, e troque as portas se necessário:
+
+```powershell
+$env:ARCHCORP_API_PORT = "8001"; $env:ARCHCORP_POSTGRES_PORT = "5433"; $env:ARCHCORP_RABBITMQ_UI_PORT = "15673"
+docker compose -p archcorp-demo up --build
+```
+
+A API só sobe depois que o PostgreSQL responde a `pg_isready` e o RabbitMQ aceita conexões AMQP (`rabbitmq-diagnostics check_port_connectivity`).
+
 Para acesso pela rede, use `PUBLIC_DEMO=true` com `DEMO_ACCESS_TOKEN`. Nunca abra as portas com os tokens locais ativos.
 
 ## Demonstração dos fluxos
@@ -120,6 +129,11 @@ A aplicação lê a configuração de variáveis de ambiente:
 | `CRM_READER_MAX_ATTEMPTS` | `3` | Tentativas da leitura do CRM |
 | `CRM_READER_BASE_DELAY_SECONDS` | `0.1` | Atraso base da retentativa exponencial |
 | `CONTRACT_ADAPTER_AVAILABLE` | `true` | Use `false` para simular a indisponibilidade de Contracts no atendimento |
+| `RABBITMQ_SOCKET_TIMEOUT_SECONDS` | `5.0` | Prazo do socket da conexão com o broker |
+| `RABBITMQ_BLOCKED_TIMEOUT_SECONDS` | `10.0` | Prazo máximo com a conexão bloqueada pelo broker; o despacho segura o bloqueio do evento enquanto publica |
+| `RABBITMQ_HEARTBEAT_SECONDS` | `30` | Heartbeat da conexão AMQP |
+| `RABBITMQ_HEALTH_TIMEOUT_SECONDS` | `2.0` | Prazo da verificação do broker em `/health/ready` |
+| `RABBITMQ_QUEUE_MAX_LENGTH` | `10000` | Tamanho máximo da fila de cópias `archcorp.events.all`; com a fila cheia, o broker recusa a publicação (`reject-publish`) e o despacho registra a falha |
 | `RETRY_LIMIT` | `3` | Tentativas de despacho antes de o evento ir para falhas |
 | `FINANCE_ALLOW_FUTURE_AS_OF` | `false` | Permite data futura na verificação de vencimento; recusada com `PUBLIC_DEMO=true` |
 | `PORT` | `8000` | Porta do contêiner da imagem Docker |
@@ -171,7 +185,7 @@ O workflow `Verify` roda em cada PR:
 | Rota | Função |
 |---|---|
 | `GET /health/live` | Processo vivo |
-| `GET /health/ready` | Banco acessível |
+| `GET /health/ready` | Banco acessível (`503` quando indisponível); com `RABBITMQ_URL`, informa também `broker: UP/DOWN`, sem derrubar a prontidão |
 | `GET /metrics` | Contadores e latência no formato Prometheus, rotulados pelo template da rota; exige `operations` ou `admin` |
 | `GET /api/v1/operations/{correlationId}` | Trilha de auditoria de uma operação |
 | `POST /api/v1/integration/outbox/dispatch` | Despacho explícito da outbox, também disponível na interface |
@@ -235,6 +249,7 @@ Comece por estes documentos:
 
 **Qualidade e evolução**
 - [`docs/ATRIBUTOS_QUALIDADE.md`](docs/ATRIBUTOS_QUALIDADE.md)
+- [`docs/TESTES_E2E.md`](docs/TESTES_E2E.md): roteiros Playwright da interface e varredura de acessibilidade
 - [`docs/EVOLUCAO_MANUTENCAO.md`](docs/EVOLUCAO_MANUTENCAO.md)
 
 **Entrega final**

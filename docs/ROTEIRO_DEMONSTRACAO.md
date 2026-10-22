@@ -581,8 +581,9 @@ Financeiro, Atendimento e Workflow; cada aviso de sucesso ou erro exibe o
    **Nova reserva**: a tela Reservas e contratos abre com o mesmo cliente
    selecionado. Registre a reserva e, na tabela Reservas, use **Gerar rascunho**.
    O contrato aparece como "Rascunho" para o mesmo cliente, sem recadastro.
-2. **F2.** Em Contratos, use **Ativar**. Em Financeiro (ou Visão geral/Workflow),
-   use **Despachar eventos pendentes**: surge a fatura "Em aberto" e, em Workflow,
+2. **F2.** Em Contratos, use **Ativar**. Na barra de eventos, visível em todas as
+   telas para `operations` e `admin`, use **Despachar eventos** (ou, em Financeiro,
+   Atendimento ou Workflow, **Despachar eventos pendentes**): surge a fatura "Em aberto" e, em Workflow,
    a "Preparação de retirada". Selecione a fatura e registre um pagamento simulado
    parcial: a fatura passa a "Parcialmente paga". No cartão **Verificar vencimento
    e registrar inadimplência**, informe uma data posterior ao vencimento (requer

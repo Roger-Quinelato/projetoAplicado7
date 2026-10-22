@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Estado em 27/09/2026: este arquivo contém diretrizes obrigatórias de evolução. Para comportamento já implementado e limites verificados, consulte `docs/ESTADO_IMPLEMENTACAO.md`; para demandas e prazos, `docs/CRONOGRAMA_EXECUCAO.md`. OIDC, tracing distribuído, fila de erro no broker e escalabilidade horizontal são metas, não funcionalidades comprovadas do protótipo.
+Criado em 27/09/2026 e revisado em 22/10/2026: este arquivo contém diretrizes obrigatórias de evolução. Para comportamento já implementado e limites verificados, consulte `docs/ESTADO_IMPLEMENTACAO.md`; para demandas e prazos, `docs/CRONOGRAMA_EXECUCAO.md`. OIDC, tracing distribuído, fila de erro no broker e escalabilidade horizontal são metas, não funcionalidades comprovadas do protótipo.
 
 ## Regras permanentes para agentes
 

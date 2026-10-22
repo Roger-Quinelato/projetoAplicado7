@@ -2,6 +2,19 @@
 
 > O estado atual de execução está no [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e no [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
 
+## Sincronização da documentação com a `main` (parte do #65, 2026-10-22)
+
+Base: `origin/main` em `2b59136` (inclui os PRs #67, #71 e #72). Ambiente: Windows 11 (10.0.26300), Python 3.12.10, SQLite. Só a documentação mudou.
+
+| Verificação | Comando | Resultado |
+|---|---|---|
+| Suíte Python, SQLite puro | `PYTHONPATH=src python -m pytest -q -p no:cacheprovider` | **233 aprovados, 14 ignorados** (exigem PostgreSQL ou RabbitMQ reais) em 5 min 34 s; o teste a mais em relação ao #62 veio do PR #67 (`tests/test_flows.py`) |
+| Contrato REST | `python tools/export_openapi.py --check` | atualizado (saída 0) |
+| Contrato de eventos | comparação dos `eventType` emitidos em `src/` com `docs/events/asyncapi.yaml` | os seis eventos coincidem; nenhum payload mudou desde 15/10/2026 |
+
+- Documentos ajustados ao código: `CRONOGRAMA_EXECUCAO.md` (status T12–T22 com as issues dos pacotes, tabela A–J, pendência das duas cabeças do Alembic resolvida pela `0005`), `ESTADO_IMPLEMENTACAO.md` (revisão do #67, limite de 200 registros dos indicadores, axe bloqueante), `TESTES_E2E.md` (axe com asserção), `MATRIZ_RASTREABILIDADE.md` (linha WF-01, convergência das migrações, contagens de 20/10), README (variáveis `RABBITMQ_*`, Compose isolado, `broker` em `/health/ready`) e o cabeçalho do `AGENTS.md`.
+- Não executado nesta rodada: suítes com PostgreSQL e RabbitMQ reais, `npm test`, roteiros Playwright, Compose com Docker, geradores do DOCX e do PPTX, publicação (T20, #64).
+
 ## Viabilidade e documentos (#63 e parte do #65, 2026-10-20)
 
 Base: branch `aceite-integrado` (B–F integrados). Ambiente: contêiner Linux, Python 3.13, LibreOffice para a conversão em PDF.
