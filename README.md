@@ -10,6 +10,11 @@ A solução é uma SOA pragmática entregue como monólito modular ([ADR-001](do
 
 > **Estado do protótipo:** este README descreve como usar o repositório. Para saber o que está verificado, o que é meta e o que depende de validação externa, consulte [`docs/ESTADO_IMPLEMENTACAO.md`](docs/ESTADO_IMPLEMENTACAO.md).
 
+## Cronograma do Projeto Aplicado 7
+
+- **Último acompanhamento:** 09/11/2026.
+- **Apresentação final:** 23/11/2026.
+
 ## Regras para agentes
 
 Antes de trabalhar no repositório, leia [`AGENTS.md`](AGENTS.md). As regras **SEMPRE** são obrigatórias e as regras **NUNCA** são proibições permanentes. Agentes Claude Code também leem [`CLAUDE.md`](CLAUDE.md), que encaminha ao guia completo. A proposta de skills por papel (implementador e revisor) está em [`docs/agentes/LEVANTAMENTO_SKILLS.md`](docs/agentes/LEVANTAMENTO_SKILLS.md) e ainda aguarda aceite.
