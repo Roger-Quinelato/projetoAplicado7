@@ -16,6 +16,7 @@ from archcorp.finance.domain import (
     Clock,
     InvoiceKind,
     InvoiceStatus,
+    OPEN_BALANCE,
     as_utc,
     billed_cycles,
     due_date_from,
@@ -205,6 +206,30 @@ class FinanceService:
 
     def get(self, session: Session, invoice_id: str) -> dict:
         return self.to_dict(session, self._require(session, invoice_id))
+
+    @staticmethod
+    def summary(session: Session) -> dict:
+        """Faturas a receber (aberta, parcialmente paga ou vencida) e saldo por moeda, sem o limite da listagem (#73).
+
+        Um estado com saldo continua com saldo na leitura: `effective_status` só troca aberta por vencida.
+        """
+        paid = (select(Payment.invoice_id, func.sum(Payment.amount).label("paid"))
+                .group_by(Payment.invoice_id).subquery())
+        rows = session.execute(
+            select(Invoice.currency, Invoice.amount, func.coalesce(paid.c.paid, 0))
+            .outerjoin(paid, paid.c.invoice_id == Invoice.invoice_id)
+            .where(Invoice.status.in_([str(s) for s in OPEN_BALANCE]))
+        ).all()
+        balances: dict[str, Decimal] = {}
+        receivable = 0
+        for currency, amount, paid_amount in rows:
+            balance = money(amount) - money(paid_amount)
+            if balance <= ZERO:
+                continue
+            receivable += 1
+            balances[currency] = balances.get(currency, ZERO) + balance
+        return {"receivable": receivable,
+                "balances": [{"currency": c, "amount": float(v)} for c, v in sorted(balances.items())]}
 
     def list_invoices(self, session: Session, contract_id: str | None = None) -> list[dict]:
         query = select(Invoice).order_by(Invoice.due_date.desc(), Invoice.invoice_id).limit(200)

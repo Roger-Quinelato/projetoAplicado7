@@ -243,6 +243,16 @@ class TicketService:
     def get(self, session: Session, ticket_id: str) -> dict:
         return self.detail(session, self._require(session, ticket_id))
 
+    def summary(self, session: Session) -> dict:
+        """Chamados em aberto e, entre eles, os dentro do SLA agora, sem o limite da listagem (#73).
+
+        Usa a mesma regra de `slaStatus` da leitura (`domain.sla_status`) em vez de comparar prazos no SQL.
+        """
+        now = self.now()
+        rows = session.execute(select(Ticket.status, Ticket.due_at).where(Ticket.status == TicketStatus.OPEN)).all()
+        within = sum(1 for status, due in rows if domain.sla_status(status, due, now) == domain.SlaStatus.WITHIN)
+        return {"open": len(rows), "withinSla": within}
+
     def list_tickets(self, session: Session, limit: int = 200) -> list[dict]:
         now = self.now()
         tickets = session.scalars(select(Ticket).order_by(Ticket.ticket_id).limit(limit)).all()

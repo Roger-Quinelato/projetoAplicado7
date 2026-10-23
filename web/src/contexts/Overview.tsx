@@ -63,10 +63,10 @@ export default function Overview({ params }: { params: URLSearchParams }) {
 
     <Card title="Situação da demonstração">
       <div className="indicators">
-        <IndicatorTile label="Contratos ativos" load={a => a.listContracts()} compute={contractIndicator} />
-        <IndicatorTile label="Faturas em aberto" load={a => a.listInvoices()} compute={invoiceIndicator} />
-        <IndicatorTile label="Chamados no prazo" load={a => a.listTickets()} compute={ticketIndicator} />
-        <IndicatorTile label="Processos em andamento" load={a => a.listProcesses()} compute={processIndicator} />
+        <IndicatorTile label="Contratos ativos" load={a => a.contractSummary()} compute={contractIndicator} />
+        <IndicatorTile label="Faturas em aberto" load={a => a.invoiceSummary()} compute={invoiceIndicator} />
+        <IndicatorTile label="Chamados no prazo" load={a => a.ticketSummary()} compute={ticketIndicator} />
+        <IndicatorTile label="Processos em andamento" load={a => a.processSummary()} compute={processIndicator} />
         <IndicatorView label="Falhas de integração" resource={failures} compute={failureIndicator} />
       </div>
     </Card>

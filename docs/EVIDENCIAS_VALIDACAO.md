@@ -2,6 +2,20 @@
 
 > O estado atual de execução está no [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e no [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
 
+## Indicadores da Visão geral contados no servidor (#73, 2026-10-21)
+
+Base: `main` em `486404a`. Ambiente: contêiner Linux, Python 3.13, Node 22, Chromium 1194, PostgreSQL 16 e RabbitMQ 3.12 locais e descartáveis, com dados sintéticos.
+
+| Verificação | Resultado |
+|---|---|
+| `tests/test_resumos_visao_geral.py` | 9 aprovados. Com 205 ou mais registros por contexto, a listagem devolve 200 e o resumo o total correto. Bordas: saldo líquido de fatura parcialmente paga, fatura vencida, paga ou cancelada, duas moedas, chamado vencido ou pendente, processo final. Papéis: 200 para quem lê a listagem e 403 para os demais |
+| `pytest` com PostgreSQL + RabbitMQ / SQLite puro | 256 aprovados / 242 aprovados e 14 ignorados |
+| `tools/export_openapi.py --check` | atualizado. Quatro rotas aditivas: `contractSummary`, `invoiceSummary`, `ticketSummary` e `processSummary` |
+| `npm test` e `npm run build` | 19 aprovados; build aprovado |
+| Playwright (API com SQLite novo) | 26 aprovados, axe incluído. `e2e/indicadores.spec.ts` cria 205 contratos e mostra o total do resumo; com o build anterior (contagem sobre a listagem), o roteiro falha |
+
+- Não verificado: volumes reais (os registros são sintéticos e inseridos diretamente pelos modelos) e o desempenho com milhares de faturas. A contagem de faturas e de chamados percorre as linhas em aberto no serviço para reaproveitar as regras do domínio.
+
 ## Viabilidade e documentos (#63 e parte do #65, 2026-10-20)
 
 Base: branch `aceite-integrado` (B–F integrados). Ambiente: contêiner Linux, Python 3.13, LibreOffice para a conversão em PDF.

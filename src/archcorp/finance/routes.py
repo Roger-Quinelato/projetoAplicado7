@@ -171,6 +171,24 @@ def check_overdue(body: OverdueCheckInput | None = None, session: Session = Depe
     return service.evaluate_overdue(session, (body or OverdueCheckInput()).asOf, correlation_id_var.get())
 
 
+class CurrencyBalance(BaseModel):
+    currency: str = Field(description="Moeda ISO 4217.")
+    amount: float = Field(description="Soma dos saldos em aberto nessa moeda.")
+
+
+class InvoiceSummaryResponse(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [{"receivable": 3, "balances": [{"currency": "BRL", "amount": 3100.0}]}]})
+
+    receivable: int = Field(description="Faturas abertas, parcialmente pagas ou vencidas com saldo positivo.")
+    balances: list[CurrencyBalance] = Field(description="Saldo a receber por moeda, em ordem alfabética da moeda.")
+
+
+@router.get("/invoices/summary", response_model=InvoiceSummaryResponse, dependencies=[Depends(FINANCE_READERS)])
+def invoice_summary(session: Session = Depends(get_session)) -> dict:
+    """Faturas a receber e saldo por moeda, sem o limite de 200 da listagem; mudança aditiva na v1 (#73)."""
+    return FinanceService.summary(session)
+
+
 @router.get("/invoices/{invoice_id}", response_model=InvoiceResponse, responses=NOT_FOUND, dependencies=[Depends(FINANCE_READERS)])
 def get_invoice(invoice_id: UUID, session: Session = Depends(get_session), service: FinanceService = Depends(finance_service)) -> dict:
     return service.get(session, str(invoice_id))
