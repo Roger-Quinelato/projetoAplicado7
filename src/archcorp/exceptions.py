@@ -12,6 +12,7 @@ class DomainError(Exception):
     code = "BAD_REQUEST"
 
     def __init__(self, detail: str, *, code: str | None = None):
+        """Guarda a mensagem legível e, se informado, substitui o código padrão."""
         super().__init__(detail)
         self.detail = detail
         if code:
@@ -39,3 +40,10 @@ class InvalidStateError(ConflictError):
 class BusinessRuleError(DomainError):
     status_code = 422
     code = "BUSINESS_RULE_VIOLATION"
+
+
+class ServiceUnavailableError(DomainError):
+    """Dependência de outro contexto indisponível; nenhum efeito foi gravado."""
+
+    status_code = 503
+    code = "SERVICE_UNAVAILABLE"

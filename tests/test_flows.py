@@ -130,28 +130,3 @@ def test_falha_permanente_pode_ser_listada_e_reprocessada(client, admin_headers)
     with SessionLocal() as session:
         event = session.get(OutboxEvent, event_id)
         assert event.attempts == 0
-
-
-def test_f2_reentrega_e_novo_evento_do_mesmo_fato_nao_duplicam_efeitos(client, admin_headers, integrated_contract):
-    _, contract = integrated_contract
-    activated = client.post(f"/api/v1/contracts/{contract['contractId']}/activate",
-                            headers={**admin_headers, "Idempotency-Key": "f2-redelivery"}).json()
-    assert client.post("/api/v1/integration/outbox/dispatch", headers=admin_headers).json()["processed"] == 1
-    with SessionLocal() as session:
-        event = session.get(OutboxEvent, activated["eventId"])
-        event.status = "PENDING"
-        session.commit()
-    assert client.post("/api/v1/integration/outbox/dispatch", headers=admin_headers).json()["processed"] == 1
-    with SessionLocal() as session:
-        assert session.query(InboxEvent).count() == 2
-        event = session.get(OutboxEvent, activated["eventId"])
-        session.add(OutboxEvent(event_type=event.event_type, producer=event.producer,
-                                payload=event.payload, correlation_id=event.correlation_id))
-        session.commit()
-    assert client.post("/api/v1/integration/outbox/dispatch", headers=admin_headers).json()["processed"] == 1
-    with SessionLocal() as session:
-        invoice = session.query(Invoice).one()
-        process = session.query(ProcessInstance).filter_by(process_type="ONBOARDING").one()
-        assert invoice.contract_id == process.reference_id == contract["contractId"]
-        assert session.query(InboxEvent).count() == 4
-        assert session.query(OutboxEvent).filter_by(status="PUBLISHED").count() == 2

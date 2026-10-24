@@ -343,7 +343,7 @@ Resposta ilustrativa de `GET /api/v1/integration/failures`:
     "eventId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
     "eventType": "ContractActivated.v1",
     "attempts": 3,
-    "reason": "Falha no despacho (RuntimeError)",
+    "reason": "dependência simulada indisponível",
     "correlationId": "11111111-1111-4111-8111-111111111111"
   }
 ]
@@ -448,9 +448,17 @@ Idempotency-Replayed: false
   "status": "OPEN",
   "priority": "HIGH",
   "slaHours": 8,
-  "dueAt": "2026-10-01T18:10:00Z"
+  "dueAt": "2026-10-01T18:10:00Z",
+  "openedAt": "2026-10-01T10:10:00Z",
+  "resolvedAt": null,
+  "slaStatus": "WITHIN"
 }
 ```
+
+`dueAt` é `openedAt` mais o SLA do contrato ativo (T15). `priority` é calculada pela
+categoria: `OUTAGE` e `SECURITY` recebem `HIGH`; as demais, `NORMAL`. `slaStatus` é
+calculado no instante da resposta: `PENDING` (sem elegibilidade), `WITHIN` ou
+`BREACHED` (aberto), `MET` ou `BREACHED` (resolvido) e `NOT_APPLICABLE` (rejeitado).
 
 A descrição permanece em Support e não aparece no evento. O dispatcher publica:
 
@@ -472,13 +480,22 @@ A descrição permanece em Support e não aparece no evento. O dispatcher public
     "status": "OPEN",
     "priority": "HIGH",
     "slaHours": 8,
-    "dueAt": "2026-10-01T18:10:00Z"
+    "dueAt": "2026-10-01T18:10:00Z",
+    "openedAt": "2026-10-01T10:10:00Z",
+    "resolvedAt": null,
+    "slaStatus": "WITHIN"
   }
 }
 ```
 
 Repita a abertura com `Idempotency-Key: demo-ticket-001`. A resposta mantém o
-mesmo `ticketId`, devolve `Idempotency-Replayed: true` e não cria outro evento.
+mesmo `ticketId`, devolve `Idempotency-Replayed: true` e não cria outro evento. A
+impressão digital da chave inclui todos os campos do pedido, inclusive a
+descrição: a mesma chave com outro conteúdo recebe `409 IDEMPOTENCY_CONFLICT`.
+
+A descrição não aceita documento, cartão, telefone (11 dígitos ou mais), placa ou
+e-mail. Nesses casos a API responde `422 VALIDATION_ERROR` com
+`loc: ["body", "description"]` e não grava o chamado.
 
 Contrato, cliente ou serviço sem elegibilidade, resposta `422`:
 
@@ -543,9 +560,17 @@ Quando o adaptador de Contracts está desabilitado, Support preserva a solicita�
   "status": "PENDING_ENTITLEMENT",
   "priority": "NORMAL",
   "slaHours": null,
-  "dueAt": null
+  "dueAt": null,
+  "openedAt": "2026-10-01T10:10:00Z",
+  "resolvedAt": null,
+  "slaStatus": "PENDING"
 }
 ```
+
+O mesmo estado é usado quando o adaptador de Contracts levanta
+`ContractsUnavailableError`, `TimeoutError` ou `ConnectionError`; a API registra um
+log `WARNING` com `operation: support_entitlement`, `result: unavailable` e o
+`correlationId`, sem a descrição.
 
 O protótipo grava `TicketOpened.v1` também nesse estado. Workflow inicia a resolução
 com prazo operacional padrão de 24 horas porque o SLA ainda não está disponível.
@@ -559,8 +584,96 @@ X-Correlation-ID: 11111111-1111-4111-8111-111111111111
 ```
 
 Se a elegibilidade for confirmada, a resposta `200 OK` muda o estado para `OPEN`,
-preenche `slaHours` e recalcula `dueAt`. Se a combinação continuar inelegível, o
-estado passa para `REJECTED_ENTITLEMENT` e os campos de SLA permanecem nulos.
+preenche `slaHours` e calcula `dueAt` a partir de `openedAt`: o tempo em que
+Contracts ficou indisponível não estende o SLA. Se a combinação continuar
+inelegível, o estado passa para `REJECTED_ENTITLEMENT`, `slaStatus` vira
+`NOT_APPLICABLE` e os campos de SLA permanecem nulos. Com a mesma `Idempotency-Key` opcional, repetir devolve `200` com a resposta
+original persistida e `Idempotency-Replayed: true`, sem novo evento. Sem chave,
+repetir após reconciliação retorna `409 INVALID_STATE`.
+
+Se Contracts ainda estiver indisponível, a resposta é `503` e o chamado continua
+pendente:
+
+```json
+{
+  "type": "urn:archcorp:problem:service-unavailable",
+  "title": "Dependência indisponível",
+  "status": 503,
+  "detail": "Contracts indisponível; o chamado permanece em PENDING_ENTITLEMENT",
+  "instance": "/api/v1/support/tickets/dddddddd-dddd-4ddd-8ddd-dddddddddddd/reconcile",
+  "code": "SERVICE_UNAVAILABLE",
+  "correlationId": "11111111-1111-4111-8111-111111111111"
+}
+```
+
+### Reconciliar todos os pendentes
+
+Operação explícita (papéis `support`, `operations` e `admin`); não há agendador:
+
+```http
+POST /api/v1/support/tickets/reconcile-pending?limit=100 HTTP/1.1
+Authorization: Bearer demo-operations
+X-Correlation-ID: 11111111-1111-4111-8111-111111111111
+```
+
+Resposta `200 OK`:
+
+```json
+{
+  "confirmed": 1,
+  "rejected": 1,
+  "remaining": 0,
+  "contractsAvailable": true,
+  "tickets": [
+    {"ticketId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd", "status": "OPEN", "slaHours": 8, "dueAt": "2026-10-01T18:10:00Z", "slaStatus": "WITHIN", "...": "demais campos do chamado"},
+    {"ticketId": "eeeeeeee-1111-4eee-8eee-eeeeeeeeeeee", "status": "REJECTED_ENTITLEMENT", "slaHours": null, "dueAt": null, "slaStatus": "NOT_APPLICABLE", "...": "demais campos do chamado"}
+  ]
+}
+```
+
+Cada chamado é confirmado em sua própria transação, com evento, histórico e
+auditoria. Repetir a operação só consulta os que continuam pendentes. Se Contracts
+cair no meio do lote, a resposta traz `contractsAvailable: false` e `remaining > 0`;
+se estiver indisponível desde o início, a resposta é `503` sem alteração.
+
+### Atribuir, reatribuir e consultar o histórico
+
+```http
+POST /api/v1/support/tickets/dddddddd-dddd-4ddd-8ddd-dddddddddddd/assign HTTP/1.1
+Authorization: Bearer demo-support
+Content-Type: application/json
+X-Correlation-ID: 11111111-1111-4111-8111-111111111111
+
+{"owner": "Equipe de assistência"}
+```
+
+O responsável deve representar uma equipe ou função (2 a 80 caracteres); use
+somente dados sintéticos. A v1 não usa regex para rejeitar conteúdo. Repetir o mesmo responsável não altera o histórico; outro valor gera
+`REASSIGNED`. Chamado resolvido ou rejeitado recebe `409 CONFLICT`.
+
+```http
+GET /api/v1/support/tickets/dddddddd-dddd-4ddd-8ddd-dddddddddddd/history HTTP/1.1
+Authorization: Bearer demo-operations
+```
+
+```json
+[
+  {"occurredAt": "2026-10-01T10:10:00Z", "action": "OPENED", "fromStatus": null, "toStatus": "OPEN", "owner": null, "previousOwner": null, "actorRole": "support", "slaStatus": "WITHIN", "correlationId": "11111111-1111-4111-8111-111111111111"},
+  {"occurredAt": "2026-10-01T10:20:00Z", "action": "ASSIGNED", "fromStatus": "OPEN", "toStatus": "OPEN", "owner": "Equipe de assistência", "previousOwner": null, "actorRole": "support", "slaStatus": "WITHIN", "correlationId": "11111111-1111-4111-8111-111111111111"},
+  {"occurredAt": "2026-10-01T11:00:00Z", "action": "REASSIGNED", "fromStatus": "OPEN", "toStatus": "OPEN", "owner": "Equipe de pátio", "previousOwner": "Equipe de assistência", "actorRole": "admin", "slaStatus": "WITHIN", "correlationId": "11111111-1111-4111-8111-111111111111"},
+  {"occurredAt": "2026-10-01T12:10:00Z", "action": "RESOLVED", "fromStatus": "OPEN", "toStatus": "RESOLVED", "owner": "Equipe de pátio", "previousOwner": null, "actorRole": "support", "slaStatus": "MET", "correlationId": "11111111-1111-4111-8111-111111111111"}
+]
+```
+
+`actorRole` registra o papel que autorizou a operação, nunca o token.
+
+### Resolver
+
+`POST /api/v1/support/tickets/{ticketId}/resolve` aceita somente chamado `OPEN`,
+grava `resolvedAt`, fixa `slaStatus` em `MET` ou `BREACHED` e publica um único
+`TicketResolved.v1`. Com a mesma `Idempotency-Key` opcional, repetir devolve
+`200` com a resposta persistida e `Idempotency-Replayed: true`. Sem chave,
+chamado resolvido, pendente ou rejeitado recebe `409 CONFLICT`. O plano não prevê reabertura nem pausa de SLA.
 
 ## Operações complementares
 

@@ -2,11 +2,12 @@ import os
 from pathlib import Path
 
 Path("tmp").mkdir(parents=True, exist_ok=True)
-os.environ["DATABASE_URL"] = "sqlite:///./tmp/test-archcorp.db"
+os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL", "sqlite:///./tmp/test-archcorp.db")
 os.environ.pop("RABBITMQ_URL", None)
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 
 from archcorp.infrastructure.db import Base, engine
 from archcorp.main import app
@@ -15,6 +16,10 @@ from archcorp.main import app
 @pytest.fixture(autouse=True)
 def clean_database():
     Base.metadata.drop_all(engine)
+    # Sem isto, um banco de teste antigo guarda o carimbo de uma revisão anterior enquanto
+    # create_all já cria o esquema novo, e o upgrade da inicialização reaplicaria migrações.
+    with engine.begin() as connection:
+        connection.exec_driver_sql("DROP TABLE IF EXISTS alembic_version")
     Base.metadata.create_all(engine)
     yield
 

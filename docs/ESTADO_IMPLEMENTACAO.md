@@ -1,5 +1,19 @@
 # Estado verificado da implementação
 
+## Atualização de verificação em 17/10/2026
+
+A auditoria repetiu a suíte (84 testes Python), os 11 testes de navegador com
+API simulada e o build. Também executou o navegador com API real, PostgreSQL e
+RabbitMQ em Compose isolado. O fluxo completo passou após preparar o ambiente;
+foram encontrados problemas na sinalização de falha de despacho e na prontidão
+do broker. Resultados, tentativas, limites e pendências estão no
+[relatório de teste real](../output/auditoria/teste-real-2026-10-17/RELATORIO.md).
+As regras estáveis a preservar estão na
+[baseline de comportamento](BASELINE_COMPORTAMENTAL.md).
+
+O quadro abaixo mantém o registro histórico de 30/09/2026. A execução local
+com PostgreSQL/RabbitMQ não comprova publicação em Render/Supabase ou HTTPS.
+
 Data: 30/09/2026. Este registro inclui a sprint Q3 incorporada pelo PR #28 e a
 execução sequencial em `EXECUCAO_TAREFAS.md`. Separa código verificado localmente,
 metas e validação externa. Render/Supabase não foram verificados nesta data.

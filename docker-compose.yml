@@ -5,7 +5,7 @@ services:
       DATABASE_URL: postgresql+psycopg://archcorp:archcorp@postgres:5432/archcorp
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/%2F
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -13,6 +13,8 @@ services:
         condition: service_healthy
   postgres:
     image: postgres:16-alpine
+    ports:
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_DB: archcorp
       POSTGRES_USER: archcorp
@@ -27,7 +29,7 @@ services:
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
     ports:
-      - "15672:15672"
+      - "127.0.0.1:15672:15672"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s

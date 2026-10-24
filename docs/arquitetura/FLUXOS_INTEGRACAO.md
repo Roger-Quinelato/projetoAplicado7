@@ -3,7 +3,7 @@
 > Estado de execução em 27/09/2026: consulte [Estado da implementação](../ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](../CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
 
 Os diagramas abaixo representam o comportamento implementado para F1, F2 e F3.
-Eles complementam `docs/INTEGRACOES.md` e usam os contratos técnicos de
+Eles complementam `docs/INTEGRACOES.md` e usam os reservas e contratos de
 `docs/api/openapi.yaml` e `docs/events/asyncapi.yaml`. Os payloads completos estão
 em `docs/EXEMPLOS_API.md`.
 
@@ -69,7 +69,7 @@ Finance e Workflow. A ativação e o registro da outbox pertencem à mesma trans
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Reservas e contratos as Usuário de reservas e contratos
+    actor Usuario as Usuário de reservas e contratos
     actor Operador
     participant API as API REST v1
     participant Contracts
@@ -82,14 +82,14 @@ sequenceDiagram
     participant Workflow
     participant MQ as RabbitMQ
 
-    Reservas e contratos->>API: POST /contracts/{id}/activate<br/>Idempotency-Key e X-Correlation-ID
+    Usuario->>API: POST /contracts/{id}/activate<br/>Idempotency-Key e X-Correlation-ID
     API->>Contracts: activate(contractId, chave, correlação)
     Contracts->>Idempotency: Buscar chave da operação
 
     alt Ativação repetida
         Idempotency-->>Contracts: Resposta armazenada
         Contracts-->>API: Mesmo contrato e eventId
-        API-->>Reservas e contratos: 200 e Idempotency-Replayed true
+        API-->>Usuario: 200 e Idempotency-Replayed true
     else Primeira ativação
         Contracts->>Contracts: Alterar estado para ACTIVE
         Contracts->>Outbox: Gravar ContractActivated.v1
@@ -97,7 +97,7 @@ sequenceDiagram
         Contracts->>Audit: Gravar ativação e correlação
         Outbox-->>Contracts: eventId na mesma transação
         Contracts-->>API: Contrato ativo e eventId
-        API-->>Reservas e contratos: 200 e Idempotency-Replayed false
+        API-->>Usuario: 200 e Idempotency-Replayed false
     end
 
     Operador->>API: POST /integration/outbox/dispatch
@@ -130,8 +130,7 @@ sequenceDiagram
         Dispatcher-->>API: processed 1, failed 0
         API-->>Operador: 200
     else Exceção durante o despacho
-        Dispatcher->>Dispatcher: Rollback do savepoint (efeitos locais e inbox)
-        Dispatcher->>Outbox: Incrementar attempts e registrar tipo do erro
+        Dispatcher->>Outbox: Incrementar attempts e registrar motivo
         alt attempts menor que RETRY_LIMIT
             Dispatcher-->>API: processed 0, failed 1<br/>Evento continua PENDING
         else attempts igual ou maior que RETRY_LIMIT
@@ -150,10 +149,6 @@ Cada chamada ao dispatcher realiza uma tentativa. O protótipo não possui
 agendador, atraso exponencial ou jitter. O operador precisa chamar o despacho
 novamente após corrigir a causa. A inbox e as restrições únicas permanecem ativas
 no reprocessamento.
-
-Motivo e log de falha omitem texto livre e traceback da exceção; a correlação
-do evento permite investigar sem expor seus dados. O savepoint protege efeitos
-no banco local, sem transação distribuída com RabbitMQ.
 
 ## F3: chamado com contrato de locação e SLA
 
@@ -184,8 +179,8 @@ sequenceDiagram
         Support-->>API: Mesmo ticketId
         API-->>Atendimento e assistência 24h: 201 e Idempotency-Replayed true
     else Nova solicitação
-        alt Adaptador de Contracts indisponível
-            Support->>Support: Definir PENDING_ENTITLEMENT<br/>sem SLA e sem dueAt
+        alt Adaptador de Contracts indisponível, timeout ou desativado
+            Support->>Support: Definir PENDING_ENTITLEMENT<br/>sem SLA e sem dueAt, com log WARNING
             Support->>Outbox: Gravar TicketOpened.v1, auditoria e idempotência
             Support-->>API: Chamado pendente
             API-->>Atendimento e assistência 24h: 201
@@ -196,7 +191,7 @@ sequenceDiagram
                 Support-->>API: Erro de negócio
                 API-->>Atendimento e assistência 24h: 422
             else Elegibilidade confirmada
-                Support->>Support: Calcular prioridade e dueAt
+                Support->>Support: Calcular prioridade e dueAt = openedAt + SLA (relógio injetado)
                 Support->>Outbox: Gravar TicketOpened.v1, auditoria e idempotência
                 Support-->>API: Chamado OPEN com SLA
                 API-->>Atendimento e assistência 24h: 201
@@ -218,17 +213,26 @@ sequenceDiagram
         Dispatcher->>Outbox: Marcar PUBLISHED
     end
 
-    opt Chamado em PENDING_ENTITLEMENT e Contracts restabelecido
-        Operador->>API: POST /support/tickets/{ticketId}/reconcile
-        API->>Support: reconcile(ticketId, correlação)
-        Support->>Contracts: Consultar elegibilidade novamente
-        Contracts-->>Support: eligible e slaHours
-        alt Elegibilidade confirmada
-            Support->>Support: Mudar para OPEN e recalcular dueAt
-            Support-->>Operador: 200 com SLA
-        else Elegibilidade rejeitada
-            Support->>Support: Mudar para REJECTED_ENTITLEMENT
-            Support-->>Operador: 200 sem SLA
+    opt Chamado em PENDING_ENTITLEMENT
+        Operador->>API: POST /support/tickets/{ticketId}/reconcile<br/>ou POST /support/tickets/reconcile-pending
+        API->>Support: reconcile(ticketId) ou reconcile_pending()
+        alt Mesma chave e comando já confirmado
+            Support-->>Operador: 200 com resposta persistida e Idempotency-Replayed true
+        else Chamado já reconciliado sem chave
+            Support-->>Operador: 409 INVALID_STATE
+        else Contracts ainda indisponível
+            Support->>Integration: Auditoria reconcile_entitlement unavailable
+            Support-->>Operador: 503 e chamado continua pendente
+        else Contracts restabelecido
+            Support->>Contracts: Consultar elegibilidade novamente
+            Contracts-->>Support: eligible e slaHours
+            alt Elegibilidade confirmada
+                Support->>Support: OPEN e dueAt = openedAt + SLA<br/>(update condicionado ao estado PENDING)
+            else Elegibilidade rejeitada
+                Support->>Support: REJECTED_ENTITLEMENT sem SLA
+            end
+            Support->>Outbox: TicketEntitlementReconciled.v1, histórico e auditoria
+            Support-->>Operador: 200 (lote: confirmados, rejeitados e restantes)
         end
     end
 ```
@@ -236,6 +240,24 @@ sequenceDiagram
 `TicketOpened.v1` nunca contém a descrição. A reconciliação atualiza o chamado e a
 auditoria e publica `TicketEntitlementReconciled.v1`; Workflow ajusta o prazo do
 processo de resolução ou o cancela quando a elegibilidade é rejeitada.
+
+### Ciclo de vida do chamado (T15)
+
+As transições ficam em `src/archcorp/support/domain.py`. Uma transição fora do
+diagrama recebe `409` com código `INVALID_STATE`. Atribuição e reatribuição não
+mudam o estado e só são aceitas em `PENDING_ENTITLEMENT` e `OPEN`. O plano não
+prevê reabertura nem pausa de SLA; `RESOLVED` e `REJECTED_ENTITLEMENT` são finais.
+
+```mermaid
+stateDiagram-v2
+    [*] --> OPEN: abertura com elegibilidade<br/>dueAt = openedAt + SLA
+    [*] --> PENDING_ENTITLEMENT: abertura com Contracts indisponível
+    PENDING_ENTITLEMENT --> OPEN: reconciliação confirmada<br/>TicketEntitlementReconciled.v1
+    PENDING_ENTITLEMENT --> REJECTED_ENTITLEMENT: reconciliação rejeitada<br/>TicketEntitlementReconciled.v1
+    OPEN --> RESOLVED: resolução<br/>TicketResolved.v1 e slaStatus MET ou BREACHED
+    RESOLVED --> [*]
+    REJECTED_ENTITLEMENT --> [*]
+```
 
 ## Ciclo de vida de reserva e contrato
 
@@ -274,6 +296,7 @@ sequenceDiagram
     participant Outbox
     participant Dispatcher
     participant Workflow
+    participant Finance
     Operador->>Contracts: POST /contracts/{id}/close + Idempotency-Key
     Contracts->>Contracts: Validar ACTIVE e data de fim
     Contracts->>Outbox: ContractClosed.v1 na mesma transação
@@ -281,36 +304,51 @@ sequenceDiagram
     Operador->>Dispatcher: POST /integration/outbox/dispatch
     Dispatcher->>Workflow: ContractClosed.v1
     Workflow->>Workflow: Concluir preparação de retirada pendente
+    Dispatcher->>Finance: ContractClosed.v1
+    Finance->>Finance: Fatura FINAL por ciclo iniciado, menos o já faturado (única por eventId e contrato; marcador se não houver valor)
 ```
 
 Repetir o encerramento com a mesma chave, ou com outra chave depois de concluído,
 devolve a resposta original com `Idempotency-Replayed: true` e não cria outro
-evento. Sem `Idempotency-Key`, uma repetição recebe `409`. Finance ainda não
-consome `ContractClosed.v1`. Acerto final, multas e cobrança recorrente não
-constam no aceite de T12 (fatura, pagamento simulado e inadimplência por
-vencimento); permanecem evolução futura, sem cálculo financeiro inventado.
+evento. Sem `Idempotency-Key`, uma repetição recebe `409`. Desde a T12, Finance
+consome `ContractClosed.v1` depois do Workflow e emite a fatura final; sem valor
+restante (por exemplo, ciclo `ONCE` já faturado), apenas registra auditoria.
 
-### Ciclo manual das tarefas operacionais
+### Ciclo de vida da fatura e inadimplência (T12)
 
 ```mermaid
 stateDiagram-v2
-    [*] --> OPEN
-    OPEN --> IN_PROGRESS: iniciar
-    IN_PROGRESS --> OPEN: devolver à fila
-    OPEN --> DONE: concluir
-    IN_PROGRESS --> DONE: concluir
-    OPEN --> CANCELLED: cancelar
-    IN_PROGRESS --> CANCELLED: cancelar
-    DONE --> [*]
-    CANCELLED --> [*]
+    direction LR
+    [*] --> OPEN: evento de ativação ou encerramento
+    OPEN --> PARTIALLY_PAID: pagamento parcial
+    OPEN --> PAID: pagamento do total
+    OPEN --> OVERDUE: verificação de vencimento
+    OPEN --> CANCELLED: cancelamento sem pagamento
+    PARTIALLY_PAID --> PARTIALLY_PAID: pagamento parcial
+    PARTIALLY_PAID --> PAID: quitação
+    PARTIALLY_PAID --> OVERDUE: verificação de vencimento
+    OVERDUE --> OVERDUE: pagamento parcial
+    OVERDUE --> PAID: quitação
 ```
 
-Responsável pode ser alterado enquanto a tarefa estiver aberta. Repetir o estado
-e responsável atuais não altera a tarefa nem duplica auditoria. A edição manual
-conclui o processo quando todas as tarefas estão `DONE`; se todas são finais e
-alguma foi cancelada, o processo fica `CANCELLED`. Não é possível adicionar
-tarefas ou alterar tarefas finais em processo encerrado. O encerramento por
-evento de contrato/chamado segue as regras específicas dos fluxos acima.
+`OVERDUE` persistido indica inadimplência registrada (`delinquent: true`,
+`overdueSince`). Uma fatura `OPEN` ou `PARTIALLY_PAID` com saldo e data UTC
+posterior a `dueDate` já é exibida como `OVERDUE` na leitura, com
+`delinquent: false`, até a verificação registrar o fato:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Operador as Operador financeiro
+    participant Finance
+    participant Auditoria
+    Operador->>Finance: POST /finance/invoices/overdue-check {asOf?}
+    Finance->>Finance: Selecionar OPEN/PARTIALLY_PAID com dueDate < asOf (UTC) e saldo > 0
+    Finance->>Auditoria: mark_invoice_overdue por fatura e evaluate_overdue (correlationId)
+    Finance-->>Operador: 200 markedOverdue e alreadyOverdue
+    Operador->>Finance: POST /finance/invoices/overdue-check (repetição)
+    Finance-->>Operador: 200 markedOverdue vazio
+```
 
 ## Rastreabilidade operacional
 
@@ -321,3 +359,7 @@ outro `X-Correlation-ID`, mesmo quando pertencem à mesma demonstração.
 
 Os diagramas descrevem o protótipo acadêmico. Produtos, interfaces e topologia dos
 sistemas reais continuam como premissas a validar com a organização.
+
+As revisões T12 e T15 convergem na head `0005_merge_finance_support` sem
+renumerar histórico publicado (ADR-004). Mutações do chamado bloqueiam a mesma
+linha Ticket; histórico, auditoria, idempotência e outbox são atômicos.

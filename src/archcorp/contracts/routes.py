@@ -1,19 +1,22 @@
+from fastapi import APIRouter, Depends, Header, Response
+from uuid import UUID
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+from archcorp.infrastructure.db import get_session
+from archcorp.observability import correlation_id_var
+from archcorp.security import require_roles
+from archcorp.api_docs import CORRELATION_REQUEST_PARAMETER, CONTRACT_DRAFT_RESPONSES, CONTRACT_ACTIVATION_RESPONSES, ENTITLEMENT_RESPONSES
+from archcorp.contracts.schemas import ContractDraftCreate, ContractDraftResponse, ContractActivationResponse, EntitlementResponse
+
 from datetime import date
 from decimal import Decimal
 from typing import Literal
-from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, Response
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 from archcorp.contracts.models import Contract, Reservation
 from archcorp.contracts.service import ContractService, ReservationService
-from archcorp.infrastructure.db import get_session
-from archcorp.observability import correlation_id_var
 from archcorp.schemas import EXAMPLE_CONTRACT_DRAFT_RESPONSE, EXAMPLE_CONTRACT_ID, EXAMPLE_CUSTOMER_ID, IDEMPOTENCY_KEY_MAX_LENGTH
-from archcorp.security import require_roles
 
 
 router = APIRouter(prefix="/api/v1/contracts", tags=["Reservas e contratos"])
@@ -36,10 +39,12 @@ def configure(contracts: ContractService) -> None:
 
 
 def contract_service() -> ContractService:
+    """Dependência FastAPI que entrega o ContractService configurado na composição."""
     return _Services.contracts
 
 
 def reservation_service() -> ReservationService:
+    """Dependência FastAPI que entrega o ReservationService configurado na composição."""
     return _Services.reservations
 
 
@@ -89,6 +94,7 @@ class ReservationInput(BaseModel):
 
     @model_validator(mode="after")
     def valid_period(self):
+        """Rejeita período com fim antes do início ou início no passado."""
         if self.endsOn < self.startsOn:
             raise ValueError("Fim da reserva anterior ao início")
         if self.startsOn < date.today():
@@ -157,6 +163,7 @@ class ContractClosedResponse(ContractResponse):
 
 
 def set_replay(response: Response, replay: bool) -> None:
+    """Preenche o cabeçalho Idempotency-Replayed da resposta."""
     response.headers["Idempotency-Replayed"] = str(replay).lower()
 
 
@@ -169,6 +176,7 @@ def set_replay(response: Response, replay: bool) -> None:
         404: {"description": "Cliente não encontrado."},
         409: {"description": "Idempotency-Key reutilizada com outra reserva."},
         422: {"description": "Cliente inelegível, sem consentimento, inativo ou período inválido."},
+        503: {"description": "CRM indisponível após as retentativas; nenhuma reserva foi gravada (ADR-006)."},
     },
     dependencies=[Depends(RESERVATION_ACTORS)],
 )
@@ -180,6 +188,7 @@ def create_reservation(
     session: Session = Depends(get_session),
     service: ReservationService = Depends(reservation_service),
 ) -> dict:
+    """Registra reserva para cliente elegível; com Idempotency-Key, repetir a chamada devolve a mesma reserva."""
     result, replay = service.create(session, body.model_dump(mode="python") | {"customerId": str(body.customerId)}, idempotency_key, correlation_id_var.get())
     set_replay(response, replay)
     return result
@@ -187,6 +196,7 @@ def create_reservation(
 
 @router.get("/reservations", response_model=list[ReservationResponse], dependencies=[Depends(RESERVATION_ACTORS)])
 def list_reservations(customerId: UUID | None = None, session: Session = Depends(get_session)) -> list[dict]:
+    """Lista até 200 reservas, das mais recentes para as mais antigas, com filtro opcional por cliente."""
     query = select(Reservation).order_by(Reservation.starts_on.desc()).limit(200)
     if customerId:
         query = query.where(Reservation.customer_id == str(customerId))
@@ -195,7 +205,8 @@ def list_reservations(customerId: UUID | None = None, session: Session = Depends
 
 @router.get("/reservations/{reservation_id}", response_model=ReservationResponse, responses={404: {"description": "Reserva não encontrada."}}, dependencies=[Depends(RESERVATION_ACTORS)])
 def get_reservation(reservation_id: UUID, session: Session = Depends(get_session)) -> dict:
-    return ReservationService.to_dict(ReservationService._require(session, str(reservation_id)))
+    """Consulta uma reserva pelo identificador global."""
+    return ReservationService.to_dict(ReservationService.require(session, str(reservation_id)))
 
 
 @router.post(
@@ -206,6 +217,7 @@ def get_reservation(reservation_id: UUID, session: Session = Depends(get_session
         404: {"description": "Reserva não encontrada."},
         409: {"description": "Reserva cancelada, Idempotency-Key reutilizada ou contrato já existente para cliente, serviço e início."},
         422: {"description": "Cliente inelegível, sem consentimento ou entrada inválida."},
+        503: {"description": "CRM indisponível após as retentativas; nenhum rascunho foi gravado (ADR-006)."},
     },
     dependencies=[Depends(RESERVATION_ACTORS)],
 )
@@ -216,6 +228,7 @@ def draft_from_reservation(
     session: Session = Depends(get_session),
     service: ReservationService = Depends(reservation_service),
 ) -> dict:
+    """Gera o rascunho de contrato a partir da reserva, sem recadastrar o cliente, na mesma transação."""
     result, replay = service.draft(session, str(reservation_id), idempotency_key, correlation_id_var.get())
     set_replay(response, replay)
     return result
@@ -235,6 +248,7 @@ def cancel_reservation(reservation_id: UUID, session: Session = Depends(get_sess
 
 @router.get("", response_model=list[ContractResponse], dependencies=[Depends(CONTRACT_READERS)])
 def list_contracts(customerId: UUID | None = None, session: Session = Depends(get_session)) -> list[dict]:
+    """Lista até 200 contratos, dos mais recentes para os mais antigos, com filtro opcional por cliente."""
     query = select(Contract).order_by(Contract.starts_on.desc()).limit(200)
     if customerId:
         query = query.where(Contract.customer_id == str(customerId))
@@ -243,7 +257,8 @@ def list_contracts(customerId: UUID | None = None, session: Session = Depends(ge
 
 @router.get("/{contract_id}", response_model=ContractResponse, responses={404: {"description": "Contrato não encontrado."}}, dependencies=[Depends(CONTRACT_READERS)])
 def get_contract(contract_id: UUID, session: Session = Depends(get_session)) -> dict:
-    return ContractService.to_dict(ContractService._require(session, str(contract_id)))
+    """Consulta um contrato pelo identificador global."""
+    return ContractService.to_dict(ContractService.require(session, str(contract_id)))
 
 
 @router.post(
@@ -271,3 +286,59 @@ def close_contract(
     result, replay = service.close(session, str(contract_id), data, idempotency_key, correlation_id_var.get())
     set_replay(response, replay)
     return result
+
+
+@router.post(
+    "/drafts",
+    status_code=201,
+    response_model=ContractDraftResponse,
+    dependencies=[Depends(require_roles("commercial", "contracts", "admin"))],
+    responses=CONTRACT_DRAFT_RESPONSES,
+    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
+)
+def create_contract_draft(
+    body: ContractDraftCreate,
+    response: Response,
+    idempotency_key: str = Header(
+        alias="Idempotency-Key", max_length=IDEMPOTENCY_KEY_MAX_LENGTH, examples=["demo-contract-001"]
+    ),
+    session: Session = Depends(get_session),
+    service: ContractService = Depends(contract_service),
+) -> dict:
+    draft_data = body.model_dump()
+    draft_data["customerId"] = str(draft_data["customerId"])
+    result, replay = service.create_draft(session, draft_data, idempotency_key, correlation_id_var.get())
+    response.headers["Idempotency-Replayed"] = str(replay).lower()
+    return result
+
+
+@router.post(
+    "/{contract_id}/activate",
+    response_model=ContractActivationResponse,
+    dependencies=[Depends(require_roles("contracts", "admin"))],
+    responses=CONTRACT_ACTIVATION_RESPONSES,
+    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
+)
+def activate_contract(
+    contract_id: UUID,
+    response: Response,
+    idempotency_key: str = Header(
+        alias="Idempotency-Key", max_length=IDEMPOTENCY_KEY_MAX_LENGTH, examples=["demo-activate-001"]
+    ),
+    session: Session = Depends(get_session),
+    service: ContractService = Depends(contract_service),
+) -> dict:
+    result, replay = service.activate(session, str(contract_id), idempotency_key, correlation_id_var.get())
+    response.headers["Idempotency-Replayed"] = str(replay).lower()
+    return result
+
+
+@router.get(
+    "/{contract_id}/entitlement",
+    response_model=EntitlementResponse,
+    dependencies=[Depends(require_roles("support", "admin"))],
+    responses=ENTITLEMENT_RESPONSES,
+    openapi_extra={"parameters": [CORRELATION_REQUEST_PARAMETER]},
+)
+def entitlement(contract_id: UUID, customerId: UUID, serviceCode: str, session: Session = Depends(get_session), service: ContractService = Depends(contract_service)) -> dict:
+    return service.entitlement(session, str(contract_id), str(customerId), serviceCode)
