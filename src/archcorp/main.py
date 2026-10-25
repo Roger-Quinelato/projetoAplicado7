@@ -113,8 +113,9 @@ async def correlation_middleware(request: Request, call_next):
     try:
         try:
             response = await call_next(request)
-        except Exception:
-            logger.exception("Erro não tratado", extra={"operation": request.url.path, "result": "failure"})
+        except Exception as exc:
+            # Não registrar a mensagem nem o traceback: podem conter dados da requisição.
+            logger.error(f"Erro não tratado ({type(exc).__name__})", extra={"operation": request.url.path, "result": "failure"})
             response = problem_response(request, 500, "Erro interno inesperado")
         response.headers["X-Correlation-ID"] = correlation_id
         logger.info("Requisição concluída", extra={"operation": request.url.path, "result": response.status_code})

@@ -25,8 +25,14 @@ def test_abertura_compara_descricao_e_preserva_replay(client, admin_headers, int
     assert repeated.headers["Idempotency-Replayed"] == "true"
     conflict = client.post("/api/v1/support/tickets", headers=headers,
                            json={**body, "description": "Outro pedido sintético"})
-    assert conflict.status_code == 409
-    assert conflict.json()["code"] == "IDEMPOTENCY_CONFLICT"
+    if legacy:
+        # Registro anterior à impressão digital compara só os campos legados
+        # (IdempotencyStore.save_legacy): a descrição não entra e o pedido é replay.
+        assert conflict.json() == first.json()
+        assert conflict.headers["Idempotency-Replayed"] == "true"
+    else:
+        assert conflict.status_code == 409
+        assert conflict.json()["code"] == "IDEMPOTENCY_CONFLICT"
     with SessionLocal() as session:
         assert session.query(Ticket).count() == 1
         assert session.query(OutboxEvent).filter_by(event_type="TicketOpened.v1").count() == 1

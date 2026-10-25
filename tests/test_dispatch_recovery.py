@@ -48,18 +48,19 @@ def test_erro_nao_expoe_conteudo_da_excecao_em_fila_api_ou_log(client, admin_hea
         session.add(event)
         session.commit()
         dispatcher = EventDispatcher({"Privacy.v1": [("private", fail)]})
-        with caplog.at_level(logging.ERROR, logger="archcorp"):
+        with caplog.at_level(logging.WARNING, logger="archcorp"):
             for _ in range(3):
                 dispatcher.dispatch_pending(session)
         assert event.status == "FAILED"
         assert marker not in event.last_error
-        assert "RuntimeError" in event.last_error
+        assert event.last_error.startswith("Falha no despacho do evento")
         assert marker not in caplog.text
-        record = next(r for r in caplog.records if r.name == "archcorp" and r.levelno == logging.ERROR)
+        record = next(r for r in caplog.records if r.name == "archcorp" and r.levelno == logging.WARNING)
         assert record.correlationId == admin_headers["X-Correlation-ID"]
+        assert record.errorType == "RuntimeError"
     failures = client.get("/api/v1/integration/failures", headers=admin_headers)
     assert marker not in failures.text
-    assert "RuntimeError" in failures.text
+    assert "Falha no despacho do evento" in failures.text
 
 
 def test_erro_http_nao_registra_texto_da_excecao(client, admin_headers, monkeypatch, caplog):
