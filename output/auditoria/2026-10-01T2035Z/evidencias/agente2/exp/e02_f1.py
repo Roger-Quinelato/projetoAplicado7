@@ -1,0 +1,36 @@
+from harness import *
+from datetime import date, timedelta
+with client() as c:
+    cust = customer(c)
+    print("cliente:", cust["customerId"], "active", cust["active"])
+    d1 = show("F1 rascunho chave K1", draft(c, cust, "K1"))
+    show("F1 repete K1 mesmo payload", draft(c, cust, "K1"))
+    show("F1 K1 payload diferente (amount 2600)", draft(c, cust, "K1", amount=2600))
+    show("F1 K1 amount 2500.00 (equivalente decimal)", draft(c, cust, "K1", amount="2500.00"))
+    show("F1 nova chave K2 mesmo negocio", draft(c, cust, "K2"))
+    show("F1 amount 3 casas 100.005", draft(c, cust, "K3", amount=100.005, starts=(date.today()+timedelta(days=9)).isoformat()))
+    show("F1 amount negativo", draft(c, cust, "K4", amount=-1, starts=(date.today()+timedelta(days=9)).isoformat()))
+    show("F1 startsOn no passado (draft direto)", draft(c, cust, "K5", starts="2020-01-01"))
+    # mesma chave em outra operação (escopo por operação)
+    r = c.post("/api/v1/support/tickets", headers={**H, "Idempotency-Key": "K1"}, json={"customerId": cust["customerId"], "contractId": d1["contractId"], "serviceCode":"RENTAL-FLEX","category":"OUTAGE","description":"teste chave"})
+    show("Mesma chave K1 em open_ticket (contrato DRAFT)", r)
+    # cliente inativo
+    c2 = customer(c)
+    show("desativar", c.post(f"/api/v1/crm/customers/{c2['customerId']}/deactivate", headers=H))
+    show("F1 cliente inativo", draft(c, c2, "K6"))
+    show("F1 cliente inexistente", draft(c, {"customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"}, "K7"))
+    # cliente com rascunho, depois inativado: chave reexecutada devolve replay?
+    c3 = customer(c)
+    show("F1 c3 rascunho K8", draft(c, c3, "K8"))
+    c.post(f"/api/v1/crm/customers/{c3['customerId']}/deactivate", headers=H)
+    show("F1 c3 inativo replay K8 (devolve resposta armazenada)", draft(c, c3, "K8"))
+    # reserva -> rascunho sem recadastro
+    rs = c.post("/api/v1/contracts/reservations", headers={**H, "Idempotency-Key": "R1"}, json={"customerId": cust["customerId"], "vehicleGroup":"SUV","protectionCode":"BASICA","serviceCode":"RENTAL-FLEX","startsOn":(date.today()+timedelta(days=20)).isoformat(),"endsOn":(date.today()+timedelta(days=25)).isoformat(),"amount":750.10,"currency":"BRL","billingCycle":"ONCE","slaHours":8})
+    rsv = show("reserva R1", rs)
+    show("reserva R1 repetida", c.post("/api/v1/contracts/reservations", headers={**H, "Idempotency-Key": "R1"}, json={"customerId": cust["customerId"], "vehicleGroup":"SUV","protectionCode":"BASICA","serviceCode":"RENTAL-FLEX","startsOn":(date.today()+timedelta(days=20)).isoformat(),"endsOn":(date.today()+timedelta(days=25)).isoformat(),"amount":750.10,"currency":"BRL","billingCycle":"ONCE","slaHours":8}))
+    show("reserva sem chave 1", c.post("/api/v1/contracts/reservations", headers=H, json={"customerId": cust["customerId"], "vehicleGroup":"SUV","protectionCode":"BASICA","serviceCode":"RENTAL-FLEX","startsOn":(date.today()+timedelta(days=30)).isoformat(),"endsOn":(date.today()+timedelta(days=31)).isoformat(),"amount":10,"currency":"BRL","billingCycle":"ONCE","slaHours":8}))
+    show("reserva sem chave 2 (duplicada)", c.post("/api/v1/contracts/reservations", headers=H, json={"customerId": cust["customerId"], "vehicleGroup":"SUV","protectionCode":"BASICA","serviceCode":"RENTAL-FLEX","startsOn":(date.today()+timedelta(days=30)).isoformat(),"endsOn":(date.today()+timedelta(days=31)).isoformat(),"amount":10,"currency":"BRL","billingCycle":"ONCE","slaHours":8}))
+    show("draft da reserva KD1", c.post(f"/api/v1/contracts/reservations/{rsv['reservationId']}/draft", headers={**H,"Idempotency-Key":"KD1"}))
+    show("draft da reserva KD2 (outra chave)", c.post(f"/api/v1/contracts/reservations/{rsv['reservationId']}/draft", headers={**H,"Idempotency-Key":"KD2"}))
+    show("reserva cliente inativo", c.post("/api/v1/contracts/reservations", headers=H, json={"customerId": c2["customerId"], "vehicleGroup":"SUV","protectionCode":"BASICA","serviceCode":"RENTAL-FLEX","startsOn":(date.today()+timedelta(days=30)).isoformat(),"endsOn":(date.today()+timedelta(days=31)).isoformat(),"amount":10,"currency":"BRL","billingCycle":"ONCE","slaHours":8}))
+    show("lista reservas", c.get("/api/v1/contracts/reservations", headers=H))

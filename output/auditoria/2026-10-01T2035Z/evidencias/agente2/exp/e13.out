@@ -1,0 +1,8 @@
+detectado esperado                            | main.py -> VIOLACAO | contracts/*.py -> VIOLACAO
+forma alternativa                             | main.py -> passa | contracts/*.py -> passa
+import absoluto                               | main.py -> passa | contracts/*.py -> passa
+import com alias                              | main.py -> passa | contracts/*.py -> passa
+modelo interno de Integration                 | main.py -> passa | contracts/*.py -> passa
+classe interna (service) de outro contexto    | main.py -> passa | contracts/*.py -> passa
+SQL direto na tabela de outro contexto        | main.py -> passa | contracts/*.py -> passa
+tabela via metadata                           | main.py -> passa | contracts/*.py -> passa

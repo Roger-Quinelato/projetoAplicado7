@@ -26,6 +26,7 @@ export interface CustomerUpdate { name?: string, email?: string, eligible?: bool
 
 export interface Contact { contactId: Uuid, customerId: Uuid, name: string, email: string, phone: string | null }
 export interface ContactInput { customerId: Uuid, name: string, email: string, phone?: string | null }
+export interface ContactUpdate { name?: string, email?: string, phone?: string | null }
 
 export type OpportunityStatus = 'OPEN' | 'WON' | 'LOST'
 export interface Opportunity { opportunityId: Uuid, customerId: Uuid, title: string, status: OpportunityStatus, notes: string | null }
@@ -143,6 +144,8 @@ export interface TaskChange { state: TaskState, owner?: string | null }
 
 export interface DemoState { customers: number, contracts: number, invoices: number, tickets: number, processes: number, legacyMappings: number }
 export interface DispatchResult { processed: number, failed: number }
+export interface OutboxSummary { pending: number, failed: number }
+export interface Readiness { status: string }
 export interface Failure { eventId: Uuid, eventType: string, attempts: number, reason: string | null, correlationId: Uuid }
 export interface OperationTrace {
   correlationId: Uuid
@@ -276,7 +279,11 @@ function withQuery(path: string, query?: Query): string {
   return text ? `${path}?${text}` : path
 }
 
-export function createApi(token: string, fetcher: typeof fetch = (...args) => fetch(...args)) {
+/**
+ * `onReach` recebe `true` sempre que a API devolve qualquer resposta HTTP e `false` em falha de rede.
+ * É o único sinal de conectividade da interface: autenticar não prova que a API continua acessível.
+ */
+export function createApi(token: string, fetcher: typeof fetch = (...args) => fetch(...args), onReach?: (reachable: boolean) => void) {
   async function request<T>(method: string, path: string, options: RequestOptions = {}): Promise<ApiResult<T>> {
     const correlationId = uuid()
     const headers: Record<string, string> = { Accept: 'application/json, application/problem+json', 'X-Correlation-ID': correlationId }
@@ -289,11 +296,13 @@ export function createApi(token: string, fetcher: typeof fetch = (...args) => fe
         method, headers, body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
       })
     } catch {
+      onReach?.(false)
       throw new ApiError({
         kind: 'network', status: 0, title: 'Falha de rede', code: 'NETWORK_ERROR', correlationId,
         detail: 'Não foi possível contatar a API. Verifique a conexão e se o servidor está em execução.',
       })
     }
+    onReach?.(true)
     if (!response.ok) throw await toApiError(response, correlationId)
     const replayHeader = response.headers.get('Idempotency-Replayed')
     const data = response.status === 204 ? (undefined as T) : await response.json() as T
@@ -308,11 +317,13 @@ export function createApi(token: string, fetcher: typeof fetch = (...args) => fe
   return {
     // CRM
     listCustomers: (q?: { email?: string, active?: boolean, limit?: number, offset?: number }) => get<Customer[]>('/api/v1/crm/customers', q),
+    getCustomer: (id: Uuid) => get<Customer>(`/api/v1/crm/customers/${id}`),
     createCustomer: (body: CustomerCreate) => request<Customer>('POST', '/api/v1/crm/customers', { body }),
     updateCustomer: (id: Uuid, body: CustomerUpdate) => request<Customer>('PATCH', `/api/v1/crm/customers/${id}`, { body }),
     deactivateCustomer: (id: Uuid) => request<Customer>('POST', `/api/v1/crm/customers/${id}/deactivate`),
     listContacts: (customerId?: Uuid) => get<Contact[]>('/api/v1/crm/contacts', { customerId }),
     createContact: (body: ContactInput) => request<Contact>('POST', '/api/v1/crm/contacts', { body }),
+    updateContact: (id: Uuid, body: ContactUpdate) => request<Contact>('PATCH', `/api/v1/crm/contacts/${id}`, { body }),
     deleteContact: (id: Uuid) => request<void>('DELETE', `/api/v1/crm/contacts/${id}`),
     listOpportunities: (q?: { customerId?: Uuid, status?: OpportunityStatus }) => get<Opportunity[]>('/api/v1/crm/opportunities', q),
     createOpportunity: (body: OpportunityInput) => request<Opportunity>('POST', '/api/v1/crm/opportunities', { body }),
@@ -327,6 +338,7 @@ export function createApi(token: string, fetcher: typeof fetch = (...args) => fe
       request<ReservationDraft>('POST', `/api/v1/contracts/reservations/${id}/draft`, { idempotencyKey }),
     cancelReservation: (id: Uuid) => request<Reservation>('POST', `/api/v1/contracts/reservations/${id}/cancel`),
     listContracts: (customerId?: Uuid) => get<Contract[]>('/api/v1/contracts', { customerId }),
+    getContract: (id: Uuid) => get<Contract>(`/api/v1/contracts/${id}`),
     createDraft: (body: ContractDraftCreate, idempotencyKey: string) =>
       request<Contract>('POST', '/api/v1/contracts/drafts', { body, idempotencyKey }),
     activateContract: (id: Uuid, idempotencyKey: string) =>
@@ -341,6 +353,8 @@ export function createApi(token: string, fetcher: typeof fetch = (...args) => fe
     listPayments: (invoiceId?: Uuid) => get<Payment[]>('/api/v1/finance/payments', { invoiceId }),
     recordPayment: (invoiceId: Uuid, body: PaymentInput, idempotencyKey: string) =>
       request<PaymentResult>('POST', `/api/v1/finance/invoices/${invoiceId}/payments`, { body, idempotencyKey }),
+    cancelInvoice: (invoiceId: Uuid, reason: string) =>
+      request<Invoice>('POST', `/api/v1/finance/invoices/${invoiceId}/cancel`, { body: { reason } }),
     checkOverdue: (asOf?: string) =>
       request<OverdueCheckResult>('POST', '/api/v1/finance/invoices/overdue-check', { body: asOf ? { asOf } : {} }),
 
@@ -349,8 +363,9 @@ export function createApi(token: string, fetcher: typeof fetch = (...args) => fe
     openTicket: (body: TicketCreate, idempotencyKey: string) =>
       request<Ticket>('POST', '/api/v1/support/tickets', { body, idempotencyKey }),
     assignTicket: (id: Uuid, owner: string) => request<Ticket>('POST', `/api/v1/support/tickets/${id}/assign`, { body: { owner } }),
-    resolveTicket: (id: Uuid) => request<Ticket>('POST', `/api/v1/support/tickets/${id}/resolve`),
-    reconcileTicket: (id: Uuid) => request<Ticket>('POST', `/api/v1/support/tickets/${id}/reconcile`),
+    /** A chave é opcional no contrato; com ela, a repetição devolve a resposta gravada. */
+    resolveTicket: (id: Uuid, idempotencyKey?: string) => request<Ticket>('POST', `/api/v1/support/tickets/${id}/resolve`, { idempotencyKey }),
+    reconcileTicket: (id: Uuid, idempotencyKey?: string) => request<Ticket>('POST', `/api/v1/support/tickets/${id}/reconcile`, { idempotencyKey }),
     reconcilePendingTickets: () => request<PendingReconciliation>('POST', '/api/v1/support/tickets/reconcile-pending'),
     ticketHistory: (id: Uuid) => get<TicketHistoryEntry[]>(`/api/v1/support/tickets/${id}/history`),
 
@@ -361,8 +376,11 @@ export function createApi(token: string, fetcher: typeof fetch = (...args) => fe
     changeTask: (id: Uuid, body: TaskChange) => request<Task>('PATCH', `/api/v1/workflow/tasks/${id}`, { body }),
 
     // Integração e operação
+    /** Prontidão da API e do banco (`/health/ready`, sem autenticação); 503 quando o banco não responde. */
+    readiness: () => get<Readiness>('/health/ready'),
     demoState: () => get<DemoState>('/api/v1/demo/state'),
     dispatchOutbox: () => request<DispatchResult>('POST', '/api/v1/integration/outbox/dispatch'),
+    outboxSummary: () => get<OutboxSummary>('/api/v1/integration/outbox/summary'),
     listFailures: () => get<Failure[]>('/api/v1/integration/failures'),
     reprocessFailure: (eventId: Uuid) => request<{ eventId: Uuid, status: string }>('POST', `/api/v1/integration/failures/${eventId}/reprocess`),
     operationTrace: (correlationId: Uuid) => get<OperationTrace>(`/api/v1/operations/${correlationId}`),

@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1480" viewBox="0 0 1600 1480" role="img" aria-labelledby="title desc">
+<title id="title">Arquitetura do módulo de Reservas e Contratos</title>
+<desc id="desc">Diagrama da entrada pela API, núcleo central de Contracts, consulta ao CRM, gerenciamento de dados no PostgreSQL e publicação de eventos para Finance, Workflow e RabbitMQ.</desc>
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f5f8fc"/><stop offset="1" stop-color="#edf2f8"/></linearGradient>
+  <linearGradient id="navy" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#132b4a"/><stop offset="1" stop-color="#21466f"/></linearGradient>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#18324f" flood-opacity=".11"/></filter>
+  <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0 0L10 5 0 10z" fill="#637c98"/></marker>
+  <marker id="arrowPurple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0L10 5 0 10z" fill="#8760c5"/></marker>
+  <style>
+    text{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+    .eyebrow{font-size:14px;font-weight:800;letter-spacing:1.7px}
+    .head{font-size:23px;font-weight:750}
+    .label{font-size:18px;font-weight:720}
+    .body{font-size:15px;font-weight:500}
+    .small{font-size:13px;font-weight:550}
+    .flow{font-size:13px;font-weight:700;fill:#516982;stroke:#f5f8fc;stroke-width:7px;paint-order:stroke}
+    .pill{font-size:12px;font-weight:800;letter-spacing:.7px}
+  </style>
+</defs>
+<rect width="1600" height="1480" rx="0" fill="url(#bg)"/>
+<rect x="0" y="0" width="1600" height="150" fill="url(#navy)"/>
+<circle cx="1480" cy="20" r="160" fill="#ffffff" opacity=".035"/><circle cx="1530" cy="145" r="110" fill="#ffffff" opacity=".035"/>
+<text x="72" y="55" fill="#a9c5e5" class="eyebrow">PROJETO APLICADO 7 · CENÁRIO 4</text>
+<text x="72" y="100" fill="#ffffff" font-size="34" font-weight="780">Reservas e Contratos</text>
+<text x="72" y="128" fill="#d3deeb" font-size="16">Da entrada de dados à persistência e aos eventos de negócio</text>
+<rect x="1250" y="50" width="276" height="42" rx="21" fill="#ffffff" opacity=".12"/>
+<circle cx="1274" cy="71" r="6" fill="#65d6a7"/><text x="1290" y="76" fill="#e9f4ff" class="small">VISÃO DO PROTÓTIPO ATUAL</text>
+
+<!-- business journey -->
+<rect x="55" y="165" width="1490" height="112" rx="20" fill="#ffffff" stroke="#d7e2ee" filter="url(#shadow)"/>
+<text x="82" y="188" fill="#3973c6" font-size="12" font-weight="800" letter-spacing="1.3px">O QUE A PLATAFORMA DEMONSTRA · FLUXO DE NEGÓCIO</text>
+<rect x="82" y="198" width="292" height="48" rx="12" fill="#f7faff" stroke="#c9dcf7"/>
+<text x="100" y="218" fill="#193b63" font-size="15" font-weight="720">1 · Cliente no CRM</text><text x="100" y="237" fill="#536b86" font-size="12">Consulta de elegibilidade</text>
+<path d="M374 222H398" stroke="#637c98" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="407" y="198" width="400" height="48" rx="12" fill="#f3fbf7" stroke="#b7dfd2"/>
+<text x="425" y="218" fill="#124b3e" font-size="15" font-weight="720">2 · Reserva e contrato de locação</text><text x="425" y="237" fill="#55766d" font-size="12">Grupo · proteção · datas · valor · ativar</text>
+<path d="M807 222H831" stroke="#637c98" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="840" y="198" width="330" height="48" rx="12" fill="#fffaf0" stroke="#ead7ad"/>
+<text x="858" y="218" fill="#644510" font-size="15" font-weight="720">3 · Financeiro</text><text x="858" y="237" fill="#806634" font-size="12">Faturas · saldo · pagamento simulado</text>
+<path d="M1170 222H1194" stroke="#637c98" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1203" y="198" width="314" height="48" rx="12" fill="#faf7ff" stroke="#d8c8ee"/>
+<text x="1221" y="218" fill="#3e2b64" font-size="15" font-weight="720">4 · Atendimento e operação</text><text x="1221" y="237" fill="#655582" font-size="12">Contrato/SLA · chamado · preparação de retirada</text>
+<text x="82" y="266" fill="#74869a" font-size="11" font-weight="550">Demonstração interna: não há seleção de origem/destino nem consulta à disponibilidade real da frota.</text>
+
+<!-- implementation status legend -->
+<rect x="55" y="287" width="1490" height="44" rx="14" fill="#ffffff" stroke="#d7e2ee"/>
+<circle cx="88" cy="309" r="7" fill="#16866a"/><text x="106" y="314" fill="#315b52" font-size="13" font-weight="650">Implementado no protótipo</text>
+<circle cx="386" cy="309" r="7" fill="#3973c6"/><text x="404" y="314" fill="#426181" font-size="13" font-weight="650">Simulado/local · dados sintéticos</text>
+<path d="M765 309h38" stroke="#9ba8b6" stroke-width="2" stroke-dasharray="6 5"/><text x="814" y="314" fill="#748392" font-size="13" font-weight="650">Planejado · integração ainda não implementada</text>
+<g transform="translate(0,145)">
+<!-- panel backgrounds -->
+<rect x="55" y="200" width="340" height="505" rx="22" fill="#ffffff" stroke="#d7e2ee" filter="url(#shadow)"/>
+<rect x="430" y="200" width="490" height="505" rx="22" fill="#ffffff" stroke="#b7dfd2" filter="url(#shadow)"/>
+<rect x="960" y="200" width="585" height="505" rx="22" fill="#ffffff" stroke="#efd8a8" filter="url(#shadow)"/>
+<rect x="55" y="735" width="1490" height="245" rx="22" fill="#ffffff" stroke="#ddcfef" filter="url(#shadow)"/>
+
+<!-- headers -->
+<rect x="55" y="200" width="340" height="70" rx="22" fill="#eaf2ff"/><path d="M55 248v22h340v-22" fill="#eaf2ff"/>
+<text x="82" y="230" fill="#3973c6" class="eyebrow">01 · ENTRADA</text><text x="82" y="254" fill="#193b63" class="head">Ingestão</text>
+<rect x="430" y="200" width="490" height="70" rx="22" fill="#e8f7f1"/><path d="M430 248v22h490v-22" fill="#e8f7f1"/>
+<text x="457" y="230" fill="#16866a" class="eyebrow">02 · CAMINHO CENTRAL</text><text x="457" y="254" fill="#124b3e" class="head">Núcleo Contracts</text>
+<rect x="960" y="200" width="585" height="70" rx="22" fill="#fff4df"/><path d="M960 248v22h585v-22" fill="#fff4df"/>
+<text x="987" y="230" fill="#b57710" class="eyebrow">03 · DADOS</text><text x="987" y="254" fill="#644510" class="head">Gerenciamento e persistência</text>
+<rect x="55" y="735" width="1490" height="66" rx="22" fill="#f1ebfa"/><path d="M55 779v22h1490v-22" fill="#f1ebfa"/>
+<text x="82" y="763" fill="#8056c8" class="eyebrow">04 · SAÍDA ASSÍNCRONA</text><text x="82" y="787" fill="#3e2b64" class="head">Eventos após a confirmação</text>
+
+<!-- entry -->
+<rect x="82" y="300" width="286" height="96" rx="15" fill="#f7faff" stroke="#c9dcf7"/>
+<circle cx="110" cy="330" r="14" fill="#dceaff"/><text x="105" y="335" fill="#3973c6" font-size="13" font-weight="800">1</text>
+<text x="135" y="329" fill="#193b63" class="label">Interface / consumidor</text><text x="105" y="359" fill="#536b86" class="body">Comercial · Contracts · Admin</text><text x="105" y="381" fill="#74869a" class="small">Comandos e consultas</text>
+<rect x="82" y="418" width="286" height="100" rx="15" fill="#f7faff" stroke="#c9dcf7"/>
+<text x="105" y="450" fill="#193b63" class="label">API REST</text><text x="105" y="477" fill="#536b86" class="body">/api/v1/contracts/*</text><text x="105" y="500" fill="#74869a" class="small">Rotas FastAPI · JSON</text>
+<rect x="82" y="540" width="286" height="112" rx="15" fill="#f7faff" stroke="#c9dcf7"/>
+<text x="105" y="571" fill="#193b63" class="label">Fronteira protegida</text><text x="105" y="599" fill="#536b86" class="body">Autenticação e papéis</text><text x="105" y="623" fill="#536b86" class="body">Validação · correlationId</text><text x="105" y="643" fill="#74869a" class="small">X-Correlation-ID</text>
+<path d="M225 396v18" stroke="#637c98" stroke-width="2.5" marker-end="url(#arrow)"/>
+<path d="M225 518v18" stroke="#637c98" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+<!-- core -->
+<rect x="457" y="300" width="436" height="76" rx="15" fill="#f3fbf7" stroke="#b7dfd2"/>
+<text x="482" y="331" fill="#124b3e" class="label">Rotas · routes.py</text><text x="482" y="356" fill="#55766d" class="body">recebem o comando e coordenam a resposta</text>
+<rect x="457" y="397" width="250" height="98" rx="15" fill="#eaf8f2" stroke="#8ccbb5" stroke-width="1.5"/>
+<text x="478" y="429" fill="#124b3e" font-size="17" font-weight="720">Casos de uso</text><text x="478" y="455" fill="#456c61" font-size="13" font-weight="600">ReservationService</text><text x="478" y="478" fill="#6b877f" font-size="13">ContractService · contratos</text>
+<rect x="725" y="397" width="168" height="98" rx="14" fill="#f4f6f8" stroke="#bdc8d2"/>
+<text x="747" y="425" fill="#445767" font-size="10" font-weight="800" letter-spacing=".6px">PORTA PÚBLICA</text><text x="747" y="450" fill="#283542" font-size="18" font-weight="720">CRM</text><text x="747" y="472" fill="#586c7d" font-size="12" font-weight="550">CustomerReader</text><text x="747" y="488" fill="#748391" font-size="10">existência · elegibilidade</text>
+<path d="M725 446 H711" fill="none" stroke="#8998a7" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+<rect x="457" y="516" width="436" height="86" rx="15" fill="#f3fbf7" stroke="#b7dfd2"/>
+<text x="482" y="548" fill="#124b3e" class="label">Domínio</text><text x="482" y="577" fill="#55766d" class="body">Elegibilidade · estados · transições válidas</text>
+<rect x="457" y="623" width="436" height="55" rx="15" fill="#f3fbf7" stroke="#b7dfd2"/>
+<text x="482" y="657" fill="#124b3e" class="label">SQLAlchemy · sessão por requisição</text>
+<path d="M675 376v15" stroke="#637c98" stroke-width="2.5" marker-end="url(#arrow)"/>
+<path d="M675 495v15" stroke="#637c98" stroke-width="2.5" marker-end="url(#arrow)"/>
+<path d="M675 602v15" stroke="#637c98" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+<!-- A leitura do CRM aparece ao lado dos casos de uso, sem cruzar o fluxo vertical. -->
+
+<!-- storage -->
+<rect x="988" y="300" width="529" height="116" rx="16" fill="#fffaf0" stroke="#e8cb8e" stroke-width="1.5"/>
+<g transform="translate(1018 328)"><ellipse cx="29" cy="10" rx="27" ry="9" fill="#f4d99f" stroke="#c28a22" stroke-width="2"/><path d="M2 10v37c0 5 12 10 27 10s27-5 27-10V10" fill="#ffefcc" stroke="#c28a22" stroke-width="2"/><path d="M2 28c0 5 12 10 27 10s27-5 27-10" fill="none" stroke="#c28a22" stroke-width="2"/><path d="M2 46c0 5 12 10 27 10s27-5 27-10" fill="none" stroke="#c28a22" stroke-width="2"/></g>
+<text x="1100" y="332" fill="#644510" class="label">PostgreSQL 16 · archcorp</text><text x="1100" y="359" fill="#806634" class="body">Banco compartilhado do monólito modular</text><text x="1100" y="387" fill="#9b7d47" class="small">Docker Compose · volume persistente archcorp-data</text>
+<rect x="988" y="435" width="252" height="92" rx="14" fill="#fffaf0" stroke="#ead7ad"/>
+<text x="1012" y="467" fill="#644510" class="label">contracts_reservations</text><text x="1012" y="494" fill="#806634" class="body">Reservas e vínculo ao contrato</text>
+<rect x="1255" y="435" width="262" height="92" rx="14" fill="#fffaf0" stroke="#ead7ad"/>
+<text x="1279" y="467" fill="#644510" class="label">contracts_contracts</text><text x="1279" y="494" fill="#806634" class="body">Dados e ciclo de vida</text>
+<rect x="988" y="545" width="529" height="106" rx="14" fill="#fffaf0" stroke="#ead7ad"/>
+<text x="1012" y="578" fill="#644510" class="label">Integração e governança</text>
+<text x="1012" y="607" fill="#806634" class="body">Outbox / inbox · idempotência · auditoria · correlação</text>
+<text x="1012" y="631" fill="#9b7d47" class="small">Banco único; cada contexto mantém propriedade dos próprios dados</text>
+<path d="M893 650h78" stroke="#637c98" stroke-width="2.5" marker-end="url(#arrow)"/>
+<text x="932" y="638" text-anchor="middle" class="flow">persistência</text>
+
+<!-- events -->
+<rect x="82" y="825" width="310" height="104" rx="15" fill="#faf7ff" stroke="#d8c8ee"/>
+<text x="108" y="858" fill="#3e2b64" class="label">Outbox transacional</text><text x="108" y="886" fill="#655582" class="body">Gravada com a mudança</text><text x="108" y="911" fill="#806aa3" class="small">Ativação · encerramento</text>
+<rect x="430" y="825" width="310" height="104" rx="15" fill="#faf7ff" stroke="#d8c8ee"/>
+<text x="456" y="858" fill="#3e2b64" class="label">Despachante</text><text x="456" y="886" fill="#655582" class="body">Inbox · correlação · replay seguro</text><text x="456" y="911" fill="#806aa3" class="small">Entrega idempotente</text>
+<rect x="778" y="825" width="330" height="104" rx="15" fill="#faf7ff" stroke="#d8c8ee"/>
+<text x="804" y="858" fill="#3e2b64" class="label">Consumidores internos</text><text x="804" y="886" fill="#655582" class="body">Finance · Workflow</text><text x="804" y="911" fill="#806aa3" class="small">Fatura · processo operacional</text>
+<rect x="1146" y="825" width="371" height="104" rx="15" fill="#faf7ff" stroke="#d8c8ee"/>
+<text x="1172" y="858" fill="#3e2b64" class="label">RabbitMQ local</text><text x="1172" y="886" fill="#655582" class="body">Cópia dos eventos publicados</text><text x="1172" y="911" fill="#806aa3" class="small">Não substitui os handlers internos</text>
+<path d="M392 877h28" stroke="#8760c5" stroke-width="2.5" marker-end="url(#arrowPurple)"/>
+<path d="M740 877h28" stroke="#8760c5" stroke-width="2.5" marker-end="url(#arrowPurple)"/>
+<path d="M1108 877h28" stroke="#8760c5" stroke-width="2.5" marker-end="url(#arrowPurple)"/>
+<path d="M1120 651 C1200 690 240 689 240 815" fill="none" stroke="#8760c5" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#arrowPurple)"/>
+<text x="620" y="700" text-anchor="middle" class="flow">ContractActivated.v1 · ContractClosed.v1 · mesma transação</text>
+
+</g>
+<!-- planned external connections -->
+<text x="800" y="1200" fill="#8b99a8" font-size="14" font-weight="800" letter-spacing="1.4px" text-anchor="middle">PRÓXIMA ETAPA · DEPOIS DAS ROTAS: CONECTAR OS SISTEMAS REAIS</text>
+<path d="M585 1074 V1226" fill="none" stroke="#9ba8b6" stroke-width="2.5" stroke-dasharray="7 7" marker-end="url(#arrow)"/>
+<text x="605" y="1152" fill="#8795a3" font-size="12" font-weight="650">adaptação futura</text>
+<rect x="448" y="1226" width="704" height="58" rx="16" fill="#f7f9fb" fill-opacity=".75" stroke="#aab5c0" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="800" y="1252" fill="#718090" font-size="16" font-weight="750" text-anchor="middle">Portas + adaptadores externos</text><text x="800" y="1273" fill="#8a97a4" font-size="12" text-anchor="middle">Traduzir contratos de API/eventos e IDs legados · ainda não conectado</text>
+<path d="M800 1284 V1300 M185 1300 H1415" fill="none" stroke="#aab5c0" stroke-width="2" stroke-dasharray="7 6"/>
+<path d="M185 1300V1316 M431 1300V1316 M677 1300V1316 M923 1300V1316 M1169 1300V1316 M1415 1300V1316" fill="none" stroke="#aab5c0" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+<g opacity=".58">
+  <rect x="69" y="1320" width="232" height="94" rx="15" fill="#f7f9fb" stroke="#9ba8b6" stroke-width="1.8" stroke-dasharray="7 5"/>
+  <text x="85" y="1348" fill="#657585" font-size="15" font-weight="720">CRM corporativo</text><text x="85" y="1375" fill="#718090" font-size="12">Cadastro mestre · consentimento</text><text x="85" y="1396" fill="#8794a1" font-size="11">Conector futuro</text>
+  <rect x="315" y="1320" width="232" height="94" rx="15" fill="#f7f9fb" stroke="#9ba8b6" stroke-width="1.8" stroke-dasharray="7 5"/>
+  <text x="331" y="1348" fill="#657585" font-size="15" font-weight="720">Frota e reservas</text><text x="331" y="1375" fill="#718090" font-size="12">Disponibilidade · origem/destino</text><text x="331" y="1396" fill="#8794a1" font-size="11">Retirada · devolução · preço real</text>
+  <rect x="561" y="1320" width="232" height="94" rx="15" fill="#f7f9fb" stroke="#9ba8b6" stroke-width="1.8" stroke-dasharray="7 5"/>
+  <text x="577" y="1348" fill="#657585" font-size="15" font-weight="720">Assinatura digital</text><text x="577" y="1375" fill="#718090" font-size="12">Formalização do contrato</text><text x="577" y="1396" fill="#8794a1" font-size="11">Provedor futuro</text>
+  <rect x="807" y="1320" width="232" height="94" rx="15" fill="#f7f9fb" stroke="#9ba8b6" stroke-width="1.8" stroke-dasharray="7 5"/>
+  <text x="823" y="1348" fill="#657585" font-size="15" font-weight="720">Financeiro / PSP</text><text x="823" y="1375" fill="#718090" font-size="12">Cobrança · pagamentos reais</text><text x="823" y="1396" fill="#8794a1" font-size="11">Conciliação · notas</text>
+  <rect x="1053" y="1320" width="232" height="94" rx="15" fill="#f7f9fb" stroke="#9ba8b6" stroke-width="1.8" stroke-dasharray="7 5"/>
+  <text x="1069" y="1348" fill="#657585" font-size="15" font-weight="720">Atendimento 24h / ITSM</text><text x="1069" y="1375" fill="#718090" font-size="12">Central e chamados reais</text><text x="1069" y="1396" fill="#8794a1" font-size="11">Integração futura</text>
+  <rect x="1299" y="1320" width="232" height="94" rx="15" fill="#f7f9fb" stroke="#9ba8b6" stroke-width="1.8" stroke-dasharray="7 5"/>
+  <text x="1315" y="1348" fill="#657585" font-size="15" font-weight="720">Motor BPM</text><text x="1315" y="1375" fill="#718090" font-size="12">Orquestração corporativa</text><text x="1315" y="1396" fill="#8794a1" font-size="11">Workflow externo</text>
+</g>
+<text x="800" y="1455" fill="#718195" font-size="13" text-anchor="middle">Hoje: rotas e simuladores locais · Futuro: conexões externas indicadas em traço claro</text>
+</svg>

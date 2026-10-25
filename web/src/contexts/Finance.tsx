@@ -1,12 +1,14 @@
 import { useReducer, useState } from 'react'
 import type { Invoice, InvoiceStatus } from '../api'
 import {
-  ActionForm, Card, Field, FeedbackBanner, Id, PageIntro, ResourceView, SelectField, Status, Table, date, dateTime, money, text,
+  ActionForm, Card, Field, FeedbackBanner, Id, PageIntro, PendingIntents, ResourceView, SelectField, Status, Table, date, dateTime, money, text,
   useActions, useIdempotencyKeys, useResource, useSession,
 } from '../ui'
 import { DispatchButton } from './shared'
 
 const payableStatus = (i: Invoice) => i.status !== 'PAID' && i.status !== 'CANCELLED'
+/** Regra do domínio (ADR-003): só fatura em aberto, sem pagamento, pode ser cancelada. */
+const cancellable = (i: Invoice) => i.status === 'OPEN' && i.paidAmount === 0
 
 export default function Finance() {
   const { api } = useSession()
@@ -15,6 +17,7 @@ export default function Finance() {
   const [version, refresh] = useReducer((x: number) => x + 1, 0)
   const [statusFilter, setStatusFilter] = useState<'' | InvoiceStatus>('')
   const [selected, setSelected] = useState<Invoice | null>(null)
+  const [cancelling, setCancelling] = useState<Invoice | null>(null)
   const [reference, setReference] = useState(() => `SIM-${Date.now()}`)
 
   const invoices = useResource(a => a.listInvoices(), [version])
@@ -29,6 +32,7 @@ export default function Finance() {
   return <>
     <PageIntro>Fatura, pagamento, saldo, vencimento e inadimplência pertencem a Finance. A primeira fatura nasce do evento <code>ContractActivated.v1</code> e a fatura final de <code>ContractClosed.v1</code>, depois do despacho da outbox. Pagamentos são apenas simulados: não há PSP, conciliação bancária, nota fiscal nem cobrança real.</PageIntro>
     <FeedbackBanner feedback={feedback} onClose={clear} />
+    <PendingIntents keys={keys} busy={busy} run={run} onCheck={refresh} />
 
     <div className="grid two">
       <Card title="Registrar pagamento simulado" roles="finance, admin">
@@ -36,7 +40,7 @@ export default function Finance() {
           const invoiceId = text(f, 'invoiceId')
           const invoice = invoices.data?.find(i => i.invoiceId === invoiceId)
           const body = { amount: Number(text(f, 'amount')), currency: invoice?.currency ?? 'BRL', reference: text(f, 'reference') }
-          const result = await run('Registro de pagamento', () => keys.send('payment', { invoiceId, ...body }, key => api.recordPayment(invoiceId, body, key)),
+          const result = await run('Registro de pagamento', () => keys.send(`payment:${invoiceId}`, body, key => api.recordPayment(invoiceId, body, key), 'Registro de pagamento'),
             r => `Fatura ${r.invoice.invoiceId.slice(0, 8)}: ${money(r.invoice.paidAmount, r.invoice.currency)} pagos de ${money(r.invoice.amount, r.invoice.currency)}; saldo ${money(r.invoice.balance, r.invoice.currency)}.`)
           if (result) { setReference(`SIM-${Date.now()}`); setSelected(result.data.invoice); refresh() }
           return result !== null
@@ -51,7 +55,17 @@ export default function Finance() {
         </ActionForm>
       </Card>
 
-      <Card title="Como a fatura nasce" roles="despacho: operations, admin">
+      {cancelling ? <Card title={`Cancelar fatura ${cancelling.invoiceId.slice(0, 8)}`} roles="finance, admin">
+        <p>Cancelamento é definitivo: a fatura não recebe pagamento e o faturamento final do contrato não recobra o valor. O motivo fica na auditoria; não inclua dados pessoais ou sensíveis.</p>
+        <ActionForm key={cancelling.invoiceId} submit="Confirmar cancelamento" busy={busy} label="Cancelar fatura" onSubmit={async f => {
+          const result = await run('Cancelamento de fatura', () => api.cancelInvoice(cancelling.invoiceId, text(f, 'reason')))
+          if (result) { setCancelling(null); setSelected(null); refresh() }
+          return result !== null
+        }}>
+          <Field name="reason" label="Motivo" defaultValue="Emitida em duplicidade (cenário fictício)" hint="De 3 a 200 caracteres." />
+        </ActionForm>
+        <button type="button" className="secondary small spaced" onClick={() => setCancelling(null)}>Voltar</button>
+      </Card> : <Card title="Como a fatura nasce" roles="despacho: operations, admin">
         <ol className="steps">
           <li>Ative um contrato em Reservas e contratos.</li>
           <li>Despache a outbox: o consumidor financeiro cria a primeira fatura com vencimento na data UTC do evento mais 10 dias (prazo é premissa a validar).</li>
@@ -59,7 +73,7 @@ export default function Finance() {
           <li>Encerre o contrato e despache: a fatura final cobra os ciclos iniciados ainda não faturados (regra é premissa a validar).</li>
         </ol>
         <DispatchButton busy={busy} run={run} onDone={refresh} />
-      </Card>
+      </Card>}
     </div>
 
     <Card title="Verificar vencimento e registrar inadimplência" roles="finance, operations, admin">
@@ -93,8 +107,11 @@ export default function Finance() {
           { key: 'delinquency', label: 'Inadimplência', render: r => r.delinquent
             ? <>Registrada em {dateTime(r.overdueSince)}</>
             : r.overdueSince ? <>Quitada após atraso</> : r.status === 'OVERDUE' ? <>Vencida, não registrada</> : <>—</> },
-          { key: 'actions', label: 'Ações', render: r => <button type="button" className="inline" aria-pressed={selected?.invoiceId === r.invoiceId}
-            onClick={() => { setSelected(r); clear() }}>{r.status === 'PAID' ? 'Ver pagamentos' : 'Selecionar'}</button> },
+          { key: 'actions', label: 'Ações', render: r => <div className="row-actions">
+            <button type="button" className="inline" aria-pressed={selected?.invoiceId === r.invoiceId}
+              onClick={() => { setSelected(r); clear() }}>{r.status === 'PAID' ? 'Ver pagamentos' : 'Selecionar'}</button>
+            {cancellable(r) && <button type="button" className="inline quiet" disabled={busy} onClick={() => { setCancelling(r); clear() }}>Cancelar…</button>}
+          </div> },
         ]} />}
       </ResourceView>
     </Card>

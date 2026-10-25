@@ -39,7 +39,7 @@ jobs:
         image: rabbitmq:3.13-alpine
         ports: ['5672:5672']
         options: >-
-          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-cmd "rabbitmq-diagnostics -q check_port_connectivity"
           --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       TEST_RABBITMQ_URL: amqp://guest:guest@localhost:5672/%2F
@@ -105,7 +105,7 @@ jobs:
       - name: Browser flows against the real API (fresh SQLite)
         working-directory: web
         run: npm run test:e2e
-      - name: Accessibility scan (informative)
+      - name: Accessibility scan (WCAG 2 A/AA, blocking)
         if: always()
         working-directory: web
         run: npm run test:a11y

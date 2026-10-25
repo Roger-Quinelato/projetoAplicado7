@@ -1,24 +1,55 @@
-import { useReducer, useState } from 'react'
-import { asApiError, type ApiError, type OperationTrace } from '../api'
+import { useEffect, useState } from 'react'
+import { asApiError, type ApiError, type ApiResult, type Api, type OperationTrace } from '../api'
+import { FAILURES_CARD } from '../EventsBar'
+import {
+  contractIndicator, failureIndicator, invoiceIndicator, processIndicator, ticketIndicator, type Indicator,
+} from '../indicators'
 import {
   Card, ErrorPanel, Field, FeedbackBanner, Id, PageIntro, ResourceView, Status, Table, dateTime, text, useActions, useResource, useSession,
+  type Resource,
 } from '../ui'
-import { DispatchButton } from './shared'
 
-const FLOWS: { title: string, steps: [string, string][] }[] = [
-  { title: 'F1 · Contrato sem recadastro', steps: [['Cadastre um cliente fictício', '/crm'], ['Registre a reserva com o cliente do CRM', '/reservas'], ['Gere o rascunho a partir da reserva', '/reservas']] },
-  { title: 'F2 · Ativação, cobrança e retirada', steps: [['Ative o contrato em rascunho', '/reservas'], ['Despache os eventos (abaixo)', '/'], ['Confira a fatura e registre o pagamento', '/financeiro'], ['Confira a preparação de retirada', '/workflow']] },
-  { title: 'F3 · Atendimento com SLA', steps: [['Consulte elegibilidade e abra o chamado', '/atendimento'], ['Despache os eventos', '/'], ['Atribua e resolva o chamado', '/atendimento'], ['Despache e confira o processo concluído', '/workflow']] },
+/** Passos de cada fluxo e a tela onde são feitos; sem rota, o passo é feito na barra de eventos. */
+const FLOWS: { title: string, steps: [string, string | null][] }[] = [
+  { title: 'F1 · Contrato sem recadastro', steps: [['Cadastre um cliente fictício', '/crm'], ['Registre a reserva com esse cliente', '/reservas'], ['Gere o rascunho a partir da reserva', '/reservas']] },
+  { title: 'F2 · Ativação, cobrança e retirada', steps: [['Ative o contrato em rascunho', '/reservas'], ['Despache os eventos', null], ['Confira a fatura e registre o pagamento', '/financeiro'], ['Confira a preparação de retirada', '/workflow']] },
+  { title: 'F3 · Atendimento com SLA', steps: [['Consulte a elegibilidade e abra o chamado', '/atendimento'], ['Despache os eventos', null], ['Atribua e resolva o chamado', '/atendimento'], ['Despache e confira o processo concluído', '/workflow']] },
 ]
+const DESTINATIONS: Record<string, string> = {
+  '/crm': 'CRM', '/reservas': 'Reservas e contratos', '/financeiro': 'Financeiro', '/atendimento': 'Atendimento', '/workflow': 'Workflow',
+}
+
+/** Um indicador calculado a partir de uma lista; sem permissão ou com erro, mostra o motivo no lugar do número. */
+function IndicatorTile<T>({ label, load, compute }: { label: string, load: (api: Api) => Promise<ApiResult<T>>, compute: (data: T) => Indicator }) {
+  return <IndicatorView label={label} resource={useResource(load, [])} compute={compute} />
+}
+
+function IndicatorView<T>({ label, resource, compute }: { label: string, resource: Resource<T>, compute: (data: T) => Indicator }) {
+  const value = resource.data === undefined ? null : compute(resource.data)
+  const detail = resource.status === 'error'
+    ? (resource.error.status === 403 ? 'sem permissão para este perfil' : 'não foi possível carregar')
+    : value?.detail ?? 'carregando…'
+  return <div className="indicator">
+    <span>{label}</span>
+    <strong>{resource.status === 'error' || !value ? '—' : value.value}</strong>
+    <small>{detail}</small>
+  </div>
+}
 
 export default function Overview({ params }: { params: URLSearchParams }) {
   const { api, navigate } = useSession()
   const { feedback, busy, run, clear } = useActions()
-  const [version, refresh] = useReducer((x: number) => x + 1, 0)
   const [trace, setTrace] = useState<{ status: 'idle' | 'loading' | 'success' | 'error', data?: OperationTrace, error?: ApiError }>({ status: 'idle' })
+  const failures = useResource(a => a.listFailures(), [])
+  const focus = params.get('focus')
 
-  const state = useResource(a => a.demoState(), [version])
-  const failures = useResource(a => a.listFailures(), [version])
+  // Destino do link "Falhas" da barra de eventos.
+  useEffect(() => {
+    if (focus !== FAILURES_CARD) return
+    const card = document.getElementById(FAILURES_CARD)
+    card?.scrollIntoView({ block: 'start' })
+    card?.focus()
+  }, [focus])
 
   async function lookup(correlationId: string) {
     setTrace({ status: 'loading' })
@@ -27,32 +58,35 @@ export default function Overview({ params }: { params: URLSearchParams }) {
   }
 
   return <>
-    <PageIntro>Protótipo acadêmico com dados sintéticos: CRM, reservas e contratos, financeiro, atendimento e workflow compartilham identificadores e eventos. Pagamentos, frota e atendimentos externos são simulados; não há conexão com sistemas reais da Localiza.</PageIntro>
+    <PageIntro>Acompanhe os três fluxos integrados com dados sintéticos. Nenhum dado vem de sistemas reais da Localiza.</PageIntro>
     <FeedbackBanner feedback={feedback} onClose={clear} />
 
-    <Card title="Totais do ambiente" roles="admin">
-      <ResourceView resource={state} label="totais" empty="" isEmpty={() => false}>
-        {d => <div className="stats">{([['Clientes', d.customers], ['Contratos', d.contracts], ['Faturas', d.invoices], ['Chamados', d.tickets], ['Processos', d.processes], ['IDs legados', d.legacyMappings]] as const)
-          .map(([label, count]) => <div className="stat" key={label}><span>{label}</span><strong>{count}</strong></div>)}</div>}
-      </ResourceView>
+    <Card title="Situação da demonstração">
+      <div className="indicators">
+        <IndicatorTile label="Contratos ativos" load={a => a.listContracts()} compute={contractIndicator} />
+        <IndicatorTile label="Faturas em aberto" load={a => a.listInvoices()} compute={invoiceIndicator} />
+        <IndicatorTile label="Chamados no prazo" load={a => a.listTickets()} compute={ticketIndicator} />
+        <IndicatorTile label="Processos em andamento" load={a => a.listProcesses()} compute={processIndicator} />
+        <IndicatorView label="Falhas de integração" resource={failures} compute={failureIndicator} />
+      </div>
     </Card>
 
     <div className="grid three">
       {FLOWS.map(flow => <Card key={flow.title} title={flow.title}>
-        <ol className="steps">{flow.steps.map(([label, route]) => <li key={label}>
-          {route === '/' ? label : <a href={`#${route}`} onClick={e => { e.preventDefault(); navigate(route) }}>{label}</a>}
+        <ol className="flow-steps">{flow.steps.map(([label, route]) => <li key={label}>
+          <span>{label}</span>
+          {route
+            ? <a href={`#${route}`} onClick={e => { e.preventDefault(); navigate(route) }}>{DESTINATIONS[route]} →</a>
+            : <small>Na barra de eventos, no topo da tela</small>}
         </li>)}</ol>
       </Card>)}
     </div>
 
     <div className="grid two">
-      <Card title="Integração · outbox" roles="operations, admin">
-        <p>O despacho é explícito no protótipo: executa os consumidores internos (Finance, Workflow, projeção de Contracts) e registra falhas após o limite de tentativas.</p>
-        <DispatchButton busy={busy} run={run} onDone={refresh} />
-      </Card>
-      <Card title="Trilha por correlação" roles="operations, admin">
+      <Card title="Trilha por correlação">
+        <p>Veja a auditoria e os eventos de uma operação a partir do ID de correlação exibido nos avisos.</p>
         <form className="filters" aria-label="Consultar trilha por correlação" onSubmit={e => { e.preventDefault(); void lookup(text(new FormData(e.currentTarget), 'correlationId')) }}>
-          <Field name="correlationId" label="Correlation ID (UUID)" defaultValue={params.get('trace') ?? ''} hint="Copie o valor exibido nos avisos de sucesso ou erro." />
+          <Field name="correlationId" label="ID de correlação" defaultValue={params.get('trace') ?? ''} placeholder="00000000-0000-0000-0000-000000000000" />
           <button type="submit" className="secondary" disabled={trace.status === 'loading'}>Consultar</button>
         </form>
         <div aria-live="polite">
@@ -75,19 +109,22 @@ export default function Overview({ params }: { params: URLSearchParams }) {
             </>)}
         </div>
       </Card>
-    </div>
 
-    <Card title="Falhas de integração" roles="operations, admin">
-      <ResourceView resource={failures} label="falhas" empty="Nenhuma mensagem com falha permanente.">
-        {rows => <Table caption="Falhas de integração" rows={rows} rowKey={r => r.eventId} columns={[
-          { key: 'event', label: 'Evento', render: r => <>{r.eventType} <Id value={r.eventId} /></> },
-          { key: 'attempts', label: 'Tentativas', render: r => String(r.attempts) },
-          { key: 'reason', label: 'Motivo', render: r => r.reason ?? '—' },
-          { key: 'corr', label: 'Correlação', render: r => <Id value={r.correlationId} /> },
-          { key: 'actions', label: 'Ações', render: r => <button type="button" className="inline" disabled={busy}
-            onClick={() => void run('Reprocessamento agendado', () => api.reprocessFailure(r.eventId)).then(x => { if (x) refresh() })}>Reprocessar</button> },
-        ]} />}
-      </ResourceView>
-    </Card>
+      <Card title="Falhas de integração" id={FAILURES_CARD}>
+        {failures.status === 'error' && failures.error.status === 403
+          ? <p className="empty">As falhas de integração ficam visíveis para os perfis operations e admin.</p>
+          : <ResourceView resource={failures} label="falhas"
+          empty={<><strong>Nenhuma falha permanente.</strong> Eventos que esgotarem as tentativas de entrega aparecem aqui para reprocessamento.</>}>
+          {rows => <Table caption="Falhas de integração" rows={rows} rowKey={r => r.eventId} columns={[
+            { key: 'event', label: 'Evento', render: r => <>{r.eventType} <Id value={r.eventId} /></> },
+            { key: 'attempts', label: 'Tentativas', render: r => String(r.attempts) },
+            { key: 'reason', label: 'Motivo', render: r => r.reason ?? '—' },
+            { key: 'corr', label: 'Correlação', render: r => <Id value={r.correlationId} /> },
+            { key: 'actions', label: 'Ações', render: r => <button type="button" className="inline" disabled={busy}
+              onClick={() => void run('Reprocessamento agendado', () => api.reprocessFailure(r.eventId)).then(x => { if (x) void failures.reload() })}>Reprocessar</button> },
+          ]} />}
+        </ResourceView>}
+      </Card>
+    </div>
   </>
 }

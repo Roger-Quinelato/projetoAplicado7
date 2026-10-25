@@ -1,10 +1,12 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from archcorp.exceptions import NotFoundError
 from archcorp.infrastructure.db import count_rows
 from archcorp.integration.public import audit
+from archcorp.workflow.domain import aggregate_process_state, ensure_process_open, parse_utc, preparation_due, task_change_needed
 from archcorp.workflow.models import ProcessInstance, ProcessTask
 
 
@@ -16,12 +18,6 @@ def _find_process(session: Session, process_type: str, reference_id: str) -> Pro
 def _tasks(session: Session, process: ProcessInstance) -> list[ProcessTask]:
     """Lista as tarefas do processo."""
     return list(session.scalars(select(ProcessTask).where(ProcessTask.process_id == process.process_id)))
-
-
-def _parse_utc(value: str) -> datetime:
-    """Converte um instante ISO 8601 do evento em datetime UTC; sem fuso, é lido como UTC."""
-    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed.astimezone(timezone.utc)
 
 
 def _start(session: Session, envelope: dict, process_type: str, reference_field: str, due_at: datetime) -> None:
@@ -38,8 +34,11 @@ def _start(session: Session, envelope: dict, process_type: str, reference_field:
 
 
 def handle_contract_activated(session: Session, envelope: dict) -> None:
-    """Consumidor de ContractActivated.v1: inicia a preparação de retirada (72 h)."""
-    _start(session, envelope, "ONBOARDING", "contractId", datetime.now(timezone.utc) + timedelta(hours=72))
+    """Consumidor de ContractActivated.v1: inicia a preparação de retirada.
+
+    O prazo conta do `occurredAt` da ativação: atraso ou reentrega do despacho não o estende.
+    """
+    _start(session, envelope, "ONBOARDING", "contractId", preparation_due(parse_utc(envelope["occurredAt"])))
 
 
 def handle_ticket_opened(session: Session, envelope: dict) -> None:
@@ -52,9 +51,9 @@ def handle_ticket_opened(session: Session, envelope: dict) -> None:
     """
     payload = envelope["payload"]
     if payload.get("dueAt"):
-        due_at = _parse_utc(payload["dueAt"])
+        due_at = parse_utc(payload["dueAt"])
     else:
-        opened_at = _parse_utc(payload.get("openedAt") or envelope["occurredAt"])
+        opened_at = parse_utc(payload.get("openedAt") or envelope["occurredAt"])
         due_at = opened_at + timedelta(hours=payload.get("slaHours") or 24)
     _start(session, envelope, "TICKET_RESOLUTION", "ticketId", due_at)
 
@@ -66,7 +65,7 @@ def handle_ticket_entitlement_reconciled(session: Session, envelope: dict) -> No
     if not process:
         return
     if payload["status"] == "OPEN":
-        process.due_at = _parse_utc(payload["dueAt"])
+        process.due_at = parse_utc(payload["dueAt"])
     else:
         process.state = "CANCELLED"
         process.due_at = None
@@ -103,3 +102,47 @@ def handle_contract_closed(session: Session, envelope: dict) -> None:
         if task.state not in {"DONE", "CANCELLED"}:
             task.state = "CANCELLED"
     audit(session, envelope["correlationId"], "workflow", "complete_onboarding_on_close", "success", process.process_id)
+
+
+def _locked_process(session: Session, process_id: str) -> ProcessInstance | None:
+    """Lê o processo com bloqueio de linha (PostgreSQL) para serializar o agregado das tarefas."""
+    return session.get(ProcessInstance, process_id, with_for_update=True, populate_existing=True)
+
+
+def create_task(session: Session, process_id: str, title: str, owner: str, correlation_id: str) -> ProcessTask:
+    """Cria tarefa em processo não encerrado, com o prazo do processo, e registra auditoria."""
+    process = _locked_process(session, process_id)
+    if not process:
+        raise NotFoundError("Processo não encontrado")
+    ensure_process_open(process.state)
+    task = ProcessTask(process_id=process.process_id, title=title, owner=owner, due_at=process.due_at)
+    session.add(task)
+    session.flush()
+    audit(session, correlation_id, "workflow", "create_task", "success", task.task_id, processId=process.process_id)
+    session.commit()
+    return task
+
+
+def change_task(session: Session, task_id: str, state: str, owner: str | None, correlation_id: str) -> ProcessTask:
+    """Altera estado ou responsável da tarefa e recalcula o processo; repetição exata não tem efeito."""
+    task = session.get(ProcessTask, task_id)
+    if not task:
+        raise NotFoundError("Tarefa não encontrada")
+    process = _locked_process(session, task.process_id)
+    session.refresh(task)
+    ensure_process_open(process.state)
+    if not task_change_needed(task.state, task.owner, state, owner):
+        session.rollback()
+        return task
+    previous_state, previous_owner = task.state, task.owner
+    task.state = state
+    task.owner = owner or task.owner
+    process_before = process.state
+    process.state = aggregate_process_state(process.state, [t.state for t in _tasks(session, process)])
+    audit(session, correlation_id, "workflow", "change_task", "success", task.task_id, processId=process.process_id,
+          fromState=previous_state, toState=task.state, ownerChanged=task.owner != previous_owner)
+    if process.state != process_before:
+        audit(session, correlation_id, "workflow", "change_process_state", "success", process.process_id,
+              fromState=process_before, toState=process.state)
+    session.commit()
+    return task

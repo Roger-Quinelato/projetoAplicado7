@@ -1,0 +1,5 @@
+[2026-10-01T20:47:28Z py3.11] amostras=200 p95_ms=11.10 meta_ms=500 resultado=PASS
+[2026-10-01T20:47:32Z py3.11] amostras=200 p95_ms=11.17 meta_ms=500 resultado=PASS
+[2026-10-01T20:47:36Z py3.11] amostras=200 p95_ms=11.57 meta_ms=500 resultado=PASS
+[2026-10-01T20:47:41Z py3.12] amostras=200 p95_ms=13.32 meta_ms=500 resultado=PASS
+[2026-10-01T20:47:45Z py3.11 PostgreSQL local] amostras=200 p95_ms=13.70 meta_ms=500 resultado=PASS

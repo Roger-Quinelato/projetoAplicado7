@@ -1,6 +1,6 @@
 # Integrações do Cenário 4
 
-> Estado de execução em 27/09/2026: consulte [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
+> O estado atual de execução está no [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e no [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
 
 Este documento detalha as três integrações obrigatórias do protótipo. Os diagramas
 de sequência estão em `docs/arquitetura/FLUXOS_INTEGRACAO.md`. Requisições,
@@ -93,6 +93,11 @@ eventos que permanecem `PENDING`. Uma exceção incrementa `attempts` e registra
 motivo. O evento muda para `FAILED` ao alcançar `RETRY_LIMIT`, que vale três por
 padrão. O protótipo não agenda tentativas automaticamente e não implementa atraso
 exponencial ou jitter.
+
+`GET /api/v1/integration/outbox/summary` devolve quantos eventos estão `PENDING` e
+quantos estão `FAILED`, sem payload. A interface usa essa contagem na barra de
+eventos, que mostra o que aguarda despacho em todas as telas para os papéis
+`operations` e `admin`.
 
 O operador consulta `GET /api/v1/integration/failures` e, depois de corrigir a
 causa, usa `POST /api/v1/integration/failures/{eventId}/reprocess`. O comando muda

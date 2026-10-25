@@ -1,0 +1,13 @@
+openapi version: 3.1.0
+INVALIDO POST /api/v1/contracts/drafts [201 application/json] exemplo=created: ["billing/amount: 2500.0 is not of type 'string'"]
+INVALIDO POST /api/v1/contracts/drafts [201 application/json] exemplo=replayed: ["billing/amount: 2500.0 is not of type 'string'"]
+INVALIDO POST /api/v1/contracts/{contract_id}/activate [200 application/json] exemplo=activated: ["billing/amount: 2500.0 is not of type 'string'"]
+INVALIDO POST /api/v1/contracts/{contract_id}/activate [200 application/json] exemplo=replayed: ["billing/amount: 2500.0 is not of type 'string'"]
+INVALIDO GET /api/v1/contracts/{contract_id}/entitlement [200 application/json] exemplo=notEligible: [": 'slaHours' is a required property"]
+INVALIDO POST /api/v1/support/tickets [201 application/json] exemplo=pending: [": 'slaHours' is a required property", ": 'dueAt' is a required property"]
+INVALIDO POST /api/v1/support/tickets/{ticket_id}/reconcile [200 application/json] exemplo=rejected: [": 'slaHours' is a required property", ": 'dueAt' is a required property"]
+INVALIDO POST /api/v1/contracts/reservations [201 application/json] exemplo=component[0]: [": 'contractId' is a required property"]
+INVALIDO GET /api/v1/contracts/reservations [200 application/json] exemplo=component[0]: ["0: 'contractId' is a required property"]
+INVALIDO GET /api/v1/contracts/reservations/{reservation_id} [200 application/json] exemplo=component[0]: [": 'contractId' is a required property"]
+INVALIDO POST /api/v1/contracts/reservations/{reservation_id}/cancel [200 application/json] exemplo=component[0]: [": 'contractId' is a required property"]
+exemplos verificados=261 invalidos=11

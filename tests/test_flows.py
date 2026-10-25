@@ -130,3 +130,21 @@ def test_falha_permanente_pode_ser_listada_e_reprocessada(client, admin_headers)
     with SessionLocal() as session:
         event = session.get(OutboxEvent, event_id)
         assert event.attempts == 0
+
+
+def test_resumo_da_outbox_conta_pendentes_e_falhas(client, admin_headers):
+    correlation_id = admin_headers["X-Correlation-ID"]
+    with SessionLocal() as session:
+        session.add_all([
+            OutboxEvent(event_type="Pending.v1", producer="test", payload={}, correlation_id=correlation_id),
+            OutboxEvent(event_type="Pending.v1", producer="test", payload={}, correlation_id=correlation_id),
+            OutboxEvent(event_type="Broken.v1", producer="test", payload={}, correlation_id=correlation_id, status="FAILED"),
+            OutboxEvent(event_type="Done.v1", producer="test", payload={}, correlation_id=correlation_id, status="PUBLISHED"),
+        ])
+        session.commit()
+    summary = client.get("/api/v1/integration/outbox/summary", headers=admin_headers)
+    assert summary.status_code == 200
+    assert summary.json() == {"pending": 2, "failed": 1}
+    assert summary.headers["X-Correlation-ID"] == correlation_id
+    assert client.get("/api/v1/integration/outbox/summary", headers={"Authorization": "Bearer demo-operations"}).status_code == 200
+    assert client.get("/api/v1/integration/outbox/summary", headers={"Authorization": "Bearer demo-commercial"}).status_code == 403

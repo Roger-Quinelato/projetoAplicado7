@@ -1,6 +1,6 @@
 # Exemplos de APIs e eventos
 
-> Estado de execução em 27/09/2026: consulte [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
+> O estado atual de execução está no [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e no [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
 
 Este documento apresenta exemplos coerentes para os três fluxos do Cenário 4.
 Os contratos executáveis permanecem em `docs/api/openapi.yaml` e
@@ -321,6 +321,26 @@ Resposta `200 OK` quando um evento é publicado:
 Finance registra uma cobrança, Workflow inicia uma preparação de retirada e cada consumidor
 registra o `eventId` na inbox. Um novo despacho sem eventos pendentes devolve
 `{"processed": 0, "failed": 0}`.
+
+### Consultar o resumo da outbox
+
+```http
+GET /api/v1/integration/outbox/summary HTTP/1.1
+Authorization: Bearer demo-operations
+X-Correlation-ID: 11111111-1111-4111-8111-111111111111
+```
+
+Resposta `200 OK` antes do despacho acima:
+
+```json
+{
+  "pending": 1,
+  "failed": 0
+}
+```
+
+`pending` conta eventos `PENDING` e `failed` conta eventos `FAILED`, que já
+esgotaram as tentativas. Perfis sem `operations` ou `admin` recebem `403 FORBIDDEN`.
 
 ### Repetir com idempotência
 

@@ -1,8 +1,8 @@
 import { useReducer, useState } from 'react'
 import type { ApiResult, BillingCycle, Contract } from '../api'
 import {
-  ActionForm, Card, Field, FeedbackBanner, Id, PageIntro, ResourceView, SelectField, Status, Table, date, isoDate, money,
-  text, useActions, useIdempotencyKeys, useResource, useSession,
+  ActionForm, Card, CustomerPicker, Field, FeedbackBanner, Id, PageIntro, PendingIntents, ResourceView, SelectField, Status, Table, date,
+  isoDate, money, text, useActions, useIdempotencyKeys, useResource, useSession,
 } from '../ui'
 
 const CYCLES = [
@@ -27,12 +27,11 @@ export default function Contracts({ params }: { params: URLSearchParams }) {
   const reservations = useResource(a => a.listReservations(), [version])
   const contracts = useResource(a => a.listContracts(), [version])
 
-  const customerOptions = (customers.data ?? []).map(c => ({ value: c.customerId, label: `${c.name} · ${c.email}` }))
   const customerName = (id: string) => customers.data?.find(c => c.customerId === id)?.name ?? id.slice(0, 8)
 
   /** Executa um comando idempotente; a chave só é reaproveitada se o corpo da nova tentativa for idêntico. */
   async function idempotent<T, B>(intent: string, label: string, body: B, call: (body: B, key: string) => Promise<ApiResult<T>>, describe?: (data: T) => string) {
-    const result = await run(label, () => keys.send(intent, body, key => call(body, key)), describe)
+    const result = await run(label, () => keys.send(intent, body, key => call(body, key), label), describe)
     if (result) refresh()
     return result !== null
   }
@@ -40,6 +39,7 @@ export default function Contracts({ params }: { params: URLSearchParams }) {
   return <>
     <PageIntro>Reserva, contrato de locação, vigência, proteções e SLA pertencem a Contracts. O rascunho nasce da reserva usando o cliente oficial do CRM, sem recadastro. Ativar publica <code>ContractActivated.v1</code> para faturamento e preparação de retirada.</PageIntro>
     <FeedbackBanner feedback={feedback} onClose={clear} />
+    <PendingIntents keys={keys} busy={busy} run={run} onCheck={refresh} />
 
     <div className="grid two">
       <Card title="Nova reserva" roles="commercial, contracts, admin">
@@ -49,8 +49,7 @@ export default function Contracts({ params }: { params: URLSearchParams }) {
             amount: Number(text(f, 'amount')), currency: 'BRL', billingCycle: text(f, 'billingCycle') as BillingCycle,
             slaHours: Number(text(f, 'slaHours')),
           }, api.createReservation, r => `Reserva ${r.reservationId.slice(0, 8)} solicitada; gere o rascunho na tabela abaixo.`)}>
-          <SelectField name="customerId" label="Cliente (CRM)" options={customerOptions} defaultValue={preselected}
-            placeholder={customers.status === 'loading' ? 'Carregando…' : customerOptions.length ? 'Selecione' : 'Nenhum cliente ativo'} />
+          <CustomerPicker label="Cliente (CRM)" defaultValue={preselected} />
           <div className="form-grid">
             <SelectField name="vehicleGroup" label="Grupo de veículo" options={GROUPS} defaultValue="ECONOMICO" />
             <SelectField name="protectionCode" label="Proteção" options={PROTECTIONS} defaultValue="BASICA" />
@@ -78,7 +77,7 @@ export default function Contracts({ params }: { params: URLSearchParams }) {
           if (ok) setClosing(null)
           return ok
         }}>
-          <Field name="endsOn" label="Data de encerramento" type="date" required={false} hint="Vazio: data atual ou início do contrato, o que for posterior." />
+          <Field name="endsOn" label="Data de encerramento" type="date" required={false} hint="Vazio: data atual em UTC ou início do contrato, o que for posterior." />
           <Field name="reason" label="Motivo" required={false} defaultValue="Devolução do veículo" />
         </ActionForm>
         <button type="button" className="secondary small spaced" onClick={() => setClosing(null)}>Voltar</button>
@@ -89,7 +88,7 @@ export default function Contracts({ params }: { params: URLSearchParams }) {
             billing: { amount: Number(text(f, 'amount')), currency: 'BRL', cycle: text(f, 'cycle') as BillingCycle },
             slaHours: Number(text(f, 'slaHours')),
           }, api.createDraft, c => `Contrato ${c.contractId.slice(0, 8)} em rascunho.`)}>
-          <SelectField name="customerId" label="Cliente (CRM)" options={customerOptions} />
+          <CustomerPicker label="Cliente (CRM)" />
           <div className="form-grid">
             <Field name="serviceCode" label="Código do serviço" defaultValue="RENTAL-FLEX" />
             <Field name="startsOn" label="Início" type="date" defaultValue={isoDate(1)} />

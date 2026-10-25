@@ -1,0 +1,225 @@
+INFO:     Started server process [6652]
+INFO:     Waiting for application startup.
+{"timestamp": "2026-10-01T20:50:30Z", "level": "INFO", "module": "alembic.runtime.migration", "operation": "__init__", "correlationId": "unknown", "result": "recorded", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-10-01T20:50:30Z", "level": "INFO", "module": "alembic.runtime.migration", "operation": "__init__", "correlationId": "unknown", "result": "recorded", "message": "Will assume transactional DDL."}
+{"timestamp": "2026-10-01T20:50:30Z", "level": "INFO", "module": "alembic.runtime.migration", "operation": "run_migrations", "correlationId": "unknown", "result": "recorded", "message": "Running upgrade  -> 0001_baseline, baseline das tabelas do protótipo"}
+{"timestamp": "2026-10-01T20:50:30Z", "level": "INFO", "module": "alembic.runtime.migration", "operation": "run_migrations", "correlationId": "unknown", "result": "recorded", "message": "Running upgrade 0001_baseline -> 0002_customer_active, adicionar situação ativa ao cliente"}
+{"timestamp": "2026-10-01T20:50:30Z", "level": "INFO", "module": "alembic.runtime.migration", "operation": "run_migrations", "correlationId": "unknown", "result": "recorded", "message": "Running upgrade 0002_customer_active -> 0003_contract_closing, encerramento de contrato e impressão digital de idempotência"}
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18090 (Press CTRL+C to quit)
+{"timestamp": "2026-10-01T20:50:31Z", "level": "INFO", "module": "archcorp", "operation": "/health/live", "correlationId": "c904104e-2fbd-4422-807d-7f8b2b4a541b", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38656 - "GET /health/live HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:32Z", "level": "INFO", "module": "archcorp", "operation": "/", "correlationId": "ada1d233-6a57-4031-bfcf-c0ba9ebdd082", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38662 - "GET / HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:32Z", "level": "INFO", "module": "archcorp", "operation": "/assets/index-CgpmyOVc.js", "correlationId": "b7b32582-1ffe-4b8e-be5a-1f9129c5981b", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38662 - "GET /assets/index-CgpmyOVc.js HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:32Z", "level": "INFO", "module": "archcorp", "operation": "/assets/index-C5x0NIz5.css", "correlationId": "d6d5fef9-02ba-4acd-8768-aa8f02fa4026", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38670 - "GET /assets/index-C5x0NIz5.css HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:35Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/contacts", "correlationId": "94915112-202c-40f5-904d-1eaa12b9b371", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38670 - "GET /api/v1/crm/contacts HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:50:35Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/customers", "correlationId": "94e8ca7d-3199-4453-87d4-9f059505f356", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38662 - "GET /api/v1/crm/customers HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:50:35Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/opportunities", "correlationId": "e3d08a4b-74cb-4c7d-a4f2-8e26d28a861d", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38684 - "GET /api/v1/crm/opportunities HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:50:35Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts", "correlationId": "28cef735-f5d5-43d3-94ee-adf4869ffe47", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38704 - "GET /api/v1/contracts HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:50:35Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/finance/invoices", "correlationId": "aec01204-3379-458b-bf13-224ae2a459d1", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38710 - "GET /api/v1/finance/invoices HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:50:35Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts/reservations", "correlationId": "64c91055-984d-409b-a8f2-0872c64fc5f8", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38698 - "GET /api/v1/contracts/reservations HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:50:35Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/workflow/processes", "correlationId": "8d5f73d9-5eac-4a0e-b942-fa2e2537cf58", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38670 - "GET /api/v1/workflow/processes HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:50:35Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/workflow/tasks", "correlationId": "513881db-2e8e-41db-a42a-356ff9f5e94f", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38684 - "GET /api/v1/workflow/tasks HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:50:35Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/support/tickets", "correlationId": "2e62d50b-69b8-4aed-babb-6e68f6f223c7", "result": 401, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38662 - "GET /api/v1/support/tickets HTTP/1.1" 401 Unauthorized
+{"timestamp": "2026-10-01T20:50:36Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/contacts", "correlationId": "0ef06868-46bd-428b-9eea-a3f727be2641", "result": 403, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38684 - "GET /api/v1/crm/contacts HTTP/1.1" 403 Forbidden
+{"timestamp": "2026-10-01T20:50:36Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/opportunities", "correlationId": "29928471-8f8a-4b23-97a0-073a360b6fe9", "result": 403, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38670 - "GET /api/v1/crm/opportunities HTTP/1.1" 403 Forbidden
+{"timestamp": "2026-10-01T20:50:37Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts/reservations", "correlationId": "0a3daa0a-b2d4-4c13-b0b1-727194a62f8d", "result": 403, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38698 - "GET /api/v1/contracts/reservations HTTP/1.1" 403 Forbidden
+{"timestamp": "2026-10-01T20:50:37Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/finance/invoices", "correlationId": "285ee33e-8df6-4724-96dd-8441a23a08e0", "result": 403, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38704 - "GET /api/v1/finance/invoices HTTP/1.1" 403 Forbidden
+{"timestamp": "2026-10-01T20:50:37Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/customers", "correlationId": "7d188678-9015-40eb-b500-421639bff6d9", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38662 - "GET /api/v1/crm/customers HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:37Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/workflow/tasks", "correlationId": "2a190a8e-240a-41ac-ac5a-d892aaac52d0", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38698 - "GET /api/v1/workflow/tasks HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:37Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts", "correlationId": "1ba8a378-c9a3-4ec1-b0db-0ad33dc6b601", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38710 - "GET /api/v1/contracts HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:37Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/support/tickets", "correlationId": "c76531f5-1a48-491f-9446-5aa44eb43cf1", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38684 - "GET /api/v1/support/tickets HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:37Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/workflow/processes", "correlationId": "e3fa305d-16bf-4087-bd98-6a675e09de02", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38670 - "GET /api/v1/workflow/processes HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:38Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/customers", "correlationId": "27f6ccf1-479b-440b-bf4a-088489a2f103", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38670 - "GET /api/v1/crm/customers HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:38Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/contacts", "correlationId": "d4cc7fd4-1aef-4ceb-96d7-d3c1f1a25edd", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38684 - "GET /api/v1/crm/contacts HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:38Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts/reservations", "correlationId": "30a585d6-4ffd-4d94-89b3-38b4a011931e", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38698 - "GET /api/v1/contracts/reservations HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:38Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts", "correlationId": "72f2cceb-b643-405e-ac23-1ae9814d3199", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38662 - "GET /api/v1/contracts HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:38Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/finance/invoices", "correlationId": "c1b08e5c-30bb-4f23-9749-8e38d6587c6b", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38704 - "GET /api/v1/finance/invoices HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:38Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/opportunities", "correlationId": "05821b23-b3c6-4ca9-bc26-c042aec0e39d", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38710 - "GET /api/v1/crm/opportunities HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:38Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/support/tickets", "correlationId": "d3e7a295-7493-4d50-bb23-4b186204c5d6", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38670 - "GET /api/v1/support/tickets HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:38Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/workflow/processes", "correlationId": "f13589cb-6dba-4d12-8bd5-90e1680e5023", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38684 - "GET /api/v1/workflow/processes HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:38Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/workflow/tasks", "correlationId": "4e224a51-2d42-4c3a-9c6b-d8c2ef5b73eb", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38698 - "GET /api/v1/workflow/tasks HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:39Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/customers", "correlationId": "fe5a9930-b9b0-41b1-9598-290f48865c24", "result": 201, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38698 - "POST /api/v1/crm/customers HTTP/1.1" 201 Created
+{"timestamp": "2026-10-01T20:50:39Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/customers", "correlationId": "f6d6ca0c-f45c-49ee-897b-cff7519dc5dd", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38698 - "GET /api/v1/crm/customers HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:39Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts/reservations", "correlationId": "5b4d502b-36cd-4f04-829d-31ece0599e77", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38710 - "GET /api/v1/contracts/reservations HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:39Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/contacts", "correlationId": "ff7564a7-fa8d-4f10-9f75-16ed425c2e85", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38684 - "GET /api/v1/crm/contacts HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:39Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/opportunities", "correlationId": "a8221a7a-d31f-4537-b5ec-77f969f418a9", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38670 - "GET /api/v1/crm/opportunities HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:39Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts", "correlationId": "0546b059-4c05-4a06-a68d-37a441a597fd", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38704 - "GET /api/v1/contracts HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:39Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/finance/invoices", "correlationId": "6382383d-bb75-4ae2-a511-ba22e9eb5280", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38662 - "GET /api/v1/finance/invoices HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:39Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/support/tickets", "correlationId": "55045e5e-9bc6-4c18-a79c-6cf7a13b0fe8", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38698 - "GET /api/v1/support/tickets HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:39Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/workflow/processes", "correlationId": "400bbbca-55a4-47c7-8a7d-b280938da525", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38710 - "GET /api/v1/workflow/processes HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:39Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/workflow/tasks", "correlationId": "0a4d2821-7048-4e4e-8d15-9d97e443428a", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38684 - "GET /api/v1/workflow/tasks HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:41Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/customers", "correlationId": "20e380bc-b8b7-45b5-bcf2-be77a85502c0", "result": 409, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38684 - "POST /api/v1/crm/customers HTTP/1.1" 409 Conflict
+{"timestamp": "2026-10-01T20:50:43Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts/reservations", "correlationId": "345077e9-b70e-429f-aeb2-54171578f6f2", "result": 201, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38684 - "POST /api/v1/contracts/reservations HTTP/1.1" 201 Created
+{"timestamp": "2026-10-01T20:50:43Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/contacts", "correlationId": "6bd05d1d-9473-40e7-9377-6e192c897642", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38698 - "GET /api/v1/crm/contacts HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:43Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/opportunities", "correlationId": "cc83dad0-9c58-423a-b390-85a393d3355d", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38662 - "GET /api/v1/crm/opportunities HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:43Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts/reservations", "correlationId": "ab4c6d65-2089-4412-b5c7-16250a150b19", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38710 - "GET /api/v1/contracts/reservations HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:43Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/finance/invoices", "correlationId": "3fac442f-42ae-4b15-b0fb-423911f2c3e3", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38670 - "GET /api/v1/finance/invoices HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:43Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/customers", "correlationId": "4a7ac39a-e543-4423-8364-30badde50289", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38684 - "GET /api/v1/crm/customers HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:43Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts", "correlationId": "77abc3fa-f081-4cd4-9f8c-67acd31c8ec2", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38704 - "GET /api/v1/contracts HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:43Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/support/tickets", "correlationId": "575caace-2ac6-4aab-b9ce-aa7c2a404eb4", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38698 - "GET /api/v1/support/tickets HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:43Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/workflow/processes", "correlationId": "2f642685-ebf8-4ac0-8eb7-40a092b7b313", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38662 - "GET /api/v1/workflow/processes HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:43Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/workflow/tasks", "correlationId": "0645420d-5cba-4b8a-b3c8-8d960489f0b3", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38710 - "GET /api/v1/workflow/tasks HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:44Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts/reservations/498c04ab-7f6e-4703-bd7d-21d199c9a116/draft", "correlationId": "9f72dd78-6ead-4171-afee-30bd898fdd57", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38710 - "POST /api/v1/contracts/reservations/498c04ab-7f6e-4703-bd7d-21d199c9a116/draft HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:44Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/opportunities", "correlationId": "ffdd1610-2fac-468e-9db0-c9e8c319fed4", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38698 - "GET /api/v1/crm/opportunities HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:44Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/contacts", "correlationId": "5200468d-4f37-4ba3-b791-e9fdba1300fa", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38662 - "GET /api/v1/crm/contacts HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:44Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts", "correlationId": "b80c40d7-b633-43d6-9dad-8f91c7637a68", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38684 - "GET /api/v1/contracts HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:44Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts/reservations", "correlationId": "b1706dd1-53ca-4438-b564-355ef20d45da", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38704 - "GET /api/v1/contracts/reservations HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:44Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/finance/invoices", "correlationId": "69119e73-3a8b-4b13-881b-849cfe4d18c4", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38670 - "GET /api/v1/finance/invoices HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:44Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/customers", "correlationId": "b36401c7-b251-4818-9c79-c375ffaea97e", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38710 - "GET /api/v1/crm/customers HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:44Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/workflow/tasks", "correlationId": "b56c4811-fbc6-4571-a450-84f1db4e2eff", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38684 - "GET /api/v1/workflow/tasks HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:44Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/support/tickets", "correlationId": "11b6152f-df52-4b80-8111-30cc2ccd0cd9", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38698 - "GET /api/v1/support/tickets HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:44Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/workflow/processes", "correlationId": "b6728b2c-9714-4c58-b7b0-545297bf08f2", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38662 - "GET /api/v1/workflow/processes HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:46Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts/a5406b86-fc3e-470d-9f75-874e0a6a1cd3/activate", "correlationId": "c10d7f91-eaec-4314-bff8-820e6214ce31", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38662 - "POST /api/v1/contracts/a5406b86-fc3e-470d-9f75-874e0a6a1cd3/activate HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:46Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts/a5406b86-fc3e-470d-9f75-874e0a6a1cd3/activate", "correlationId": "5343321e-85d6-487d-a9a9-fb6b1dd1e064", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38698 - "POST /api/v1/contracts/a5406b86-fc3e-470d-9f75-874e0a6a1cd3/activate HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:46Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/customers", "correlationId": "0938f06a-3f65-43ae-9bc8-21ff4188e32e", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38662 - "GET /api/v1/crm/customers HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:46Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts/reservations", "correlationId": "99db2a40-e8dc-4b15-a08e-2fe8c599eccf", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38670 - "GET /api/v1/contracts/reservations HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:46Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/contacts", "correlationId": "6395bcb6-d3b6-423e-9a97-73b710da5556", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38684 - "GET /api/v1/crm/contacts HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:46Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/opportunities", "correlationId": "e1b56686-0a19-4fc3-909f-153f94c84eff", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38710 - "GET /api/v1/crm/opportunities HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:46Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/finance/invoices", "correlationId": "e3a17b0e-2e70-4965-be73-d0a8d61fd677", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38698 - "GET /api/v1/finance/invoices HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:46Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts", "correlationId": "c3e1661f-dbe7-4018-8d3c-5649482a4ded", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38704 - "GET /api/v1/contracts HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:46Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/workflow/processes", "correlationId": "96eb0a4d-b0d3-4a81-ab92-c5b94df990ac", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38670 - "GET /api/v1/workflow/processes HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:46Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/support/tickets", "correlationId": "508dc280-ddd9-4a17-b170-bb5c61ffc654", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38662 - "GET /api/v1/support/tickets HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:46Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/workflow/tasks", "correlationId": "8829f744-c826-44fa-8c84-43a1d47be530", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38684 - "GET /api/v1/workflow/tasks HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:46Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts/reservations", "correlationId": "9f8204fb-c45e-40c1-9270-78d07720ae22", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38698 - "GET /api/v1/contracts/reservations HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:46Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/customers", "correlationId": "594c558d-7fa1-439d-9441-3c2fd08f6d2b", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38710 - "GET /api/v1/crm/customers HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:46Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/contacts", "correlationId": "00a52098-3515-41ce-9bb6-f436bf5095e9", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38704 - "GET /api/v1/crm/contacts HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:46Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/opportunities", "correlationId": "2ffcc5ab-b2d3-442c-b756-aaf4e2ce0e88", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38670 - "GET /api/v1/crm/opportunities HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:46Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/finance/invoices", "correlationId": "3109b494-96e5-430b-96fa-5a36712316ee", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38662 - "GET /api/v1/finance/invoices HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:46Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/workflow/tasks", "correlationId": "b0d21b78-fd8a-44cf-a1bd-47f516991e20", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38704 - "GET /api/v1/workflow/tasks HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:46Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts", "correlationId": "3c505606-8062-4188-a62e-4a177447e160", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38684 - "GET /api/v1/contracts HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:46Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/support/tickets", "correlationId": "16c1531d-ec4a-41e8-a9fb-4bda785f1865", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38710 - "GET /api/v1/support/tickets HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:46Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/workflow/processes", "correlationId": "698ca456-d429-46fb-a00d-215c439153eb", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38698 - "GET /api/v1/workflow/processes HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:48Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/integration/outbox/dispatch", "correlationId": "76a0a811-18f8-4804-b4af-17f26ad48ec5", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38698 - "POST /api/v1/integration/outbox/dispatch HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:48Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/customers", "correlationId": "9baa4b4f-7530-452f-9543-415fe0c6ef79", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38698 - "GET /api/v1/crm/customers HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:48Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/finance/invoices", "correlationId": "7e91aad9-c019-4edd-bf3e-2f1bd1ca3a8a", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38670 - "GET /api/v1/finance/invoices HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:48Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/contacts", "correlationId": "dd5aabf9-0093-45e0-a788-b42570a702fd", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38710 - "GET /api/v1/crm/contacts HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:48Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts/reservations", "correlationId": "b1765b14-f4e8-44c8-9a55-d27bb7447df5", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38704 - "GET /api/v1/contracts/reservations HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:48Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts", "correlationId": "e4d82344-b5cc-4912-b053-d7654a12f899", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38662 - "GET /api/v1/contracts HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:48Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/opportunities", "correlationId": "71d93975-2c63-4a15-9592-7fe88cfb276a", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38684 - "GET /api/v1/crm/opportunities HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:48Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/support/tickets", "correlationId": "02b926fd-7f17-4daa-a216-2247169775b6", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38698 - "GET /api/v1/support/tickets HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:48Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/workflow/processes", "correlationId": "8bc43e74-7108-4c69-b465-dd529556df12", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38670 - "GET /api/v1/workflow/processes HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:48Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/workflow/tasks", "correlationId": "a8ba10cd-5ce0-4cf6-90de-441029190d6c", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38710 - "GET /api/v1/workflow/tasks HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:52Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/support/tickets", "correlationId": "2f11e2cb-b1a5-4277-8ac0-55198cc8e3b0", "result": 422, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38710 - "POST /api/v1/support/tickets HTTP/1.1" 422 Unprocessable Entity
+{"timestamp": "2026-10-01T20:50:54Z", "level": "INFO", "module": "archcorp", "operation": "/", "correlationId": "9fd3554e-19b4-4173-bdae-75c42c4f8fcd", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38418 - "GET / HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:54Z", "level": "INFO", "module": "archcorp", "operation": "/assets/index-CgpmyOVc.js", "correlationId": "2a317414-5fbf-4cf9-ad5a-7b9724569ffb", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38418 - "GET /assets/index-CgpmyOVc.js HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:54Z", "level": "INFO", "module": "archcorp", "operation": "/assets/index-C5x0NIz5.css", "correlationId": "2dcdae9a-4afb-4e5e-b8b8-da08ea188234", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38428 - "GET /assets/index-C5x0NIz5.css HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:54Z", "level": "INFO", "module": "archcorp", "operation": "/", "correlationId": "b0b1d5be-83a7-4343-bc41-9308d82cb2a2", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38418 - "GET / HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:54Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/finance/invoices", "correlationId": "1ea10d0b-9d7b-4821-acb8-2ee0148759ae", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38484 - "GET /api/v1/finance/invoices HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:54Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/contacts", "correlationId": "971536b3-54a1-429a-a8ea-965c6e2b050e", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38428 - "GET /api/v1/crm/contacts HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:54Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts/reservations", "correlationId": "191e0661-4269-4cc0-bbb9-ea38b88629c8", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38456 - "GET /api/v1/contracts/reservations HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:54Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/opportunities", "correlationId": "8609df55-6d1d-4a01-b7e7-9fa52c7821e3", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38442 - "GET /api/v1/crm/opportunities HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:54Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/contracts", "correlationId": "55d44ebc-e46a-45d4-9061-c029e81046d3", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38470 - "GET /api/v1/contracts HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:54Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/crm/customers", "correlationId": "e02bf5a8-851a-4374-b2a4-72fe4c4b9c69", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38418 - "GET /api/v1/crm/customers HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:54Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/workflow/processes", "correlationId": "bec9650a-8034-4169-87d5-e21062b5916e", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38428 - "GET /api/v1/workflow/processes HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:54Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/support/tickets", "correlationId": "4d649ff8-2a4d-4619-93c8-b03af28d29d5", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38484 - "GET /api/v1/support/tickets HTTP/1.1" 200 OK
+{"timestamp": "2026-10-01T20:50:54Z", "level": "INFO", "module": "archcorp", "operation": "/api/v1/workflow/tasks", "correlationId": "116fb7d1-c928-49ec-bdcc-4838ca56e70c", "result": 200, "message": "Requisição concluída"}
+INFO:     127.0.0.1:38456 - "GET /api/v1/workflow/tasks HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [6652]

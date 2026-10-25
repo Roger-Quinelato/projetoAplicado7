@@ -145,6 +145,28 @@ class EventDispatcher:
                 connection.close()
 
 
+def broker_status() -> str | None:
+    """Estado do listener AMQP para a prontidão: None sem RABBITMQ_URL, "UP" ou "DOWN".
+
+    Abre e fecha uma conexão AMQP com prazo curto. Não publica nada; o despacho continua
+    tolerando broker indisponível (a tentativa falha e o evento segue pendente).
+    """
+    if not settings.rabbitmq_url:
+        return None
+    import pika
+    parameters = pika.URLParameters(settings.rabbitmq_url)
+    parameters.socket_timeout = settings.rabbitmq_health_timeout_seconds
+    parameters.blocked_connection_timeout = settings.rabbitmq_health_timeout_seconds
+    parameters.connection_attempts = 1
+    try:
+        pika.BlockingConnection(parameters).close()
+    except Exception as exc:
+        logger.warning("Broker indisponível na verificação de prontidão",
+                       extra={"operation": "broker_ready", "result": "failure", "errorType": type(exc).__name__})
+        return "DOWN"
+    return "UP"
+
+
 def audit(session: Session, correlation_id: str, module: str, operation: str, result: str, entity_id: str | None = None, **details) -> None:
     """Registra uma entrada de auditoria vinculada ao correlationId."""
     session.add(AuditLog(correlation_id=correlation_id, module=module, operation=operation, result=result, entity_id=entity_id, details=details))
