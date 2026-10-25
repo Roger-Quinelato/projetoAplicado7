@@ -27,7 +27,7 @@ class Principal:
 def current_principal(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)) -> Principal:
     """Identifica o chamador pelo token Bearer; na demo pública, aceita apenas DEMO_ACCESS_TOKEN."""
     if settings.public_demo:
-        if not settings.demo_access_token or credentials is None or not compare_digest(credentials.credentials, settings.demo_access_token):
+        if not settings.demo_access_token or credentials is None or not compare_digest(credentials.credentials.encode("utf-8"), settings.demo_access_token.encode("utf-8")):
             raise HTTPException(status_code=401, detail="Credencial de demonstração ausente ou inválida")
         return Principal("public-demo", TOKEN_ROLES["demo-admin"])
     if credentials is None or credentials.credentials not in TOKEN_ROLES:
