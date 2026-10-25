@@ -255,6 +255,19 @@ def list_contracts(customerId: UUID | None = None, session: Session = Depends(ge
     return [ContractService.to_dict(x) for x in session.scalars(query)]
 
 
+class ContractSummaryResponse(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [{"total": 240, "active": 180}]})
+
+    total: int = Field(description="Contratos gravados, em qualquer estado.")
+    active: int = Field(description="Contratos no estado ACTIVE.")
+
+
+@router.get("/summary", response_model=ContractSummaryResponse, dependencies=[Depends(CONTRACT_READERS)])
+def contract_summary(session: Session = Depends(get_session)) -> dict:
+    """Totais de contratos sem o limite de 200 da listagem; mudança aditiva na v1 (#73)."""
+    return ContractService.summary(session)
+
+
 @router.get("/{contract_id}", response_model=ContractResponse, responses={404: {"description": "Contrato não encontrado."}}, dependencies=[Depends(CONTRACT_READERS)])
 def get_contract(contract_id: UUID, session: Session = Depends(get_session)) -> dict:
     """Consulta um contrato pelo identificador global."""

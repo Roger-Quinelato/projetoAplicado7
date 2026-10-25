@@ -2767,6 +2767,60 @@ paths:
                 correlationId: 11111111-1111-4111-8111-111111111111
                 errors:
                 - *id001
+  /api/v1/contracts/summary:
+    get:
+      tags:
+      - Reservas e contratos
+      summary: Contract Summary
+      description: Totais de contratos sem o limite de 200 da listagem; mudança aditiva
+        na v1 (#73).
+      operationId: contractSummary
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractSummaryResponse'
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/contracts/summary
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/contracts/summary
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
   /api/v1/contracts/{contract_id}:
     get:
       tags:
@@ -3669,6 +3723,60 @@ paths:
           type: string
           format: uuid
         example: 11111111-1111-4111-8111-111111111111
+  /api/v1/finance/invoices/summary:
+    get:
+      tags:
+      - Financeiro e faturamento
+      summary: Invoice Summary
+      description: Faturas a receber e saldo por moeda, sem o limite de 200 da listagem;
+        mudança aditiva na v1 (#73).
+      operationId: invoiceSummary
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceSummaryResponse'
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/finance/invoices/summary
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/finance/invoices/summary
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
   /api/v1/finance/invoices/{invoice_id}:
     get:
       tags:
@@ -4458,6 +4566,60 @@ paths:
                 instance: /api/v1/support/tickets/reconcile-pending
                 code: SERVICE_UNAVAILABLE
                 correlationId: 11111111-1111-4111-8111-111111111111
+  /api/v1/support/tickets/summary:
+    get:
+      tags:
+      - Atendimento e assistência 24h
+      summary: Ticket Summary
+      description: Chamados em aberto e dentro do SLA, sem o limite de 200 da listagem;
+        mudança aditiva na v1 (#73).
+      operationId: ticketSummary
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketSummaryResponse'
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/support/tickets/summary
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/support/tickets/summary
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
   /api/v1/support/tickets/{ticket_id}:
     get:
       tags:
@@ -5178,6 +5340,60 @@ paths:
                 status: 403
                 detail: Papel sem permissão para esta operação
                 instance: /api/v1/workflow/processes
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
+  /api/v1/workflow/processes/summary:
+    get:
+      tags:
+      - Gestão de processos
+      summary: Process Summary
+      description: Processos gravados e em andamento, sem o limite de 200 da listagem;
+        mudança aditiva na v1 (#73).
+      operationId: processSummary
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessSummaryResponse'
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/workflow/processes/summary
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/workflow/processes/summary
                 code: FORBIDDEN
                 correlationId: 11111111-1111-4111-8111-111111111111
       security:
@@ -6059,6 +6275,39 @@ components:
         slaHours: 8
         startsOn: '2026-10-01'
         status: ACTIVE
+    ContractSummaryResponse:
+      properties:
+        total:
+          type: integer
+          title: Total
+          description: Contratos gravados, em qualquer estado.
+        active:
+          type: integer
+          title: Active
+          description: Contratos no estado ACTIVE.
+      type: object
+      required:
+      - total
+      - active
+      title: ContractSummaryResponse
+      examples:
+      - active: 180
+        total: 240
+    CurrencyBalance:
+      properties:
+        currency:
+          type: string
+          title: Currency
+          description: Moeda ISO 4217.
+        amount:
+          type: number
+          title: Amount
+          description: Soma dos saldos em aberto nessa moeda.
+      type: object
+      required:
+      - currency
+      - amount
+      title: CurrencyBalance
     CustomerCreate:
       properties:
         name:
@@ -6409,6 +6658,28 @@ components:
         paidAmount: 0.0
         sourceEventId: cccccccc-cccc-4ccc-8ccc-cccccccccccc
         status: OPEN
+    InvoiceSummaryResponse:
+      properties:
+        receivable:
+          type: integer
+          title: Receivable
+          description: Faturas abertas, parcialmente pagas ou vencidas com saldo positivo.
+        balances:
+          items:
+            $ref: '#/components/schemas/CurrencyBalance'
+          type: array
+          title: Balances
+          description: Saldo a receber por moeda, em ordem alfabética da moeda.
+      type: object
+      required:
+      - receivable
+      - balances
+      title: InvoiceSummaryResponse
+      examples:
+      - balances:
+        - amount: 3100.0
+          currency: BRL
+        receivable: 3
     LegacyIdResponse:
       properties:
         entityType:
@@ -6824,6 +7095,24 @@ components:
         processType: ONBOARDING
         referenceId: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
         state: STARTED
+    ProcessSummaryResponse:
+      properties:
+        total:
+          type: integer
+          title: Total
+          description: Processos gravados, em qualquer estado.
+        running:
+          type: integer
+          title: Running
+          description: Processos fora dos estados finais COMPLETED e CANCELLED.
+      type: object
+      required:
+      - total
+      - running
+      title: ProcessSummaryResponse
+      examples:
+      - running: 40
+        total: 250
     ReconciledTicket:
       properties:
         ticketId:
@@ -7503,6 +7792,24 @@ components:
       - slaHours
       - dueAt
       title: TicketResponse
+    TicketSummaryResponse:
+      properties:
+        open:
+          type: integer
+          title: Open
+          description: Chamados no estado OPEN.
+        withinSla:
+          type: integer
+          title: Withinsla
+          description: Chamados OPEN com slaStatus WITHIN no instante da consulta.
+      type: object
+      required:
+      - open
+      - withinSla
+      title: TicketSummaryResponse
+      examples:
+      - open: 12
+        withinSla: 9
     ProblemDetails:
       description: Corpo de erro publicado no OpenAPI.
       examples:

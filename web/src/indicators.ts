@@ -1,5 +1,5 @@
 // Textos e indicadores derivados das listas da API, sem JSX, para os testes com `node --test`.
-import type { Contract, DispatchResult, Invoice, Process, Ticket } from './api'
+import type { ContractSummary, DispatchResult, InvoiceSummary, ProcessSummary, TicketSummary } from './api'
 
 export interface Indicator { label: string, value: string, detail: string }
 
@@ -17,36 +17,28 @@ export function dispatchSummary(result: DispatchResult, at: Date): string {
   return `Último despacho às ${hour}: ${plural(result.processed, 'evento entregue', 'eventos entregues')}, ${failed}.`
 }
 
-function currencyTotal(invoices: Invoice[]): string {
-  const totals = new Map<string, number>()
-  for (const i of invoices) totals.set(i.currency, (totals.get(i.currency) ?? 0) + Number(i.balance))
-  return [...totals].map(([currency, value]) => {
-    try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(value) }
-    catch { return `${currency} ${value.toFixed(2)}` }
+function currencyTotal(balances: InvoiceSummary['balances']): string {
+  return balances.map(({ currency, amount }) => {
+    try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(amount) }
+    catch { return `${currency} ${amount.toFixed(2)}` }
   }).join(' + ')
 }
 
-export function contractIndicator(contracts: Contract[]): Indicator {
-  const active = contracts.filter(c => c.status === 'ACTIVE').length
-  return { label: 'Contratos ativos', value: String(active), detail: `de ${plural(contracts.length, 'contrato', 'contratos')}` }
+// Os indicadores partem dos resumos contados no servidor (#73), não das listagens limitadas a 200.
+export function contractIndicator({ total, active }: ContractSummary): Indicator {
+  return { label: 'Contratos ativos', value: String(active), detail: `de ${plural(total, 'contrato', 'contratos')}` }
 }
 
-const RECEIVABLE = new Set(['OPEN', 'PARTIALLY_PAID', 'OVERDUE'])
-export function invoiceIndicator(invoices: Invoice[]): Indicator {
-  const open = invoices.filter(i => RECEIVABLE.has(i.status))
-  return { label: 'Faturas em aberto', value: String(open.length), detail: open.length ? `${currencyTotal(open)} a receber` : 'nada a receber' }
+export function invoiceIndicator({ receivable, balances }: InvoiceSummary): Indicator {
+  return { label: 'Faturas em aberto', value: String(receivable), detail: receivable ? `${currencyTotal(balances)} a receber` : 'nada a receber' }
 }
 
-export function ticketIndicator(tickets: Ticket[]): Indicator {
-  const open = tickets.filter(t => t.status === 'OPEN')
-  const within = open.filter(t => t.slaStatus === 'WITHIN').length
-  return { label: 'Chamados no prazo', value: String(within), detail: open.length ? `de ${open.length} em aberto` : 'nenhum chamado em aberto' }
+export function ticketIndicator({ open, withinSla }: TicketSummary): Indicator {
+  return { label: 'Chamados no prazo', value: String(withinSla), detail: open ? `de ${open} em aberto` : 'nenhum chamado em aberto' }
 }
 
-const FINISHED = new Set(['COMPLETED', 'CANCELLED'])
-export function processIndicator(processes: Process[]): Indicator {
-  const running = processes.filter(p => !FINISHED.has(p.state)).length
-  return { label: 'Processos em andamento', value: String(running), detail: `de ${plural(processes.length, 'processo', 'processos')}` }
+export function processIndicator({ total, running }: ProcessSummary): Indicator {
+  return { label: 'Processos em andamento', value: String(running), detail: `de ${plural(total, 'processo', 'processos')}` }
 }
 
 export function failureIndicator(failures: unknown[]): Indicator {

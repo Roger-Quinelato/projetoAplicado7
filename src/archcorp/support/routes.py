@@ -157,6 +157,19 @@ def reconcile_pending(
     return service.reconcile_pending(session, correlation_id_var.get(), acting_role(principal), limit)
 
 
+class TicketSummaryResponse(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [{"open": 12, "withinSla": 9}]})
+
+    open: int = Field(description="Chamados no estado OPEN.")
+    withinSla: int = Field(description="Chamados OPEN com slaStatus WITHIN no instante da consulta.")
+
+
+@router.get("/tickets/summary", response_model=TicketSummaryResponse, dependencies=[Depends(TICKET_READERS)])
+def ticket_summary(session: Session = Depends(get_session), service: TicketService = Depends(ticket_service)) -> dict:
+    """Chamados em aberto e dentro do SLA, sem o limite de 200 da listagem; mudança aditiva na v1 (#73)."""
+    return service.summary(session)
+
+
 @router.get("/tickets/{ticket_id}", response_model=TicketDetailResponse, responses=NOT_FOUND, dependencies=[Depends(TICKET_READERS)])
 def get_ticket(ticket_id: UUID, session: Session = Depends(get_session), service: TicketService = Depends(ticket_service)) -> dict:
     return service.get(session, str(ticket_id))

@@ -832,6 +832,56 @@ Resposta `200 OK`:
 }
 ```
 
+### Resumos dos indicadores da Visão geral
+
+Os indicadores da Visão geral usam contagens feitas no servidor. As listagens
+continuam limitadas a 200 itens e não servem para contar. Cada resumo exige os
+mesmos papéis da listagem do seu contexto (`403 FORBIDDEN` fora deles).
+
+```http
+GET /api/v1/contracts/summary HTTP/1.1
+Authorization: Bearer demo-contracts
+```
+
+```json
+{ "total": 240, "active": 180 }
+```
+
+```http
+GET /api/v1/finance/invoices/summary HTTP/1.1
+Authorization: Bearer demo-finance
+```
+
+```json
+{ "receivable": 3, "balances": [{ "currency": "BRL", "amount": 3100.0 }] }
+```
+
+`receivable` conta as faturas abertas, parcialmente pagas ou vencidas com saldo
+positivo. `balances` soma esse saldo (valor menos pagamentos) por moeda.
+
+```http
+GET /api/v1/support/tickets/summary HTTP/1.1
+Authorization: Bearer demo-support
+```
+
+```json
+{ "open": 12, "withinSla": 9 }
+```
+
+`withinSla` usa a mesma regra do `slaStatus` da leitura: chamados `OPEN` com
+prazo ainda não vencido no instante da consulta.
+
+```http
+GET /api/v1/workflow/processes/summary HTTP/1.1
+Authorization: Bearer demo-operations
+```
+
+```json
+{ "total": 250, "running": 40 }
+```
+
+`running` exclui os estados finais `COMPLETED` e `CANCELLED`.
+
 ## Consultar a correlação
 
 Use o mesmo UUID da operação:
