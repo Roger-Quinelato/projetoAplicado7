@@ -1,4 +1,9 @@
-# Tasks e subtasks do Cenário 4
+# Backlog de referência do Cenário 4
+
+> Checklist histórico de decomposição; não é o índice de entrega ao professor.
+> Use [ENTREGA_FINAL.md](ENTREGA_FINAL.md) e os marcos de 09/11 e 23/11 em
+> [CRONOGRAMA_EXECUCAO.md](CRONOGRAMA_EXECUCAO.md). Caixas antigas não
+> substituem o estado do código ou o aceite de entrega.
 
 > O estado atual de execução está no [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e no [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
 

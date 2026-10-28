@@ -1,9 +1,15 @@
 # Publicação e vínculos — T21
 
+> Revisão em 28/10/2026: os registros abaixo descrevem publicações históricas de
+> setembro. Não comprovam sincronização com a versão atual. Para a entrega, use
+> [o índice final](ENTREGA_FINAL.md) e os artefatos locais revisados. Os commits
+> técnicos T06–T19 foram incorporados na main pelo PR #75 em 25/10/2026; a
+> confirmação dos arquivos publicados e do ambiente público continua pendente.
+
 Revisão de 30/09/2026. T21 ainda em andamento: GitHub Project depende de acesso.
 Não há sincronização automática entre ferramentas. O aceite técnico local das
-13 tarefas está em [Execução das tarefas](EXECUCAO_TAREFAS.md); os commits ainda
-não foram enviados ao remoto e os tickets externos não foram encerrados.
+13 tarefas está em [Execução das tarefas](EXECUCAO_TAREFAS.md); o estado dos tickets externos exige nova conferência. A observação de commits
+não enviados era histórica e foi superada pelo PR #75.
 
 ## Acessos oficiais
 

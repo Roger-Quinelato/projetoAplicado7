@@ -3,7 +3,7 @@
 > O estado atual de execução está no [Estado da implementação](../ESTADO_IMPLEMENTACAO.md) e no [Cronograma executável](../CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
 
 Os diagramas abaixo representam o comportamento implementado para F1, F2 e F3.
-Eles complementam `docs/INTEGRACOES.md` e usam os reservas e contratos de
+Eles complementam `docs/INTEGRACOES.md` e usam os contratos técnicos de
 `docs/api/openapi.yaml` e `docs/events/asyncapi.yaml`. Os payloads completos estão
 em `docs/EXEMPLOS_API.md`.
 
@@ -59,7 +59,9 @@ sequenceDiagram
 
 Erros de autenticação, autorização ou correlação são encerrados na API com `401`,
 `403` ou `400`, antes de Contracts executar o caso de uso. O adaptador interno de
-CRM não simula indisponibilidade ou timeout neste fluxo.
+CRM não simula indisponibilidade ou timeout neste fluxo. Se a porta levantar
+`CustomerReaderUnavailableError`, `TimeoutError` ou `ConnectionError`, Contracts
+retorna `503` antes de gravar o rascunho.
 
 ## F2: ativação da locação, cobrança e preparação de retirada
 
@@ -150,10 +152,18 @@ agendador, atraso exponencial ou jitter. O operador precisa chamar o despacho
 novamente após corrigir a causa. A inbox e as restrições únicas permanecem ativas
 no reprocessamento.
 
+Os consumidores são invocados pelo dispatcher no mesmo processo; RabbitMQ
+recebe apenas uma cópia opcional. Falha antes da confirmação desfaz os efeitos
+locais e a inbox do evento. `FAILED` é estado da outbox, sem fila de erro no broker.
+
 ## F3: chamado com contrato de locação e SLA
 
 Support consulta o contrato pela porta `ContractEntitlementPort`. O estado
 pendente preserva a solicitação quando o adaptador está indisponível.
+
+A consulta retorna somente `eligible` e `slaHours`. Grupo de veículo e proteção
+permanecem na reserva, sem exposição no contrato ou nesta consulta. Os processos
+de workflow são tarefas sintéticas, sem gestão de frota ou assistência externa real.
 
 ```mermaid
 sequenceDiagram

@@ -29,6 +29,13 @@ localizar e corrigir falhas.
 
 ## Proposta de valor
 
+O recorte executável revisado em 28/10/2026 usa dados sintéticos: CRM,
+reservas/contratos, faturamento e pagamentos simulados, chamados com SLA e tarefas
+operacionais. Não inclui gestão de frota, PSP ou integração real. Grupo de
+veículo e proteção ficam na reserva, sem exposição no contrato ou na
+elegibilidade. OIDC/OAuth e identidade corporativa são evolução futura;
+a autenticação atual usa tokens Bearer de demonstração.
+
 A arquitetura cria uma referência global de cliente e conecta os processos por
 APIs e eventos versionados. Cada sistema mantém a propriedade de seus dados, e a
 camada de integração registra tradução, entrega, correlação e falhas. A proposta

@@ -1,4 +1,9 @@
-# Execução das tarefas pendentes
+# Registro histórico de execução das tarefas
+
+> Preservado como evidência de execução. O pacote de entrega está em
+> [ENTREGA_FINAL.md](ENTREGA_FINAL.md); o estado vigente está em
+> [ESTADO_IMPLEMENTACAO.md](ESTADO_IMPLEMENTACAO.md). T06–T19 foram
+> incorporadas na main pelo PR #75 em 25/10/2026.
 
 Início: 30/09/2026. Base: `main`, commit `3a3d8bd` (PR #28).
 Uma tarefa é verificada e recebe um commit antes do início da próxima.

@@ -6,9 +6,10 @@
 
 O TO-BE aplica a decisão do ADR-001: uma SOA pragmática entregue inicialmente
 como monólito modular. Os contextos executam no mesmo processo, mas preservam
-regras, dados e interfaces públicas próprias. Dentro de cada contexto, a
-arquitetura hexagonal mantém domínio e casos de uso independentes de HTTP,
-banco, broker e sistemas externos.
+regras, dados e interfaces públicas próprias. A arquitetura hexagonal orienta
+a separação por portas e adaptadores. O isolamento de infraestrutura é parcial:
+os serviços de aplicação atuais recebem `Session` e usam SQLAlchemy; a
+independência completa dos casos de uso em relação ao banco é uma meta.
 
 Esta é uma **Proposta definida** para o protótipo acadêmico. Produtos legados,
 interfaces existentes, topologia de produção, volumes e responsáveis permanecem
@@ -53,25 +54,36 @@ flowchart TB
 CRM, Contracts, Finance, Support e Workflow mantêm regras de negócio. No domínio
 Localiza, Contracts representa reservas e contratos de locação; Finance
 representa faturamento e cobranças; Support representa atendimento e assistência
-24h; Workflow representa processos operacionais de retirada, devolução, vistoria
-e resolução. Integration
+24h; Workflow implementa tarefas de preparação de retirada e resolução de chamados.
+Devolução, vistoria e manutenção completas pertencem ao domínio proposto.
+Integration
 traduz, roteia, correlaciona e controla a entrega, mas não decide elegibilidade,
 SLA, cobrança, prioridade ou estado dos processos.
 
 ## Componentes, serviços, APIs e dados
 
+A coluna de dados oficiais delimita o domínio proposto. No código de
+28/10/2026, grupo de veículo e proteção ficam em `contracts_reservations`,
+sem exposição no contrato ou na elegibilidade. Finance implementa faturas,
+pagamentos simulados e inadimplência, sem pré-autorização, caução, multas ou PSP.
+CRM também persiste contatos e oportunidades; Finance, pagamentos; Support,
+atribuições e histórico; Workflow, tarefas. A persistência abaixo lista tabelas
+principais, sem representar um inventário completo. Não há gestão de frota nem
+integração com sistemas corporativos reais.
+
 | Contexto | Serviços e casos de uso | Interface pública | Dados oficiais | Persistência do protótipo |
 |---|---|---|---|---|
 | CRM | Cadastro, atualização, elegibilidade e consentimento | API CRM e `CustomerReader` | Cliente, contatos, consentimentos, perfil de locação e oportunidade | `crm_customers` |
-| Contracts | Rascunho, ativação, plano, vigência e SLA | API Contracts e `ContractEntitlementPort` | Reserva, contrato de locação, grupo de veículo, vigência, proteções e SLA | `contracts_contracts` |
+| Contracts | Reserva, rascunho, ativação, encerramento, vigência e SLA | API Contracts e `ContractEntitlementPort` | Reserva, contrato de locação, grupo de veículo, vigência, proteções e SLA | `contracts_reservations`, `contracts_contracts` |
 | Finance | Primeira cobrança, faturamento final, pagamento simulado e inadimplência por vencimento | Consumidores de `ContractActivated.v1` e `ContractClosed.v1`; API Finance | Pré-autorização, cobrança, fatura, pagamento, caução, multa e inadimplência | `finance_invoices` |
 | Support | Abertura, prioridade, prazo e reconciliação de chamado | API Support | Chamado, assistência, prioridade, histórico e resolução | `support_tickets` |
 | Workflow | Preparação de retirada e processo de resolução | Consumidores de eventos | Instância, tarefa, responsável, prazo e estado operacional | `workflow_instances` |
 | Integration | IDs legados, correlação, outbox, inbox, auditoria e falhas | APIs operacionais e dispatcher | Mapeamentos, correlação e registros de entrega | tabelas `integration_*` |
 
 A API pública usa o prefixo `/api/v1`. O OpenAPI documenta as operações HTTP,
-e o AsyncAPI documenta `CustomerUpdated.v1`, `ContractActivated.v1` e
-`TicketOpened.v1`. Mudanças compatíveis adicionam campos opcionais; mudanças
+e o AsyncAPI documenta `CustomerUpdated.v1`, `ContractActivated.v1`,
+`ContractClosed.v1`, `TicketOpened.v1`, `TicketEntitlementReconciled.v1` e
+`TicketResolved.v1`. Mudanças compatíveis adicionam campos opcionais; mudanças
 incompatíveis criam nova versão.
 
 ## Fluxo de informações
@@ -118,6 +130,10 @@ reduzir o tempo de execução e verificam as regras e restrições principais. O
 servidor PostgreSQL único atende apenas ao protótipo; as fronteiras lógicas
 proíbem leitura direta de tabelas de outro contexto.
 
+O dispatcher invoca os consumidores internos no mesmo processo; RabbitMQ recebe
+uma cópia opcional quando `RABBITMQ_URL` está configurado. Não há consumidores
+RabbitMQ nem fila de erro no broker; `FAILED` é estado persistido da aplicação.
+
 Credenciais separadas, capacidade, alta disponibilidade e distribuição física
 dependem da topologia real e são **Premissa a validar**. A proposta não inclui
 Kubernetes, service mesh, múltiplos bancos físicos ou decomposição completa em
@@ -138,8 +154,11 @@ disponibilidade, tecnologia ou ritmo de mudança.
 
 ## Segurança, privacidade e operação
 
-O adaptador local simula tokens OIDC e aplica papéis por rota. A substituição por
-um provedor real preserva a porta de autenticação. A API valida entradas,
+O adaptador local reconhece tokens Bearer de demonstração e aplica papéis por
+rota; não implementa nem simula o protocolo OIDC/OAuth. No modo público,
+`DEMO_ACCESS_TOKEN` é uma credencial compartilhada com todos os papéis, sem
+identificação individual. Um provedor de identidade é evolução futura.
+A API valida entradas,
 minimiza dados compartilhados e não inclui a descrição do chamado nos eventos.
 Logs não devem registrar tokens, senhas, documentos completos, CNH, placa
 completa, dados bancários ou conteúdo sensível. TLS é obrigatório fora da

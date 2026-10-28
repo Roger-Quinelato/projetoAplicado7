@@ -1,6 +1,6 @@
 # Dados sintéticos e identificadores
 
-Estado em 29/09/2026 (T07, ARCH7-7). Este documento define os dados permitidos no
+Revisado em 28/10/2026; origem: T07, ARCH7-7. Este documento define os dados permitidos no
 protótipo acadêmico. O protótipo não acessa sistemas reais da Localiza e não deve
 receber dados pessoais reais.
 
@@ -19,6 +19,9 @@ receber dados pessoais reais.
   repetem a orientação de usar dados sintéticos.
 - Identificadores legados de exemplo usam prefixos como `SINT-`, `CRM-` ou
   `WEB-LOCALIZA-`, que não correspondem a registros reais.
+- Grupo de veículo e proteção são rótulos sintéticos da reserva, sem cadastro
+  ou alocação de frota; não integram o contrato nem a consulta de elegibilidade.
+  Pagamentos são simulados, sem PSP ou transação financeira real.
 - Logs não registram payloads; erros internos registram somente caminho,
   resultado e `correlationId`.
 

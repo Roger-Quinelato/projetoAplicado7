@@ -18,6 +18,13 @@ professor nem pela empresa; portanto permanecem como **Premissa a validar**.
 
 ## Sistemas do Cenario
 
+A tabela descreve o dominio proposto, nao a cobertura integral do prototipo.
+No recorte executavel revisado em 28/10/2026, ha CRM, reservas/contratos,
+faturas e pagamentos simulados, chamados com SLA e tarefas de workflow.
+`vehicleGroup` e `protectionCode` pertencem a reserva; nao sao expostos no
+contrato nem na elegibilidade (`eligible`, `slaHours`). Gestao de frota,
+pre-autorizacao/caucao, PSP e integracoes corporativas reais ficam fora do escopo.
+
 | Sistema | Papel no caso Localiza |
 |---|---|
 | CRM | Cadastro de clientes, empresas, contatos, preferencias e oportunidades de mobilidade. |
@@ -36,6 +43,9 @@ professor nem pela empresa; portanto permanecem como **Premissa a validar**.
 
 ## Requisitos Funcionais
 
+Os criterios de aceite sao requisitos de referencia; nao constituem, por si,
+evidencia de aprovacao ou de nova execucao de testes nesta revisao documental.
+
 | ID | Prioridade | Requisito | Criterio de aceite | Rastreabilidade |
 |---|---|---|---|---|
 | RF-01 | P0 | Manter uma referencia unica de cliente entre os sistemas. | Todo registro integrado usa `customerId` global em UUID e pode manter identificadores legados do CRM, Webcorp, contrato, faturamento e atendimento. | F1, mapeamento de IDs e teste de idempotencia. |
@@ -52,7 +62,7 @@ professor nem pela empresa; portanto permanecem como **Premissa a validar**.
 |---|---|---|---|---|
 | RNF-01 | P0 | Interoperabilidade | APIs e eventos usam contratos versionados, JSON UTF-8, UUID global, datas ISO 8601 UTC e valores monetarios com moeda explicita. | OpenAPI, AsyncAPI e exemplos. |
 | RNF-02 | P0 | Confiabilidade e tolerancia a falhas | Outbox transacional, inbox, `Idempotency-Key` e restricoes unicas impedem efeitos duplicados em reentregas. | Testes F1, F2, F3 e falha permanente. |
-| RNF-03 | P0 | Seguranca e privacidade | Rotas exigem autenticacao e papel compativel; logs e eventos nao expoem token, senha, documento completo, dado bancario, CNH, placa completa ou descricao sensivel do chamado. | Testes 403/422 e revisao dos payloads. |
+| RNF-03 | P0 | Seguranca e privacidade | Rotas protegidas exigem token Bearer e papel compativel; logs e eventos nao expoem token, senha, documento completo, dado bancario, CNH, placa completa ou descricao sensivel do chamado. OIDC/OAuth nao estao implementados; campos livres exigem uso responsavel de dados sinteticos. | Testes de autorizacao/validacao e revisao dos payloads. |
 | RNF-04 | P0 | Observabilidade | HTTP, logs, eventos, auditoria e falhas propagam `correlationId`; health checks e metricas permitem diagnostico. | `/health/*`, `/metrics` e consulta de operacao. |
 | RNF-05 | P0 | Manutenibilidade | Contextos comunicam-se por interfaces publicas, sem importar modelos internos nem acessar tabelas de outro contexto. Mudanca estrutural exige novo ADR. | Teste estatico de fronteiras e ADR-001. |
 | RNF-06 | P0 | Disponibilidade controlada | Falha temporaria de Contracts nao perde chamado de assistencia; estado pendente permite reconciliacao posterior. | Teste de F3 degradado. |
@@ -61,6 +71,9 @@ professor nem pela empresa; portanto permanecem como **Premissa a validar**.
 | RNF-09 | P0 | Testabilidade | Suite cobre tres fluxos, autorizacao, validacao, reentrega, indisponibilidade, falha permanente, contratos e fronteiras. | `tests/`. |
 
 ## Regras Transversais
+
+As responsabilidades abaixo delimitam o dominio proposto. Nao comprovam a
+implementacao de todos os dados e processos citados; vale o recorte executavel acima.
 
 - CRM e a fonte oficial de cliente, contatos, consentimentos e oportunidades.
 - Contracts e a fonte oficial de reserva, contrato de locacao, grupo de veiculo,

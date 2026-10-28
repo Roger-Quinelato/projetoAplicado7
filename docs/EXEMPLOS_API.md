@@ -19,7 +19,9 @@ facilitar a leitura. A aplicação gera outros UUIDs durante a execução.
 | Evento de chamado | `eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee` |
 
 As chamadas protegidas da demonstração usam o token local `demo-admin`. Esse token
-simula os papéis de um provedor OIDC e não é uma credencial de produção.
+é mapeado a papéis locais; não há OIDC/OAuth ou provedor de identidade.
+No modo público, use o segredo configurado em `DEMO_ACCESS_TOKEN`, que concede
+todos os papéis por uma credencial compartilhada, sem contas individuais.
 
 Cabeçalhos comuns:
 
@@ -31,7 +33,9 @@ X-Correlation-ID: 11111111-1111-4111-8111-111111111111
 
 A API devolve `X-Correlation-ID` nas respostas processadas. Quando o cliente omite
 o cabeçalho, o middleware gera um UUID. Um valor que não seja UUID recebe `400`.
-Os comandos repetíveis também exigem `Idempotency-Key`.
+`Idempotency-Key` é obrigatória nos rascunhos, na ativação e na abertura do chamado;
+reserva, encerramento, resolução e reconciliação individual também aceitam
+execução sem chave, conforme o contrato de cada rota.
 
 ## F1: cliente do CRM para contrato
 
@@ -363,7 +367,7 @@ Resposta ilustrativa de `GET /api/v1/integration/failures`:
     "eventId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
     "eventType": "ContractActivated.v1",
     "attempts": 3,
-    "reason": "dependência simulada indisponível",
+    "reason": "Falha no despacho do evento; consulte a correlação e reprocesse após corrigir a causa",
     "correlationId": "11111111-1111-4111-8111-111111111111"
   }
 ]
@@ -513,9 +517,9 @@ mesmo `ticketId`, devolve `Idempotency-Replayed: true` e não cria outro evento.
 impressão digital da chave inclui todos os campos do pedido, inclusive a
 descrição: a mesma chave com outro conteúdo recebe `409 IDEMPOTENCY_CONFLICT`.
 
-A descrição não aceita documento, cartão, telefone (11 dígitos ou mais), placa ou
-e-mail. Nesses casos a API responde `422 VALIDATION_ERROR` com
-`loc: ["body", "description"]` e não grava o chamado.
+A descrição deve conter somente dados sintéticos, sem documento, cartão,
+telefone, placa ou e-mail. A API valida o tamanho (3 a 2000 caracteres), mas não
+inspeciona esses conteúdos; essa restrição é responsabilidade de quem demonstra.
 
 Contrato, cliente ou serviço sem elegibilidade, resposta `422`:
 
@@ -736,6 +740,9 @@ padrão `^[A-Z]{3}$` ou valor com mais de duas casas recebem `422`.
 `endsOn`, e devolve `{"reservationId": "...", "contract": {...}}` na mesma
 transação que vincula a reserva. A reserva passa a `DRAFTED` e acompanha a
 ativação (`ACTIVE`) e o encerramento (`CLOSED`) do contrato.
+`vehicleGroup` e `protectionCode` permanecem na reserva: não são copiados para
+o contrato nem retornados na elegibilidade, limitada a `eligible` e `slaHours`.
+Não há alocação de frota, PSP ou integração corporativa real nesses exemplos.
 `POST /api/v1/contracts/reservations/{reservationId}/cancel` cancela uma reserva
 `REQUESTED` ou `DRAFTED`; o rascunho vinculado passa a `CANCELLED`.
 
@@ -776,8 +783,9 @@ Resposta `200 OK`:
 
 O corpo é opcional; sem `endsOn`, a data é a atual ou o início do contrato, o que
 for posterior. O encerramento publica `ContractClosed.v1`. Repetir com a mesma
-chave devolve a mesma resposta; contrato que não está `ACTIVE` recebe `409`
-`INVALID_STATE`.
+chave devolve a mesma resposta. Já encerrado, o contrato também devolve a
+resposta original quando há chave; sem chave, repetir recebe `409`.
+Outros estados que não sejam `ACTIVE` recebem `409 INVALID_STATE`.
 
 ### Contatos e oportunidades do CRM
 

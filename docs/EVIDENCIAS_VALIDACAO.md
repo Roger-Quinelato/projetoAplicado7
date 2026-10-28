@@ -1,5 +1,58 @@
 # Evidências de validação
 
+## Revisão da versão de entrega em 28/10/2026
+
+Base técnica: `f1669d7` (main, PR #75 integrado em 25/10/2026).
+Consulta remota ao [GitHub Actions, execução 40199072801](https://github.com/Roger-Quinelato/projetoAplicado7/actions/runs/40199072801):
+jobs `application`, `postgresql`, `rabbitmq` e `e2e` concluídos com sucesso.
+Essa é evidência de CI da versão-base, não validação da hospedagem pública.
+
+| Job / verificação em 25/10/2026 | Resultado nos logs |
+|---|---|
+| Application, suíte Python / SQLite | 252 aprovados, 14 ignorados |
+| PostgreSQL, suíte Python | 262 aprovados, 4 ignorados |
+| RabbitMQ, seleção de confiabilidade | 22 aprovados |
+| Application, testes frontend | 19 aprovados |
+| E2E, navegador | 25 aprovados |
+| E2E, acessibilidade axe | 1 aprovado |
+
+As suítes têm sobreposição; as contagens não representam testes únicos somáveis.
+Os resultados históricos abaixo preservam as datas e ambientes em que foram
+obtidos; não são novas medições do notebook em 28/10.
+
+O guia foi conferido integralmente: páginas 9–10 enumeram os documentos,
+páginas 10–13 exigem artigo de 15–20 páginas, metodologia com participantes,
+resultados, conclusões e referências. A demonstração admite sistemas simulados
+e exige pelo menos três fluxos integrados. A cobertura está em
+[ENTREGA_FINAL.md](ENTREGA_FINAL.md).
+
+Ainda exigem conferência de entrega: nomes/contribuições, revisão da versão
+renderizada a submeter, ensaio completo no ambiente escolhido e aceite
+docente. Configuração de deploy não comprova HTTPS ou persistência no provedor.
+
+### Execução local em 28/10/2026
+
+- Python 3.12, `.venv`, SQLite em memória, `PYTHONPATH=src`:
+  `.venv/Scripts/python.exe -B -m pytest -q tests -p no:cacheprovider -rs`:
+  **252 aprovados, 14 ignorados**, em 190,40 s. Os ignorados dependem de
+  PostgreSQL/RabbitMQ; um aviso de depreciação.
+- `npm test` no frontend: **19 aprovados**. Verificação TypeScript
+  `tsc --noEmit --incremental false` e OpenAPI
+  `python -B tools/export_openapi.py --check`: aprovadas.
+- Sondas adicionais identificaram recuperação fora de ordem no F3, divergência
+  entre vencimento calculado e cancelamento, e encerramento com processo
+  concluído/tarefa cancelada. Cenários e prioridades no
+  [panorama](PANORAMA_PRONTIDAO.md). Não foram corrigidos nesta revisão documental.
+
+### Artefatos regenerados em 28/10/2026
+
+Relatório DOCX regenerado e renderizado em PDF A4 com **20 páginas**;
+apresentação regenerada com **18 slides**. Houve revisão visual e validação
+estrutural do PPTX. Datas, evidências e limitações conhecidas foram atualizadas.
+O runtime gráfico dos slides devolveu código 1 após salvar os arquivos, embora
+os arquivos e validações tenham sido produzidos; não é declarado sucesso
+irrestrito do comando de geração. Autoria e contribuições continuam pendentes.
+
 > O estado atual de execução está no [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e no [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
 
 ## Indicadores da Visão geral contados no servidor (#73, 2026-10-21)

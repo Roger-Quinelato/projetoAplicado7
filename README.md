@@ -4,6 +4,9 @@ Protótipo acadêmico de integração entre os cinco sistemas do Cenário 4 da L
 
 A solução é uma SOA pragmática entregue como monólito modular ([ADR-001](docs/adr/ADR-001-integracao-empresa-de-servicos.md)). Os módulos conversam por REST e por eventos gravados numa outbox transacional. O despachante entrega os eventos aos consumidores internos e publica uma cópia no RabbitMQ local.
 
+**Entrega ao professor:** [índice da documentação final](docs/ENTREGA_FINAL.md).
+**Situação e trabalho restante:** [panorama de prontidão](docs/PANORAMA_PRONTIDAO.md).
+
 **Diagrama de contratos:** [abrir documentação do fluxo](docs/ARQUITETURA_CONTRATOS.md).
 
 ![Diagrama da arquitetura de Reservas e Contratos](docs/diagramas/arquitetura-contratos.svg)
@@ -12,7 +15,8 @@ A solução é uma SOA pragmática entregue como monólito modular ([ADR-001](do
 
 ## Cronograma do Projeto Aplicado 7
 
-- **Último acompanhamento:** 09/11/2026.
+- **Entrega pronta e alinhamento com o professor:** 09/11/2026 (documentação e protótipo funcionando).
+- **Ajustes e ensaios:** 10 a 22/11/2026.
 - **Apresentação final:** 23/11/2026.
 
 ## Regras para agentes

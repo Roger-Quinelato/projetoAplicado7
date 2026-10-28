@@ -2,6 +2,10 @@
 
 > O estado atual de execução está no [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e no [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
 
+Revisão: 28/10/2026. Grupo de veículo e proteção pertencem à reserva; não são
+expostos pelo contrato nem pela consulta de elegibilidade. O desenho hexagonal
+orienta as portas, mas os serviços atuais ainda dependem de SQLAlchemy.
+
 ## Objetivo Tecnico
 
 Demonstrar uma arquitetura corporativa para integrar capacidades de locacao de
@@ -183,3 +187,14 @@ desempenho local, escalabilidade futura e testabilidade.
 A validacao tecnica ocorre por testes automatizados, contratos OpenAPI/AsyncAPI,
 roteiro de demonstracao, matriz de rastreabilidade e evidencias registradas em
 `docs/EVIDENCIAS_VALIDACAO.md`.
+
+## Limites reproduzidos na revisão de 28/10/2026
+
+Uma sonda de recuperação do F3 mostrou que `TicketResolved.v1` confirmado
+antes de recuperar `TicketOpened.v1` pode deixar o chamado resolvido e o
+processo posteriormente criado ainda aberto. Também foram observadas
+divergências entre vencimento calculado/cancelamento financeiro e entre
+processo concluído/tarefa cancelada no encerramento de contrato.
+Esses casos não foram corrigidos pela atualização documental. O
+[panorama de prontidão](PANORAMA_PRONTIDAO.md) define prioridade e critérios
+para fechamento antes de declarar a entrega pronta.
