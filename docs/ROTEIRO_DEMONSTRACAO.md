@@ -676,3 +676,12 @@ docker compose down
 
 Esse comando preserva o volume do PostgreSQL. Remover o volume apagaria os dados
 da demonstração e não faz parte deste roteiro.
+
+## Estados de fechamento
+
+Após encerrar o contrato, tarefas de preparação ainda pendentes são canceladas.
+O processo fica CANCELLED se houver tarefa cancelada; só fica COMPLETED quando
+todas já estão DONE. Fatura aberta com data UTC posterior ao vencimento não
+aceita cancelamento (409), mesmo sem executar a verificação de inadimplência.
+No F3 fora de ordem, recuperar a abertura e reprocessar os eventos em FAILED;
+a resolução não é confirmada enquanto o processo não existe.

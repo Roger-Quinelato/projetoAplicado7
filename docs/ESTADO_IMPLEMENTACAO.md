@@ -1,5 +1,7 @@
 # Estado verificado da implementação
 
+**Fechamento de 28/10:** F3, cancelamento financeiro e agregado de encerramento corrigidos, com 12 casos de regressão. Suíte local após as correções: **264 aprovados e 14 ignorados**. Autoria preenchida por orientação do responsável: Rodrigo Nenato — backend, produto e negócio; Raquel — frontend e levantamento de requisitos. As referências à base/CI abaixo preservam seus ambientes e resultados históricos.
+
 Data da revisão documental: **28/10/2026**. Base: `f1669d7`, presente em `main` e na branch `docs/entrega-final-20261028`, que registra a integração T06–T19 e a recuperação de correções do T17 pelo [PR #75](https://github.com/Roger-Quinelato/projetoAplicado7/pull/75). T12 (financeiro) e T15 (atendimento) estão integradas à `main`; o estado anterior de revisão dessas implementações foi superado. Essa integração não constitui aceite docente, conclusão dos entregáveis ou comprovação de deploy.
 
 Esta leitura confrontou documentação, código, testes versionados e histórico Git. Os resultados numéricos e demonstrações datados abaixo são **evidências históricas, preservadas com suas datas originais**. Por exemplo, o registro de 17/10/2026 informa 211 testes aprovados e 10 ignorados; ele não é uma contagem da suíte atual. As fontes são [Evidências de validação](EVIDENCIAS_VALIDACAO.md), [Testes E2E](TESTES_E2E.md) e [Baseline comportamental](BASELINE_COMPORTAMENTAL.md). A execução local de 28/10/2026 está registrada em EVIDENCIAS_VALIDACAO.md: 252 testes aprovados, 14 ignorados; frontend com 19 aprovados, TypeScript e OpenAPI aprovados.
@@ -42,20 +44,28 @@ O `Guia.pdf` exige pelo menos três integrações detalhadas (item 5) e três fl
 - **Fluxos:** F1, F2 e F3 têm código, contratos, testes e roteiros versionados; as execuções registradas são históricas. Grupo de veículo permanece na reserva e não é exposto na consulta de elegibilidade de F3, lacuna de RF-04 do plano.
 - **Qualidade:** `ATRIBUTOS_QUALIDADE.md` avalia nove atributos e distingue mecanismos implementados de resultados esperados. Tracing distribuído, OIDC/OAuth e escala horizontal continuam não implementados.
 - **Evolução:** `EVOLUCAO_MANUTENCAO.md` responde às sete perguntas do item 9; balanceamento, feature flags gerais e implantação gradual são estratégias futuras.
-- **Relatório e apresentação:** artefatos regenerados em 28/10/2026; PDF do relatório conferido com 20 páginas, dentro do limite do Guia. Há 18 slides. Os materiais incorporam a base f1669d7, evidências de CI e limitações reproduzidas; faltam nomes e contribuições da equipe para a submissão.
-- **Publicação e validação externa:** faltam comprovação atual de URL HTTPS, operações, persistência após reinício e proteção do banco no provedor; aceite do ADR-006, premissas de negócio, nomes/contribuições e validação docente continuam pendentes. Não há declaração de submissão ou aceite final.
+- **Relatório e apresentação:** artefatos regenerados em 28/10/2026; PDF do relatório conferido com 20 páginas, dentro do limite do Guia. Há 18 slides. Os materiais incorporam a base f1669d7, evidências de CI e limitações reproduzidas; autoria preenchida: Rodrigo Nenato (backend, produto e negócio) e Raquel (frontend e levantamento de requisitos).
+- **Publicação e validação externa:** faltam comprovação atual de URL HTTPS, operações, persistência após reinício e proteção do banco no provedor; aceite do ADR-006, premissas de negócio e validação docente continuam pendentes. Não há declaração de submissão ou aceite final.
 
 O [Cronograma de fechamento](CRONOGRAMA_EXECUCAO.md) fixa **09/11/2026** para projeto demonstrável e documentação pronta e **23/11/2026** para apresentação avaliada, conforme informado pelo responsável. O [índice de entrega](ENTREGA_FINAL.md) reúne os artefatos e o [panorama de prontidão](PANORAMA_PRONTIDAO.md) detalha o fechamento. Estados administrativos de tickets não substituem o código integrado em #75. A consulta remota aqui foi limitada à CI; não houve sincronização de tickets.
 
 Em 27/09/2026, as 22 tarefas também foram criadas como [GitHub Issues](https://github.com/Roger-Quinelato/projetoAplicado7/issues), cada uma com link para seu registro `ARCH7` no Jira. Sete marcos Q1–Q7 e etiquetas de semana, tipo, prioridade e status permitem navegar pelo cronograma. O [PR #2](https://github.com/Roger-Quinelato/projetoAplicado7/pull/2) registra a implementação inicial; a base desta revisão é a integração #75. O registro anterior indica pendência de escopo de acesso ao GitHub Project; o estado externo não foi reconferido.
 
-## Limites reproduzidos na revisão de 28/10/2026
+## Correções verificadas de fechamento
 
-Uma sonda de recuperação do F3 mostrou que `TicketResolved.v1` confirmado
-antes de recuperar `TicketOpened.v1` pode deixar o chamado resolvido e o
-processo posteriormente criado ainda aberto. Também foram observadas
-divergências entre vencimento calculado/cancelamento financeiro e entre
-processo concluído/tarefa cancelada no encerramento de contrato.
-Esses casos não foram corrigidos pela atualização documental. O
-[panorama de prontidão](PANORAMA_PRONTIDAO.md) define prioridade e critérios
-para fechamento antes de declarar a entrega pronta.
+- F3: resolução e reconciliação sem processo existente falham de forma
+  recuperável; a inbox não é confirmada. Após recuperar a abertura, repetir o
+  despacho conclui a operação. Se a retentativa atingir o limite, reprocessar
+  explicitamente os eventos em `FAILED` após resolver a dependência.
+- Financeiro: cancelamento usa a data UTC e o estado efetivo da consulta.
+  Fatura vencida recebe `409 INVALID_STATE`, mesmo antes da verificação
+  explícita de inadimplência. No próprio dia do vencimento, ainda pode ser
+  cancelada se estiver aberta e sem pagamento.
+- Workflow: o fim do contrato cancela tarefas ainda abertas e calcula o
+  agregado: todas `DONE` → `COMPLETED`; alguma `CANCELLED` e todas finais →
+  `CANCELLED`. Reentrega preserva estados e responsáveis finais. O evento de
+  encerramento também aguarda o processo de preparação, sem confirmação vazia.
+
+As correções não alteram retroativamente registros já consumidos em versões
+anteriores. A persistência de inconsistências antigas exige análise e reparação
+específicas, sem apagar dados ou reescrever eventos automaticamente.

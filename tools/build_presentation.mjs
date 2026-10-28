@@ -15,7 +15,7 @@ const workspaceDir = (process.env.ARCHCORP_ROOT ?? path.resolve(path.dirname(fil
 const SKILL_DIR = process.env.PRESENTATIONS_SKILL_DIR ?? "C:/Users/roger/.codex/plugins/cache/openai-primary-runtime/presentations/26.1025.11240/skills/presentations";
 const IMG_DIR = path.join(workspaceDir, "docs/arquitetura/img");
 // Preencha antes da submissão, na mesma ordem do relatório (tools/build_report.py, EQUIPE).
-const EQUIPE = [];
+const EQUIPE = ["Rodrigo Nenato — backend, produto e negócio", "Raquel — frontend e levantamento de requisitos"];
 const DATA_RELATORIO = "28/10/2026";
 const ENTREGA_PRONTA = "09/11/2026";
 const APRESENTACAO = "23/11/2026";
@@ -83,8 +83,8 @@ function notes(slide, text) {
   textbox(slide, "Arquitetura de Integração\npara Empresa de Serviços", { left: 90, top: 170, width: 900, height: 190 }, 54, C.white, true);
   textbox(slide, "Projeto Aplicado  |  Cenário 4", { left: 94, top: 390, width: 600, height: 50 }, 27, "#C8DFE2");
   const accent = slide.shapes.add({ geometry: "rect", position: { left: 95, top: 130, width: 180, height: 10 }, fill: C.rust, line: { fill: "none", width: 0 } });
-  textbox(slide, `${EQUIPE.length ? EQUIPE.join(" · ") : "Nomes e contribuições individuais ainda não informados"}\nVersão ${DATA_RELATORIO}  ·  Base main ${VERSAO_BASE}\nEntrega pronta ${ENTREGA_PRONTA}  ·  Apresentação ${APRESENTACAO} (previstas)`, { left: 94, top: 545, width: 1100, height: 110 }, 20, C.white);
-  notes(slide, "Fonte principal: Guia.pdf, enunciado acadêmico ArchCorp, 2026, 13 páginas. Cenário 4 aplicado a uma locadora fictícia inspirada na Localiza, com dados sintéticos. Referência técnica: main f1669d78f01e2d279b3de60a999ed778e6c9916e, PR #75 de 25/10/2026, https://github.com/Roger-Quinelato/projetoAplicado7/pull/75, commit consultado localmente. Marcos previstos conforme orientação da entrega. Autoria e contribuições aguardam informação da equipe. Não há declaração de aceite docente.");
+  textbox(slide, `${EQUIPE.length ? EQUIPE.join("\n") : "Nomes e contribuições individuais ainda não informados"}\nVersão ${DATA_RELATORIO}  ·  Base main ${VERSAO_BASE}\nEntrega pronta ${ENTREGA_PRONTA}  ·  Apresentação ${APRESENTACAO} (previstas)`, { left: 94, top: 545, width: 1100, height: 110 }, 20, C.white);
+  notes(slide, "Fonte principal: Guia.pdf, enunciado acadêmico ArchCorp, 2026, 13 páginas. Cenário 4 aplicado a uma locadora fictícia inspirada na Localiza, com dados sintéticos. Referência técnica: main f1669d78f01e2d279b3de60a999ed778e6c9916e, PR #75 de 25/10/2026, https://github.com/Roger-Quinelato/projetoAplicado7/pull/75, commit consultado localmente. Marcos previstos conforme orientação da entrega. Autoria: Rodrigo Nenato — backend, produto e negócio; Raquel — frontend e levantamento de requisitos. Não há declaração de aceite docente.");
 }
 
 // 2
@@ -229,14 +229,14 @@ function notes(slide, text) {
   slide.shapes.connect(support, contractsBox, { fromSide: "right", toSide: "left", kind: "elbow", line: { style: "solid", fill: C.teal, width: 3 }, tail: { type: "arrow", width: "med", length: "med" } });
   slide.shapes.connect(contractsBox, ticket, { fromSide: "bottom", toSide: "top", kind: "straight", line: { style: "solid", fill: C.teal, width: 3 }, tail: { type: "arrow", width: "med", length: "med" } });
   slide.shapes.connect(ticket, workflow, { fromSide: "right", toSide: "left", kind: "straight", line: { style: "solid", fill: C.teal, width: 3 }, tail: { type: "arrow", width: "med", length: "med" } });
-  textbox(slide, "Limite conhecido: resolução antes da abertura pode deixar processo STARTED", { left: 120, top: 520, width: 1060, height: 60 }, 24, C.rust, true);
+  textbox(slide, "Recuperação: resolução aguarda a abertura, sem confirmar a inbox", { left: 120, top: 520, width: 1060, height: 60 }, 24, C.rust, true);
   textbox(slide, "F3 histórico: 15/15 checagens (20/10)", { left: 380, top: 590, width: 720, height: 50 }, 24, C.green, true);
-  notes(slide, "Fonte: docs/INTEGRACOES.md, scripts/demo_f3.py e evidência histórica consolidada em docs/EVIDENCIAS_VALIDACAO.md (20/10/2026). Revisão de código e reprodução informadas pela equipe em 28/10: se TicketOpened falha e TicketResolved é consumido antes da recuperação, handle_ticket_resolved retorna sem processo; a abertura reprocessada depois cria STARTED embora o chamado esteja RESOLVED, sem pendências restantes que assegurem a convergência (src/archcorp/workflow/service.py, handle_ticket_resolved). Defeito não corrigido nesta revisão documental. A reconciliação de elegibilidade depende de ação explícita, sem agendador. Os resultados históricos não comprovam todos os casos de ordenação de eventos.");
+  notes(slide, "F3: quando o processo ainda não existe, resolução e reconciliação levantam uma falha recuperável. O dispatcher não confirma a inbox e mantém a tentativa disponível; se atingir FAILED, reprocessar explicitamente após recuperar a abertura. Regressões em tests/test_regressoes_fechamento.py cobrem falha temporária, limite de tentativas e reprocessamento, sem duplicação. A resolução preserva estados finais e usa o agregado das tarefas. Não há agendador: o despacho é explícito.");
 }
 
 // 11
 {
-  const slide = base("Interoperabilidade e reservas e contratos");
+  const slide = base("Interoperabilidade e contratos técnicos");
   bullets(slide, ["UUID global com identificadores legados associados", "JSON UTF 8, UTC ISO 8601 e moeda explícita", "OpenAPI para REST e AsyncAPI para eventos", "Fonte oficial vence; divergência fica auditada", "Mudança incompatível cria uma nova versão"], { left: 95, top: 145, width: 720, height: 410 }, 26);
   box(slide, "eventId\neventType\neventVersion\noccurredAt\ncorrelationId\ncausationId\nproducer\npayload", { left: 900, top: 140, width: 250, height: 390 }, C.navy, C.white);
   textbox(slide, "Envelope obrigatório", { left: 920, top: 555, width: 250, height: 40 }, 23, C.teal, true);
@@ -269,7 +269,7 @@ function notes(slide, text) {
   bullets(slide, ["Tokens locais ou segredo compartilhado e RBAC", "Credenciais comparadas em bytes", "Erros sem mensagem sensível nos logs"], { left: 470, top: 210, width: 340, height: 220 }, 22);
   textbox(slide, "Observabilidade", { left: 850, top: 145, width: 300, height: 45 }, 27, C.teal, true);
   bullets(slide, ["Correlação ponta a ponta", "Logs JSON e métricas", "Health checks e auditoria"], { left: 845, top: 210, width: 340, height: 220 }, 22);
-  textbox(slide, "Testes de reprocessamento cobrem cenários específicos.\nConvergência de eventos e coerência de estados têm defeitos conhecidos.", { left: 110, top: 505, width: 1080, height: 85 }, 25, C.rust, true);
+  textbox(slide, "Regressões cobrem recuperação fora de ordem e estados finais.\nFalhas permanecem recuperáveis por retentativa ou reprocessamento explícito.", { left: 110, top: 505, width: 1080, height: 85 }, 25, C.rust, true);
   notes(slide, "Fonte: docs/ATRIBUTOS_QUALIDADE.md e docs/EVIDENCIAS_VALIDACAO.md. Correções de segurança: main f1669d7, PR #75, 25/10/2026, https://github.com/Roger-Quinelato/projetoAplicado7/pull/75, registro local do commit. Credencial com caracteres não ASCII comparada em bytes, exceção inesperada registra só errorType. FAILED é estado persistido da aplicação, não fila de erro RabbitMQ. Sem OIDC e sem tracing distribuído.");
 }
 
@@ -294,18 +294,18 @@ function notes(slide, text) {
   textbox(slide, `CI da main ${VERSAO_BASE} em 25/10`, { left: 680, top: 140, width: 540, height: 50 }, 29, C.teal, true);
   bullets(slide, ["application: 252 aprovados, 14 ignorados", "postgresql: 262 aprovados, 4 ignorados", "rabbitmq: 22 aprovados", "e2e: 25 aprovados; axe: 1 aprovado"], { left: 675, top: 215, width: 530, height: 305 }, 24);
   textbox(slide, "CI 40199072801 com quatro jobs concluídos com sucesso.\nAs suítes se sobrepõem. Não somar as contagens. p95 histórico de 20/10.", { left: 100, top: 555, width: 1100, height: 80 }, 23, C.rust, true);
-  notes(slide, "Fontes: docs/EVIDENCIAS_VALIDACAO.md, seções históricas de 20/10/2026; registro local do commit f1669d78f01e2d279b3de60a999ed778e6c9916e, PR #75, 25/10/2026, https://github.com/Roger-Quinelato/projetoAplicado7/pull/75; logs da CI Verify 40199072801, https://github.com/Roger-Quinelato/projetoAplicado7/actions/runs/40199072801, executada em 25/10 sobre essa main, consultados no GitHub Actions em 28/10/2026. Quatro jobs success: application 252 passed/14 skipped; postgresql 262 passed/4 skipped; rabbitmq 22 passed; e2e 25 passed e axe separado 1 passed. Suítes sobrepostas, sem total agregado. Histórico de 20/10: PostgreSQL 16/RabbitMQ 3.12 locais, contêiner Linux, Python 3.13, 60 clientes, 100 amostras por consulta em 10 consultas de negócio, p95 máximo de 45,1 ms, 22 roteiros de navegador, F1 20/20, F2 14/14 e F3 15/15. O p95 não foi medido novamente na main f1669d7. Verificação local de 28/10: Python 252 aprovados e 14 ignorados, frontend 19 aprovados, TypeScript e OpenAPI check aprovados. Hospedagem pública e PostgreSQL gerenciado sem comprovação.");
+  notes(slide, "Fontes: docs/EVIDENCIAS_VALIDACAO.md, seções históricas de 20/10/2026; registro local do commit f1669d78f01e2d279b3de60a999ed778e6c9916e, PR #75, 25/10/2026, https://github.com/Roger-Quinelato/projetoAplicado7/pull/75; logs da CI Verify 40199072801, https://github.com/Roger-Quinelato/projetoAplicado7/actions/runs/40199072801, executada em 25/10 sobre essa main, consultados no GitHub Actions em 28/10/2026. Quatro jobs success: application 252 passed/14 skipped; postgresql 262 passed/4 skipped; rabbitmq 22 passed; e2e 25 passed e axe separado 1 passed. Suítes sobrepostas, sem total agregado. Histórico de 20/10: PostgreSQL 16/RabbitMQ 3.12 locais, contêiner Linux, Python 3.13, 60 clientes, 100 amostras por consulta em 10 consultas de negócio, p95 máximo de 45,1 ms, 22 roteiros de navegador, F1 20/20, F2 14/14 e F3 15/15. O p95 não foi medido novamente na main f1669d7. Verificação local após correções em 28/10: Python 264 aprovados e 14 ignorados, frontend 19 aprovados, TypeScript e OpenAPI check aprovados. Hospedagem pública e PostgreSQL gerenciado sem comprovação.");
 }
 
 // 15
 {
   const slide = base("Conclusões e marcos da entrega");
   textbox(slide, "Conclusões", { left: 90, top: 145, width: 430, height: 48 }, 29, C.teal, true);
-  bullets(slide, ["Os três fluxos têm evidências no protótipo acadêmico", "Contratos e fronteiras permitem evolução incremental", "Testes aprovados não garantem convergência em todos os casos"], { left: 85, top: 215, width: 520, height: 270 }, 24);
+  bullets(slide, ["Os três fluxos têm evidências no protótipo acadêmico", "Contratos e fronteiras permitem evolução incremental", "Regressões cobrem recuperação e estados finais"], { left: 85, top: 215, width: 520, height: 270 }, 24);
   textbox(slide, "Limites e evolução", { left: 700, top: 145, width: 430, height: 48 }, 29, C.teal, true);
-  bullets(slide, ["F3 pode permanecer STARTED após resolução", "Processo COMPLETED pode ter tarefa CANCELLED", "Fatura exibida OVERDUE pode ser cancelada", "Nomes e contribuições individuais pendentes"], { left: 695, top: 205, width: 500, height: 310 }, 23);
+  bullets(slide, ["F3 aguarda a abertura e permite reprocessamento", "Processo respeita o agregado das tarefas", "Fatura vencida não aceita cancelamento", "Rodrigo Nenato e Raquel: autoria preenchida"], { left: 695, top: 205, width: 500, height: 310 }, 23);
   textbox(slide, `Entrega pronta prevista para ${ENTREGA_PRONTA}\nApresentação prevista para ${APRESENTACAO}`, { left: 165, top: 540, width: 950, height: 82 }, 27, C.rust, true);
-  notes(slide, "Fontes: relatório técnico, seções 3.1, 3.4, 4.10 e 5, docs/EVOLUCAO_MANUTENCAO.md e ADR-006 (Proposto). Revisão e reproduções informadas em 28/10/2026: F3 perde a convergência se TicketResolved é consumido antes de recuperar TicketOpened; encerramento de contrato pode deixar processo COMPLETED com tarefa CANCELLED; leitura financeira calcula OVERDUE enquanto o comando de cancelamento usa OPEN persistido. Conferência: src/archcorp/workflow/service.py (handle_ticket_resolved e handle_contract_closed), src/archcorp/finance/service.py (cancel) e domain.py. Defeitos conhecidos não corrigidos nesta revisão documental. Verificação local de 28/10 informada: Python 252 aprovados/14 ignorados, frontend 19 aprovados, TypeScript e OpenAPI check aprovados. Não somar suítes. Marcos previstos conforme orientação da entrega. Nomes e contribuições individuais necessários para a submissão. Premissas e ADR-006 aguardam validação ou aceite. Publicação, OIDC e agendador são evolução. O merge do PR #75 não equivale a aceite docente nem à validação das premissas.");
+  notes(slide, "Correções de fechamento: F3 não confirma resolução/reconciliação sem processo; eventos mantêm retentativa e reprocessamento explícito. Encerramento do contrato cancela tarefas pendentes e deriva o estado agregado, preservando tarefas finais. Cancelamento financeiro usa a data UTC e o estado efetivo da consulta; vencida recebe 409. As correções não alteram registros antigos já consumidos. Autoria declarada: Rodrigo Nenato — backend, produto e negócio; Raquel — frontend e levantamento de requisitos. Permanecem ensaio, aceite docente e comprovação da hospedagem prevista no plano. OIDC, tracing distribuído e consumo pelo broker são evoluções.");
 }
 
 for (let i = 0; i < deck.slides.items.length; i++) {

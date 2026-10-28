@@ -194,9 +194,13 @@ class FinanceService:
         invoice = self._require(session, invoice_id, lock=True)
         if invoice.status == InvoiceStatus.CANCELLED:
             return self.to_dict(session, invoice)
-        if self.paid_total(session, invoice.invoice_id) > ZERO:
+        paid = self.paid_total(session, invoice.invoice_id)
+        if paid > ZERO:
             raise InvalidStateError("Fatura com pagamento registrado não pode ser cancelada")
-        ensure_invoice_transition(invoice.status, InvoiceStatus.CANCELLED)
+        # A regra usa o mesmo estado efetivo exibido na consulta, mesmo antes
+        # do comando explícito que registra a inadimplência no banco.
+        current = effective_status(invoice.status, invoice.due_date, money(invoice.amount) - paid, utc_today(self.clock))
+        ensure_invoice_transition(current, InvoiceStatus.CANCELLED)
         invoice.status = InvoiceStatus.CANCELLED
         audit(session, correlation_id, "finance", "cancel_invoice", "success", invoice.invoice_id, reason=reason)
         session.commit()

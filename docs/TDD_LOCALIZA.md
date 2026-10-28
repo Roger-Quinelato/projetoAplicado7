@@ -188,13 +188,21 @@ A validacao tecnica ocorre por testes automatizados, contratos OpenAPI/AsyncAPI,
 roteiro de demonstracao, matriz de rastreabilidade e evidencias registradas em
 `docs/EVIDENCIAS_VALIDACAO.md`.
 
-## Limites reproduzidos na revisão de 28/10/2026
+## Correções verificadas de fechamento
 
-Uma sonda de recuperação do F3 mostrou que `TicketResolved.v1` confirmado
-antes de recuperar `TicketOpened.v1` pode deixar o chamado resolvido e o
-processo posteriormente criado ainda aberto. Também foram observadas
-divergências entre vencimento calculado/cancelamento financeiro e entre
-processo concluído/tarefa cancelada no encerramento de contrato.
-Esses casos não foram corrigidos pela atualização documental. O
-[panorama de prontidão](PANORAMA_PRONTIDAO.md) define prioridade e critérios
-para fechamento antes de declarar a entrega pronta.
+- F3: resolução e reconciliação sem processo existente falham de forma
+  recuperável; a inbox não é confirmada. Após recuperar a abertura, repetir o
+  despacho conclui a operação. Se a retentativa atingir o limite, reprocessar
+  explicitamente os eventos em `FAILED` após resolver a dependência.
+- Financeiro: cancelamento usa a data UTC e o estado efetivo da consulta.
+  Fatura vencida recebe `409 INVALID_STATE`, mesmo antes da verificação
+  explícita de inadimplência. No próprio dia do vencimento, ainda pode ser
+  cancelada se estiver aberta e sem pagamento.
+- Workflow: o fim do contrato cancela tarefas ainda abertas e calcula o
+  agregado: todas `DONE` → `COMPLETED`; alguma `CANCELLED` e todas finais →
+  `CANCELLED`. Reentrega preserva estados e responsáveis finais. O evento de
+  encerramento também aguarda o processo de preparação, sem confirmação vazia.
+
+As correções não alteram retroativamente registros já consumidos em versões
+anteriores. A persistência de inconsistências antigas exige análise e reparação
+específicas, sem apagar dados ou reescrever eventos automaticamente.

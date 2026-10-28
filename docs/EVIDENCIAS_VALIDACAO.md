@@ -1,5 +1,39 @@
 # Evidências de validação
 
+## Fechamento das correções e autoria em 28/10/2026
+
+As três falhas da revisão foram corrigidas: resolução do F3 aguarda a abertura
+do processo; cancelamento financeiro usa o estado efetivo e a data UTC; o
+encerramento do contrato deriva o estado do processo das tarefas finais.
+Reconciliação e encerramento sem processo também mantêm o evento recuperável.
+
+Antes da correção, os oito casos iniciais de regressão apresentaram **5 falhas
+e 3 aprovações**, reproduzindo os três defeitos. Foram acrescentadas quatro
+checagens para dependências ausentes e preservação de estados finais.
+
+Verificação depois das correções, Python 3.12 no Windows, SQLite em arquivo
+descartável `tmp/regressoes-fechamento-20261028.db`, com `PYTHONPATH=src` e
+`TEST_DATABASE_URL` apontando para esse banco:
+
+```powershell
+.venv/Scripts/python.exe -B -m pytest -q tests -p no:cacheprovider
+```
+
+Resultado: **264 aprovados, 14 ignorados**, em 388,73 s, um aviso de depreciação.
+Os ignorados exigem serviços reais; PostgreSQL/RabbitMQ não foram reexecutados
+localmente neste fechamento. `npm test`: **19 aprovados**.
+`tools/export_openapi.py --check` e `git diff --check`: aprovados.
+
+O teste financeiro de abono usa relógio fixo anterior ao vencimento. O teste
+de encerramento agora exige processo e tarefas cancelados quando a preparação
+não foi executada, conforme a regra do agregado. Nenhuma checagem foi retirada.
+
+Autoria declarada: **Rodrigo Nenato — backend, produto e negócio**;
+**Raquel — frontend e levantamento de requisitos**. Relatório DOCX/PDF e slides
+regenerados com essas contribuições e as regras corrigidas. O PDF permanece
+com **20 páginas** e a apresentação com **18 slides**, com revisão visual e
+validação estrutural. Os registros anteriores abaixo são históricos.
+
 ## Revisão da versão de entrega em 28/10/2026
 
 Base técnica: `f1669d7` (main, PR #75 integrado em 25/10/2026).

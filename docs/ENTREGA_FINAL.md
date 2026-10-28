@@ -40,6 +40,15 @@ preparação) e F3 (chamado → processo de resolução).
 | Apresentação técnica | [Slides](../output/Apresentacao_Cenario_4.pptx) |
 | Continuidade por outra equipe | README, contratos, ADRs, [estado técnico](ESTADO_IMPLEMENTACAO.md), [rastreabilidade](MATRIZ_RASTREABILIDADE.md) |
 
+## Participantes e contribuições
+
+| Participante | Contribuição declarada |
+|---|---|
+| Rodrigo Nenato | Backend, produto e negócio |
+| Raquel | Frontend e levantamento de requisitos |
+
+Contribuições informadas pelo responsável em 28/10/2026.
+
 ## Estrutura do relatório
 
 O relatório deve conter resumo; introdução com objetivos; fundamentação com
@@ -63,7 +72,7 @@ aceite verificável; não é comprovada apenas pela existência de `render.yaml`
 
 ## Conferência antes da submissão
 
-- Preencher e conferir os nomes e as contribuições dos participantes.
+- Conferir a identificação já preenchida: Rodrigo Nenato — backend, produto e negócio; Raquel — frontend e levantamento de requisitos.
 - Confirmar se o professor aceita as premissas do cenário e a demonstração local
   ou se mantém a publicação pública prevista no plano.
 - Conferir relatório de 15–20 páginas, figuras legíveis, citações e referências.
