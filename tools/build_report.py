@@ -145,7 +145,7 @@ IMG = ROOT / "docs" / "arquitetura" / "img"
 
 # Preencha com os integrantes antes da submissão: (nome, contribuição principal).
 EQUIPE: list[tuple[str, str]] = [
-    ("Rodrigo Nenato", "Backend, produto e negócio"),
+    ("Roger Quinelato", "Backend, produto e negócio"),
     ("Raquel", "Frontend e levantamento de requisitos"),
 ]
 
