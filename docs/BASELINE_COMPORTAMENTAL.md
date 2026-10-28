@@ -7,7 +7,7 @@ Esta baseline registra comportamentos que devem ser preservados em mudanças
 futuras. Preservar significa manter o resultado observável e os limites de
 escopo. A implementação pode evoluir mediante requisito, análise de impacto,
 atualização dos contratos afetados e provas de regressão. Mudanças estruturais
-exigem ADR, conforme [AGENT.md](../AGENT.md).
+exigem ADR, conforme [AGENTS.md](../AGENTS.md).
 
 Não congelar bugs, estilos visuais ou detalhes internos por causa deste registro.
 Os achados da auditoria continuam sendo pendências, mesmo com as suítes verdes.
@@ -27,7 +27,7 @@ Os achados da auditoria continuam sendo pendências, mesmo com as suítes verdes
 | Autorização e erros | Rotas protegidas aplicam papéis; erro preserva `application/problem+json` e correlação; modo público rejeita tokens locais | `tests/test_demo_credentials.py`, `tests/test_foundation.py` e testes de papéis dos módulos |
 | Contratos publicados | OpenAPI salvo corresponde à aplicação; eventos respeitam envelope e schemas; migrações são aditivas | `tests/test_contracts_and_architecture.py`, `tests/test_foundation.py` |
 | Formulários | Envio pendente bloqueia repetição; campos são preservados após rejeição da API e limpos após sucesso | `web/tests/navigation.spec.ts` |
-| Transparência acadêmica | Interface e documentação identificam dados sintéticos, pagamentos simulados e ausência de integração com sistemas reais da Localiza | `README.md`, interface e `AGENT.md` |
+| Transparência acadêmica | Interface e documentação identificam dados sintéticos, pagamentos simulados e ausência de integração com sistemas reais da Localiza | `README.md`, interface e `AGENTS.md` |
 
 ## Limites que também devem ser preservados na documentação
 
@@ -59,7 +59,7 @@ Os achados da auditoria continuam sendo pendências, mesmo com as suítes verdes
 
 As suítes de 17/10/2026 aprovaram 84 testes Python e 11 de navegador, com build
 aprovado. Os testes de navegador originais usam API simulada. O roteiro
-complementar de teste real e seus resultados estão no
-[relatório da auditoria](../output/auditoria/teste-real-2026-10-17/RELATORIO.md).
-O relatório distingue problemas da aplicação, preparação do ambiente e limites
-de cobertura; esses problemas não fazem parte da baseline aprovada.
+complementar de teste real foi citado no registro original, mas seu relatório
+não está disponível no repositório. Essa referência não é usada como prova de
+aceite atual. Consulte as [evidências disponíveis](EVIDENCIAS_VALIDACAO.md)
+para resultados datados e limites de cobertura.

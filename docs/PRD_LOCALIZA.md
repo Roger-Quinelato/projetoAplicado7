@@ -5,7 +5,7 @@
 ## Contexto
 
 O produto academico aplica o Cenario 4 do `Guia.pdf` a uma operacao inspirada na
-Localiza. A organizacao possui sistemas separados para CRM, reservas e contratos
+Localiza. O cenario academico considera sistemas separados para CRM, reservas e contratos
 de locacao, financeiro e faturamento, atendimento e assistencia 24h e gestao de
 processos operacionais. O problema central e a fragmentacao entre cadastro,
 contrato, cobranca, preparacao do veiculo e atendimento ao cliente.
@@ -33,7 +33,9 @@ confirmacao confiavel de contrato, grupo de veiculo, protecoes e SLA.
 2. Criar reserva/contrato de locacao a partir do cadastro oficial do CRM.
 3. Ativar locacao e disparar cobranca e preparacao de retirada sem acoplamento
    ponto a ponto.
-4. Abrir chamado com contrato de locacao, grupo de veiculo e SLA aplicaveis.
+4. Abrir chamado com elegibilidade do contrato de locacao e SLA aplicaveis;
+   grupo de veiculo e protecoes sao dados da reserva, ausentes do contrato e da
+   consulta de elegibilidade atuais.
 5. Permitir rastreamento e reprocessamento de falhas por `correlationId`.
 
 ## Escopo P0
@@ -47,6 +49,11 @@ confirmacao confiavel de contrato, grupo de veiculo, protecoes e SLA.
 
 ## Fora do Escopo
 
+- Gestao de frota, alocacao de veiculos e operacao fisica de retirada, vistoria
+  ou manutencao; o workflow registra tarefas, sem executar essas atividades.
+- PSP, pre-autorizacao e caucao reais; pagamentos sao simulados.
+- OIDC/OAuth e contas individuais; a demonstracao usa tokens Bearer locais
+  com papeis ou credencial compartilhada no modo publico.
 - Substituir sistemas reais da Localiza.
 - Integrar pagamento, antifraude, telemetria, aplicativo, Webcorp ou sistemas de
   agencia reais.

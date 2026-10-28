@@ -1,6 +1,6 @@
 # Plano de implementação - Cenário 4: Localiza - locação de veículos e mobilidade corporativa
 
-> Plano arquitetural de referência, com opções e metas ainda não implementadas. A execução por S1–S14, o catálogo T01–T22 e o status verificável estão em [Cronograma executável](docs/CRONOGRAMA_EXECUCAO.md) e [Estado da implementação](docs/ESTADO_IMPLEMENTACAO.md). O protótipo acadêmico não tem OIDC, tracing distribuído nem consumidores RabbitMQ; esses itens abaixo descrevem evolução possível.
+> Plano arquitetural de referência, com opções e metas ainda não implementadas. Os marcos vigentes são 09/11/2026 (projeto e documentação prontos) e 23/11/2026 (apresentação). O plano S1–S14 é histórico; o fechamento e o status verificável estão em [Cronograma executável](docs/CRONOGRAMA_EXECUCAO.md) e [Estado da implementação](docs/ESTADO_IMPLEMENTACAO.md). O protótipo acadêmico não tem OIDC, tracing distribuído nem consumidores RabbitMQ; esses itens abaixo descrevem evolução possível.
 
 ## 1. Objetivo
 

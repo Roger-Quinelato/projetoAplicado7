@@ -1,8 +1,8 @@
 # Integrações do Cenário 4
 
-> O estado atual de execução está no [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e no [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
+> Revisão documental: **28/10/2026**, base `f1669d7` (`main`, integração #75). O [estado técnico](ESTADO_IMPLEMENTACAO.md) distingue implementação, evidência e lacunas; o [índice de entrega](ENTREGA_FINAL.md) reúne os materiais finais. Resultados datados são históricos, não reexecutados nesta leitura documental; a CI da base foi consultada remotamente, conforme o estado técnico.
 
-Este documento detalha as três integrações obrigatórias do protótipo. Os diagramas
+Este documento detalha as três integrações obrigatórias do protótipo, conforme o item 5 do `Guia.pdf`: origem, destino, informação, objetivo, comunicação, API/serviço, dados enviados/recebidos e erros. T12 e T15 estão integradas à `main` por #75; os fluxos usam dados sintéticos e adaptadores no mesmo processo. Os diagramas
 de sequência estão em `docs/arquitetura/FLUXOS_INTEGRACAO.md`. Requisições,
 respostas e eventos completos estão em `docs/EXEMPLOS_API.md`.
 
@@ -28,10 +28,10 @@ correlação, mapeamentos legados, idempotência, outbox, inbox, auditoria e fal
 | Informação compartilhada | Identidade global do cliente e condições da locação negociada |
 | Objetivo | Criar um rascunho de contrato de locação a partir do cliente existente, sem recadastrar seus dados |
 | Tipo de comunicação | Comando REST/JSON síncrono; consulta interna síncrona por porta pública |
-| API ou serviço utilizado | `POST /api/v1/contracts/drafts` e `CustomerReader` |
-| Dados enviados | `customerId`, `serviceCode`, `startsOn`, `billing.amount`, `billing.currency`, `billing.cycle` e `slaHours` |
+| API ou serviço utilizado | `POST /api/v1/contracts/reservations`, `POST /api/v1/contracts/reservations/{id}/draft` ou rascunho direto em `POST /api/v1/contracts/drafts`; porta `CustomerReader` envolvida por `ResilientCustomerReader` |
+| Dados enviados | Rascunho direto: `customerId`, `serviceCode`, `startsOn`, `billing.amount`, `billing.currency`, `billing.cycle` e `slaHours`. Pela reserva: condições de locação, grupo/proteção e vigência em `/reservations`; a conversão usa o ID na URL e não tem corpo |
 | Dados recebidos | `contractId`, `customerId`, produto de locação, início, cobrança, SLA e estado `DRAFT`; cabeçalhos `X-Correlation-ID` e `Idempotency-Replayed` |
-| Tratamento de erros | `400` para correlação inválida, `401` ou `403` para acesso; `422` com lista para validação estrutural ou com mensagem para cliente inexistente, inelegível ou sem consentimento; repetição segura por `Idempotency-Key` |
+| Tratamento de erros | `400` para correlação inválida; `401`/`403` para acesso; `404` para reserva inexistente; `422 VALIDATION_ERROR` estrutural ou `422 BUSINESS_RULE_VIOLATION` para cliente inexistente, inativo, inelegível ou sem consentimento; `409` para estado, duplicidade ou chave com outro pedido; `503 SERVICE_UNAVAILABLE` ao esgotar a leitura do CRM, sem efeito de negócio. Chave obrigatória no rascunho e opcional na reserva |
 
 Contracts consulta o CRM somente por `CustomerReader`. A porta confirma a
 existência, a elegibilidade e o consentimento e fornece os dados necessários para
@@ -70,7 +70,7 @@ falha do CRM; o comportamento é verificado com simuladores em
 |---|---|
 | Sistema de origem | Contracts |
 | Sistemas de destino | Finance e Workflow; RabbitMQ recebe uma cópia do evento quando configurado |
-| Informação compartilhada | Fato de ativação, identidade do cliente e do contrato, grupo de veículo, vigência, cobrança e SLA |
+| Informação compartilhada | Fato de ativação, identidade do cliente e do contrato, serviço, vigência, cobrança e SLA; grupo de veículo permanece na reserva e não integra o payload de ativação |
 | Objetivo | Criar a primeira cobrança da locação e iniciar o processo de preparação de retirada após a ativação confirmada |
 | Tipo de comunicação | Comando REST síncrono para ativar; evento assíncrono para os efeitos desacoplados |
 | API ou serviço utilizado | `POST /api/v1/contracts/{contractId}/activate`, outbox, `ContractActivated.v1` e `POST /api/v1/integration/outbox/dispatch` |
@@ -85,14 +85,12 @@ transação. O corpo da resposta inclui o `eventId`. Repetir o comando com a mes
 O dispatcher verifica a inbox de cada consumidor. Finance mantém uma primeira cobrança
 por contrato e por `eventId`, e Workflow mantém uma instância por tipo e referência. Depois dos
 consumidores internos, o dispatcher publica o envelope no RabbitMQ quando
-`RABBITMQ_URL` está configurado. Uma publicação concluída muda o evento para
-`PUBLISHED`.
+`RABBITMQ_URL` está configurado. Somente após consumidores, publicação opcional e commit bem-sucedidos, o evento fica `PUBLISHED`. Se o consumidor ou broker falhar, o SAVEPOINT desfaz os efeitos locais e inbox daquele evento antes de registrar a tentativa; não há confirmação parcial de Finance ou Workflow.
 
 Cada chamada a `/api/v1/integration/outbox/dispatch` representa uma tentativa dos
 eventos que permanecem `PENDING`. Uma exceção incrementa `attempts` e registra o
 motivo. O evento muda para `FAILED` ao alcançar `RETRY_LIMIT`, que vale três por
-padrão. O protótipo não agenda tentativas automaticamente e não implementa atraso
-exponencial ou jitter.
+padrão. O dispatcher não agenda tentativas automaticamente e não implementa atraso exponencial ou jitter. A retentativa exponencial com jitter de `ResilientCustomerReader` pertence à leitura síncrona do CRM em F1 e não à outbox. Sem `RABBITMQ_URL`, `PUBLISHED` registra apenas o processamento interno; com o broker configurado, exige também a publicação confirmada da cópia.
 
 `GET /api/v1/integration/outbox/summary` devolve quantos eventos estão `PENDING` e
 quantos estão `FAILED`, sem payload. A interface usa essa contagem na barra de
@@ -118,7 +116,7 @@ tentativas.
 | API ou serviço utilizado | `POST /api/v1/support/tickets`, `ContractEntitlementPort`, `TicketOpened.v1`, dispatcher, reconciliação individual (`POST /support/tickets/{ticketId}/reconcile`) e em lote (`POST /support/tickets/reconcile-pending`), atribuição, resolução e histórico |
 | Dados enviados | Na abertura: `customerId`, `contractId`, `serviceCode`, `category` e `description`; no evento: dados do chamado sem a descrição |
 | Dados recebidos | Elegibilidade e `slaHours` de Contracts; chamado com estado, prioridade, SLA, `openedAt`, `dueAt` e `slaStatus`; Workflow registra uma instância de resolução |
-| Tratamento de erros | `400`, `401` ou `403` para acesso/correlação; `422` com lista para validação estrutural (inclusive descrição com documento, cartão, telefone, placa ou e-mail) ou com mensagem para combinação inelegível; `PENDING_ENTITLEMENT` quando o adaptador está desativado ou levanta indisponibilidade/timeout; `503` na reconciliação enquanto Contracts não volta; `409 INVALID_STATE` fora da máquina de estados; idempotência na abertura, na resolução e na reconciliação |
+| Tratamento de erros | `400`, `401`/`403` para correlação/acesso; `422 VALIDATION_ERROR` para tipo/tamanho e `422 BUSINESS_RULE_VIOLATION` para combinação inelegível; não há rejeição de conteúdo por regex (ADR-004). Indisponibilidade abre em `PENDING_ENTITLEMENT`; reconciliação indisponível retorna `503`; reconciliação fora de estado retorna `409 INVALID_STATE`, atribuição/resolução inválidas preservam `409 CONFLICT`. Chave obrigatória na abertura e opcional na resolução/reconciliação individual; replay persistido exige a mesma chave |
 
 Quando o adaptador está disponível, Support consulta Contracts por
 `ContractEntitlementPort`. Uma combinação ativa de contrato, cliente e produto de locação
@@ -130,7 +128,7 @@ Quando `CONTRACT_ADAPTER_AVAILABLE=false`, ou quando o adaptador levanta
 `ConnectionError`, Support não descarta a solicitação. Ele cria o chamado em
 `PENDING_ENTITLEMENT`, sem SLA nem prazo, registra um log `WARNING` com a
 correlação e grava `TicketOpened.v1`. O consumidor de Workflow inicia a resolução
-com prazo padrão de 24 horas quando o evento ainda não contém SLA. O adaptador
+com prazo provisório de 24 horas contado de `openedAt` quando o evento não contém `dueAt`. Esse prazo de Workflow é premissa do protótipo; o chamado em Support permanece sem SLA até a reconciliação. O adaptador
 interno roda no mesmo processo e não tem timeout de rede; a indisponibilidade é
 exercitada pela configuração e por simuladores nos testes.
 
@@ -146,16 +144,12 @@ Depois que Contracts volta a responder, a reconciliação é explícita:
 confirmação muda o chamado para `OPEN`, preenche o SLA e calcula o prazo a partir
 da abertura. Uma rejeição muda o estado para `REJECTED_ENTITLEMENT`. Cada
 chamado reconciliado publica um único `TicketEntitlementReconciled.v1`, ganha uma
-entrada no histórico e na auditoria; repetir a operação não produz novo efeito, e
-a atualização é condicionada ao estado lido para que execuções concorrentes não
-dupliquem o evento. Enquanto Contracts não responde, a reconciliação devolve `503`
-e o chamado continua pendente. A reconciliação não publica um segundo
+entrada no histórico e na auditoria. Repetir a reconciliação individual com a mesma `Idempotency-Key` recupera a resposta persistida; sem chave, um chamado já reconciliado recebe `409 INVALID_STATE`. O lote só seleciona pendentes, limitado a 200 por chamada. Bloqueio e atualização condicionada ao estado impedem evento duplicado em concorrência. Enquanto Contracts não responde, a reconciliação individual devolve `503`, registra a indisponibilidade na auditoria e mantém o chamado pendente. No lote, a indisponibilidade antes de qualquer reconciliação também gera `503`; se ocorrer após algum resultado confirmado, a API retorna o resumo com `contractsAvailable: false` e preserva o restante pendente. A reconciliação não publica um segundo
 `TicketOpened.v1`.
 
 Atribuição, reatribuição e resolução ficam em Support, com histórico próprio
 (`support_ticket_history`) e auditoria. O histórico guarda o papel que autorizou a
-ação, nunca o token. A resolução repetida devolve o mesmo chamado sem publicar
-outro `TicketResolved.v1`.
+ação, nunca o token. A resolução repetida com a mesma chave opcional devolve a resposta persistida sem publicar outro `TicketResolved.v1`; sem chave, resolver novamente recebe `409 CONFLICT`.
 
 A descrição do chamado permanece no banco de Support. Ela não entra no evento, nos
 logs estruturados ou na resposta da API, o que reduz a exposição de conteúdo
@@ -211,12 +205,11 @@ monetários da v1 seguem como `number`; a representação decimal em string é d
   `integration_legacy_ids` e são resolvidos por
   `GET /api/v1/integration/legacy-ids/{sourceSystem}/{legacyId}`.
 - Datas usam ISO 8601. Horários de eventos e prazos usam UTC.
-- Valores monetários usam decimal positivo e moeda com três letras.
+- Valores monetários usam `Decimal` internamente e moeda explícita. A v1 mantém valores numéricos nas respostas e nos eventos, inclusive `amount`, `paidAmount` e `balance` no Finance; decimal em string é evolução para a v2, não garantia atual de serialização.
 - Eventos incluem `eventId`, `eventType`, `eventVersion`, `occurredAt`,
   `correlationId`, `causationId`, `producer` e `payload`.
 - `correlationId` atravessa HTTP, auditoria, eventos e registros de falha.
-- Mudanças incompatíveis exigem nova versão da API ou do evento; mudanças
-  compatíveis devem ser aditivas.
+- A regra geral exige nova versão para mudanças incompatíveis e adições compatíveis na v1. O ADR-003 registra exceções financeiras não aditivas aceitas, incluindo precisão monetária e estado `PARTIALLY_PAID`; o ADR-004 mantém a compatibilidade das demais operações e a convergência de migrações.
 - A fonte oficial de cada contexto prevalece. Divergências devem ser registradas
   para análise, sem sobrescrita silenciosa.
 
@@ -257,14 +250,20 @@ implementado em `src/archcorp/errors.py` e publicado no OpenAPI como
 | 422 | `VALIDATION_ERROR` | Corpo, cabeçalho ou parâmetro inválido |
 | 422 | `BUSINESS_RULE_VIOLATION` | Regra de negócio, como cliente sem consentimento |
 | 500 | `INTERNAL_ERROR` | Falha inesperada, registrada em log com `correlationId` e sem payload |
-| 503 | `SERVICE_UNAVAILABLE` | Banco indisponível em `/health/ready` |
+| 503 | `SERVICE_UNAVAILABLE` | Banco indisponível em `/health/ready`, leitura do CRM esgotada ou reconciliação sem Contracts disponível |
 
 Os casos de uso levantam exceções de `src/archcorp/exceptions.py`, sem depender
 de HTTP. A camada de API converte essas exceções, `HTTPException`, erros de
 validação e `IntegrityError` do banco no mesmo formato. A mudança é aditiva:
 clientes da versão 1 que leem `detail` continuam funcionando.
 
-## Limites do protótipo
+## Evidências e limites da demonstração
+
+F1, F2 e F3 têm testes em `tests/test_flows.py`, suítes específicas e roteiros `scripts/demo_f1.py`, `demo_f2.py` e `demo_f3.py`. Os resultados datados estão em [Evidências de validação](EVIDENCIAS_VALIDACAO.md) e [Testes E2E](TESTES_E2E.md); a CI de `f1669d7` foi consultada em 28/10/2026, com os quatro jobs aprovados na [run 40199072801](https://github.com/Roger-Quinelato/projetoAplicado7/actions/runs/40199072801), executada em 25/10/2026. Isso não equivale a ensaio no ambiente final ou aceite docente.
+
+O `correlationId` permite consultar auditoria e eventos da operação; **tracing distribuído não está implementado**. O estado `FAILED` pertence à outbox da aplicação e não é DLQ do RabbitMQ. O broker recebe cópia; ele não entrega os eventos aos consumidores internos.
+
+### Limites do protótipo
 
 Os cinco sistemas são contextos e simuladores do protótipo. Produtos, tecnologias,
 interfaces, responsáveis e volumes reais da organização não constam no enunciado

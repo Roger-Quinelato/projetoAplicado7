@@ -30,6 +30,10 @@ responsaveis nao foram fornecidos. Esses pontos sao **Premissa a validar**.
 
 ## Processos Principais e Dependencias
 
+Os passos e o diagrama representam a hipotese AS-IS do estudo, nao processos
+observados na Localiza nem funcionalidades entregues pelo prototipo. Frota,
+pre-autorizacao e sistemas externos reais nao fazem parte do escopo executavel.
+
 1. Cliente ou gestor de frota e cadastrado ou atualizado no CRM.
 2. Reserva/contrato de locacao e criada a partir da oportunidade ou solicitacao.
 3. Na ativacao/retirada, o financeiro precisa iniciar cobranca ou

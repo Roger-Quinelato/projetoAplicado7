@@ -4,6 +4,14 @@
 
 ## Linguagem Ubiqua
 
+Este vocabulario e as entidades da tabela de contextos descrevem o dominio
+proposto. No codigo de 28/10/2026, o contrato guarda cliente, servico, datas,
+valor/ciclo, SLA e estado; `vehicleGroup` e `protectionCode` ficam na reserva e
+nao integram o contrato nem a resposta de elegibilidade (`eligible`, `slaHours`).
+Finance implementa faturas, pagamentos simulados e inadimplencia; Workflow
+registra processos e tarefas. Frota, condutores, pre-autorizacao, caucao, multas
+e integracoes reais com PSP ou sistemas corporativos nao estao implementados.
+
 | Termo | Definicao no projeto |
 |---|---|
 | Cliente | Pessoa ou empresa que realiza locacao ou contrata mobilidade corporativa. |
@@ -37,6 +45,8 @@
   entrega e registra falhas.
 
 ## Agregados e Regras
+
+As regras desta secao correspondem ao recorte implementado, com dados sinteticos.
 
 - **Cliente:** deve ter identificador global e consentimento antes de originar
   contrato no fluxo academico.
