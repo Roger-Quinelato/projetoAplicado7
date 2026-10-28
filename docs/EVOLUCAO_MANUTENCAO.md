@@ -123,10 +123,9 @@ SLAs reais da organização.
 
 ## Evolução após o fechamento acadêmico
 
-Antes de acrescentar funcionalidades, resolver a recuperação fora de ordem
-do F3 e definir as políticas divergentes de cancelamento e encerramento
-registradas no [panorama](PANORAMA_PRONTIDAO.md). Manter contratos e regressões
-alinhados. Identidade OIDC, consumidores reais do broker, agendamento e tracing
+A recuperação fora de ordem do F3 e as políticas de cancelamento e encerramento
+foram corrigidas no fechamento, com regressões. Preservar essas regras em
+novas funcionalidades e manter contratos e testes alinhados. Identidade OIDC, consumidores reais do broker, agendamento e tracing
 distribuído são evoluções; o protótipo não os comprova. Desacoplar os serviços
 de aplicação de SQLAlchemy é evolução de desenho, não condição já atendida.
 O fechamento funcional e documental ocorre até 09/11/2026; de 10 a 22/11,
