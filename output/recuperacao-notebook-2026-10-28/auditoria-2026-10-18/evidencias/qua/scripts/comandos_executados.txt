@@ -1,0 +1,54 @@
+REGISTRO DOS COMANDOS EXECUTADOS PELA FRENTE F-QUA (auditoria 18/10/2026, main = 44b8325)
+
+Ambiente: ISO = C:\Users\roger\.claude\jobs\f5019419\tmp\iso-qua (copia por git archive, sem .git)
+          PY  = C:\Users\roger\.claude\jobs\f5019419\tmp\venv-auditoria\Scripts\python.exe (Python 3.12.10)
+          Node v24.21.0 / npm 11.19.0. Tokens locais de demonstracao redigidos como <TOKEN_...>.
+
+Nota: este arquivo registra os comandos, nao e um script. O ambiente recusou executar um .sh com
+variaveis calculadas; cada linha abaixo foi executada separadamente a partir de ISO (ou da pasta
+da frente, para os scripts de analise), com saida redirecionada para logs\.
+
+1) Suite com cobertura de ramos (rodada 1), a partir de ISO:
+   PY -m coverage run --branch -m pytest -q -p no:cacheprovider -rs -o pythonpath=src tests > logs\pytest_rodada1_cobertura.log
+   PY -m coverage report -m --include="src/*" > logs\coverage_report_src.txt
+   PY -m coverage json --include="src/*" -o logs\coverage_src.json
+   PY -I scripts\resumo_cobertura.py logs\coverage_src.json > logs\resumo_cobertura.txt
+
+2) Repeticao da suite (rodada 2, deteccao de instabilidade):
+   PY -m pytest -q -p no:cacheprovider -rs --durations=25 -o pythonpath=src tests > logs\pytest_rodada2.log
+
+3) Frontend, em ISO\web:
+   npm ci > logs\npm_ci.log
+   npm test > logs\npm_test.log
+   npm run build > logs\npm_build.log
+   node --experimental-test-coverage --test "tests/**/*.test.ts" > logs\npm_test_cobertura_frontend.txt
+
+4) Estaticos, em ISO:
+   PY -m ruff check src tests scripts tools --statistics > logs\ruff_estatisticas.txt
+   PY -m ruff check src tests scripts tools --output-format concise > logs\ruff_concise.txt
+   PY -m mypy src --ignore-missing-imports > logs\mypy_src.txt   (levou mais de 120 s; concluido em segundo plano)
+
+5) Analises e experimentos sem servidor (PY -I, scripts da pasta scripts\):
+   PY -I scripts\analise_testes.py ISO\tests > logs\analise_testes.txt
+   PY -I scripts\experimento_formatter_excecao.py ISO\src > logs\experimento_formatter_excecao.txt
+   PY -I scripts\teste_cegueira_rls.py ISO\src > logs\teste_cegueira_rls.txt
+   PY -I scripts\teste_cegueira_formato.py ISO > logs\teste_cegueira_formato.txt
+   PY -I scripts\contraste_wcag.py > logs\contraste_wcag.md
+   PY -I scripts\ativacao_concorrente_causa.py ISO\src 10 > logs\ativacao_concorrente_causa.txt   (in-process, TestClient)
+
+6) Servidor da copia para E-14 e QUA-13 (porta 18103, SQLite dentro de ISO):
+   PY -m uvicorn --app-dir ISO\src archcorp.main:app --host 127.0.0.1 --port 18103 --log-level info > logs\uvicorn_e14.log 2>&1
+   curl http://127.0.0.1:18103/health/live ; curl http://127.0.0.1:18103/health/ready
+   PY -I scripts\seed_sintetico.py --base-url http://127.0.0.1:18103 --token <TOKEN_ADMIN_LOCAL> > logs\e14_carga_sintetica.txt
+   PY -I scripts\medir_rotas_e14.py http://127.0.0.1:18103 <TOKEN_ADMIN_LOCAL> 200 > logs\e14_medicoes.txt
+   PY -I scripts\cauda_latencia_e14.py http://127.0.0.1:18103 <TOKEN_ADMIN_LOCAL> 300 > logs\e14_cauda_latencia.txt
+   curl -H "Authorization: Bearer <TOKEN_OPERACOES_LOCAL>" http://127.0.0.1:18103/metrics > logs\e14_metrics.txt
+   curl http://127.0.0.1:18103/metrics   (sem token: 401)
+   PY -I scripts\ativacao_concorrente_api.py http://127.0.0.1:18103 <TOKEN_ADMIN_LOCAL> 15 > logs\ativacao_concorrente_sqlite.txt
+   Encerramento: Stop-Process no processo uvicorn (venv e Python base) e checagem da porta 18103 (liberada).
+
+7) Leitura externa (somente leitura):
+   gh pr view 54 --repo Roger-Quinelato/projetoAplicado7 --json number,state,isDraft,title,headRefName,updatedAt
+   gh run view 39063148796 --repo Roger-Quinelato/projetoAplicado7 --job 117485116770 --log | grep -E "SKIPPED|passed|warning"
+
+8) Verificacoes de referencias no codigo (grep/sed sobre ISO e sobre a arvore somente leitura): ver evidencias.md.
