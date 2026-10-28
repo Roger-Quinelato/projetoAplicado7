@@ -1,0 +1,9 @@
+# F-CFG · Linha de base (itens da frente)
+
+Referência: `main` = `44b83254b43bfcc043766d69b9fb6b8970330cbf`, verificado em 19/10/2026 (UTC). Estados: resolvido, parcial, aberto, obsoleto ou não verificável.
+
+| ID | Título (01/10 ou 16/10) | Estado em 44b8325 | Evidência | Observação |
+|---|---|---|---|---|
+| AUD-42 | T20 sem evidência de publicação (01/10; Informativa, Meta) | aberto | E-CFG-13, E-CFG-23, E-CFG-24; `scripts/github_leitura.py`; `scripts/governanca_detalhes.py` | Nenhuma URL pública no repositório: busca de `onrender.com` em código e configuração sem resultado; o README cita só `https://supabase.com`. GitHub: 0 deployments; issue #23 aberta, sem comentários, com `status:planejado`. Publicação no Render e no Supabase não verificável daqui (sem acesso ao painel). P-16 depende de P-11 a P-14, que são de outras frentes. Se houver URL no painel, reavaliar com CFG-18. |
+| AUD-49 | Transitivas sem pin nem hash; imagem como root e sem digest; Node e Python divergentes entre local e CI (01/10; Baixa) | parcial | E-CFG-10, E-CFG-15, E-CFG-16, E-CFG-17; CFG-07 e CFG-08 | Resolvido: Node 24 e Python 3.12 alinhados entre Dockerfile, CI e venv (3.12.10). Aberto: Dockerfile sem `USER` (roda como root); `FROM` sem digest (o log da CI mostra digests resolvidos pelo BuildKit, o arquivo não fixa); `pip install` sem `--require-hashes`; 22 transitivas de execução sem pin nem hash neste Windows. P-13 parcial: FastAPI 0.143.2 e Starlette 1.8.0 pinados, pip-audit sem vulnerabilidades; não há lock com hashes. |
+| AUD-50 | Trabalho declarado (`execucao-tarefas-pendentes`/`3fdb533`, 13 commits) não publicado no remoto (01/10; Informativa, Risco) | aberto | E-CFG-03, E-CFG-24; `logs/governanca_detalhes.txt` | `git ls-remote` não retorna a ref; o SHA `3fdb533` não existe no clone nem no reflog; nenhuma ref com "pendentes". P-01 não cumprido. Análogo atual: `feat/fluxo-coordenado` (6901e02), 20 commits fora da `main`, sem upstream e sem remota (CFG-12). |
