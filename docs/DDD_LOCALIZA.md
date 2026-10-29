@@ -18,7 +18,7 @@ e integracoes reais com PSP ou sistemas corporativos nao estao implementados.
 | Gestor de frota | Representante corporativo que acompanha reservas, contratos e faturas. |
 | Reserva | Intencao operacional de locacao antes da ativacao/retirada. |
 | Contrato de locacao | Acordo ativo com periodo, grupo de veiculo, protecoes, valores e condicoes. |
-| Grupo de veiculo | Categoria comercial usada na reserva e no contrato. |
+| Grupo de veiculo | Categoria comercial registrada na reserva. No prototipo, nao e exposta no contrato nem na elegibilidade (lacuna do RF-04). |
 | SLA | Prazo ou nivel de atendimento associado ao contrato e ao tipo de ocorrencia. |
 | Chamado | Solicitacao de atendimento, assistencia, duvida, manutencao ou ocorrencia. |
 | Processo operacional | Sequencia de tarefas para retirada, devolucao, vistoria, manutencao ou resolucao. |
@@ -29,7 +29,7 @@ e integracoes reais com PSP ou sistemas corporativos nao estao implementados.
 | Contexto | Entidades principais | Fonte oficial |
 |---|---|---|
 | CRM | Cliente, contato, consentimento, oportunidade | Dados cadastrais e elegibilidade comercial. |
-| Contracts | Reserva, contrato, item de locacao, SLA | Condicoes da locacao e status contratual. |
+| Contracts | Reserva, contrato, SLA | Condicoes da locacao e status contratual. |
 | Finance | Cobranca, fatura, pagamento, adicional | Valores, vencimentos, pagamentos e pendencias. |
 | Support | Chamado, historico, prioridade | Atendimento e resolucao da ocorrencia. |
 | Workflow | Processo, tarefa, responsavel, prazo | Estado operacional da retirada, devolucao e atendimento. |
@@ -39,8 +39,11 @@ e integracoes reais com PSP ou sistemas corporativos nao estao implementados.
 
 - CRM fornece dados de cliente para Contracts por `CustomerReader`.
 - Contracts fornece elegibilidade para Support por `ContractEntitlementPort`.
-- Contracts publica `ContractActivated.v1` para Finance e Workflow.
-- Support publica `TicketOpened.v1` para Workflow.
+- CRM publica `CustomerUpdated.v1` para a projecao de clientes de Contracts.
+- Contracts publica `ContractActivated.v1` para Finance e Workflow e
+  `ContractClosed.v1` para Workflow (encerramento do processo) e Finance (fatura final).
+- Support publica `TicketOpened.v1`, `TicketEntitlementReconciled.v1` e
+  `TicketResolved.v1` para Workflow.
 - Integration nao decide regras de negocio; apenas traduz, correlaciona,
   entrega e registra falhas.
 

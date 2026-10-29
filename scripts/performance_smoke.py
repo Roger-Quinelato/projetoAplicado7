@@ -8,10 +8,12 @@ O banco indicado é recriado: nunca aponte para um banco com dados que importam.
 Uso: PYTHONPATH=src python scripts/performance_smoke.py [--clientes 60] [--amostras 100]
 """
 import argparse
+import json
 import os
 import statistics
 import time
 from datetime import date, timedelta
+from pathlib import Path
 
 os.environ.setdefault("DATABASE_URL", "sqlite:///./tmp/performance-archcorp.db")
 os.environ.pop("RABBITMQ_URL", None)  # mede a API, não a cópia opcional no broker
@@ -71,7 +73,9 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--clientes", type=int, default=60)
     parser.add_argument("--amostras", type=int, default=100)
+    parser.add_argument("--json", help="Grava o resultado em JSON neste caminho (consumido por tools/consolidar_evidencias.py).")
     args = parser.parse_args()
+    results = []
 
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
@@ -89,8 +93,15 @@ def main() -> int:
                 response.raise_for_status()
             p95 = statistics.quantiles(samples, n=100, method="inclusive")[94]
             failed |= p95 >= META_MS
+            results.append({"consulta": label, "p95Ms": round(p95, 2), "medianaMs": round(statistics.median(samples), 2)})
             print(f"{'PASS' if p95 < META_MS else 'FAIL'} p95_ms={p95:7.2f} mediana_ms={statistics.median(samples):7.2f} {label}")
     print(f"resultado={'FAIL' if failed else 'PASS'}")
+    if args.json:
+        Path(args.json).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.json).write_text(json.dumps({
+            "banco": engine.dialect.name, "clientes": args.clientes, "amostrasPorConsulta": args.amostras, "metaP95Ms": META_MS,
+            "maiorP95Ms": max(row["p95Ms"] for row in results), "resultado": "FAIL" if failed else "PASS", "consultas": results,
+        }, ensure_ascii=False, indent=2), encoding="utf-8")
     return 1 if failed else 0
 
 

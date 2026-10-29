@@ -35,7 +35,8 @@ bifurcação em vez de fingir que ela nunca existiu. Testes verificam dados lega
 convergência, ausência de drift e bloqueio de downgrade com preservação de dados.
 
 CI passa a executar também PostgreSQL 16 dedicado com credenciais sintéticas
-efêmeras, sem conectar Supabase/Render ou sistemas reais. Resultado configurado
+efêmeras, sem conectar Supabase/Render ou sistemas reais (o Supabase saiu do
+projeto em 29/10/2026; ver ADR-007). Resultado configurado
 não é resultado executado: as evidências distinguem execução local e CI.
 
 A comparação com o contrato da main `5e344e2` também retirou os novos limites

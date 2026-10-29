@@ -81,6 +81,18 @@ def test_reserva_valida_periodo_cliente_e_idempotencia(client, admin_headers, cu
     assert len(client.get(path, headers=admin_headers, params={"customerId": customer["customerId"]}).json()) == 1
 
 
+def test_reserva_compara_inicio_com_a_data_utc(client, admin_headers, customer, monkeypatch):
+    # 01h UTC de 10/01 ainda é 09/01 em Brasília: a regra usa a data UTC, não a local.
+    from datetime import datetime, timezone
+    import archcorp.contracts.routes as routes
+    monkeypatch.setattr(routes, "reservation_clock", lambda: datetime(2030, 1, 10, 1, 0, tzinfo=timezone.utc))
+    path = "/api/v1/contracts/reservations"
+    body = reservation_body(customer["customerId"], startsOn="2030-01-10", endsOn="2030-01-12")
+    assert client.post(path, headers={**admin_headers, "Idempotency-Key": "utc-hoje"}, json=body).status_code == 201
+    yesterday = reservation_body(customer["customerId"], startsOn="2030-01-09", endsOn="2030-01-12")
+    assert client.post(path, headers={**admin_headers, "Idempotency-Key": "utc-ontem"}, json=yesterday).status_code == 422
+
+
 def test_cancelamento_de_reserva_cancela_rascunho(client, admin_headers, customer):
     reservation = client.post("/api/v1/contracts/reservations", headers=admin_headers, json=reservation_body(customer["customerId"])).json()
     drafted = client.post(f"/api/v1/contracts/reservations/{reservation['reservationId']}/draft", headers={**admin_headers, "Idempotency-Key": "cancel-draft"}).json()

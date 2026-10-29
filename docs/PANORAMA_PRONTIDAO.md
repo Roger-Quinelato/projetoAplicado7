@@ -16,18 +16,18 @@ prontidão acadêmica.
 Os três defeitos reproduzidos foram corrigidos com testes de regressão: F3
 fora de ordem, cancelamento financeiro vencido e agregado do processo após
 encerramento. A autoria foi preenchida: Roger Quinelato (backend, produto e
-negócio); Raquel (frontend e levantamento de requisitos). A evidência detalhada
+negócio); Raquel Pereira (frontend e levantamento de requisitos). A evidência detalhada
 está em EVIDENCIAS_VALIDACAO.md. Permanecem ensaio, ambiente e aceite docente.
 
 | Frente | Situação observada | O que falta para aceite |
 |---|---|---|
 | Cenário, requisitos, AS-IS e TO-BE | Documentos e diagramas existentes | Conferência docente das premissas; cenário é acadêmico |
-| Padrões, integrações e APIs | ADRs, OpenAPI, AsyncAPI e exemplos existentes | Manter coerência com o commit demonstrado; ADR-006 ainda proposto |
+| Padrões, integrações e APIs | ADRs, OpenAPI, AsyncAPI e exemplos existentes | Manter coerência com o commit demonstrado; ADR-006 não adotado (evolução) |
 | Três fluxos integrados | Código, interface e roteiros F1/F2/F3 existentes | Ensaio integral no notebook e ambiente da apresentação |
 | Qualidade e evolução | Nove atributos e estratégias documentados | Distinguir resultados medidos de metas futuras |
 | CI da versão-base | Run `40199072801`: 252 testes aprovados/14 ignorados no SQLite; 262/4 no PostgreSQL; 25 E2E e axe aprovado | Suítes sobrepostas; não equivale a aprovação docente ou teste de hospedagem |
 | Relatório e slides | Artefatos existentes em revisão final | Autoria preenchida; conferir versão renderizada |
-| Operação pública | Configuração prevista no repositório | HTTPS, health, escrita/leitura, migrações e persistência após reinício não comprovados |
+| Operação pública | Fora do escopo da entrega: demonstração oficial local, Supabase retirado (ADR-007) | Ensaio local completo e contingência |
 | Entrega e apresentação | Datas definidas | Pacote fechado, cópia de contingência, revisão do professor e ensaios |
 
 Evidência remota consultada:
@@ -41,7 +41,7 @@ Evidências locais e históricas: [validação](EVIDENCIAS_VALIDACAO.md).
 | 28–30/10 | Documentação alinhada e autoria | Índice do guia completo; autoria preenchida e conferida |
 | 29/10–02/11 | Correções e decisões técnicas | Concluído em 28/10: três correções, 12 regressões e suíte local 264/14 |
 | 31/10–02/11 | Ambiente de demonstração | Instalação documentada, banco sintético, F1/F2/F3 completos e contingência local |
-| 03–04/11 | Publicação prevista ou decisão docente | Evidência de HTTPS/persistência, ou aceite explícito da demonstração local |
+| 03–04/11 | Ambiente local de demonstração (ADR-007) | Verificação antes da demonstração aprovada e contingência pronta |
 | 05–06/11 | Relatório e slides conferidos | Artigo de 15–20 páginas renderizado; figuras e referências conferidas; slides coerentes |
 | 07–08/11 | Ensaio e congelamento | Fluxos repetidos sem falha, backup e pacote identificado por commit |
 | 09/11 | Alinhamento com professor | Projeto funcionando e documentação completa; registrar apenas ajustes solicitados |

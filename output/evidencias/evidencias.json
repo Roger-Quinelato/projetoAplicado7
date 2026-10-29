@@ -1,0 +1,48 @@
+{
+  "geradoEm": "2026-10-29T17:43:10.169597Z",
+  "commit": "534eab2e77363318fedda77509aca0e0031f4e3a",
+  "commitCurto": "534eab2",
+  "branch": "fix/etapa2-sem-supabase-e-correcoes",
+  "arvoreLimpa": true,
+  "ambiente": {
+    "sistema": "Windows-11-10.0.26300-SP0",
+    "python": "3.12.10"
+  },
+  "verificacoes": {
+    "openapi": {
+      "comando": "tools/export_openapi.py --check",
+      "ok": true
+    },
+    "pytest": {
+      "comando": "pytest -q",
+      "banco": "SQLite",
+      "aprovados": 269,
+      "ignorados": 14,
+      "falhas": 0,
+      "segundos": 419.5,
+      "inicio": "2026-10-29T17:43:14.693129Z",
+      "ok": true
+    },
+    "desempenho": {
+      "comando": "scripts/performance_smoke.py",
+      "banco": "sqlite",
+      "metaP95Ms": 500,
+      "maiorP95Ms": 21.53,
+      "consultas": 10,
+      "ok": true
+    },
+    "web": {
+      "comando": "npm test (web)",
+      "resumo": [
+        "pass 19",
+        "fail 0"
+      ],
+      "ok": true
+    }
+  },
+  "ci": {
+    "disponivel": false,
+    "observacao": "nenhuma execução de CI para este commit (faça push e aguarde)"
+  },
+  "ok": true
+}

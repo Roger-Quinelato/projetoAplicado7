@@ -1,15 +1,17 @@
 import hashlib
 import json
+import math
 from collections.abc import Callable
+from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from archcorp.config import settings
 from archcorp.infrastructure.db import count_rows
 from archcorp.exceptions import ConflictError, IdempotencyConflictError
 from archcorp.integration.models import AuditLog, IdempotencyRecord, InboxEvent, LegacyIdMapping, OutboxEvent
-from archcorp.observability import COUNTERS, logger
+from archcorp.observability import COUNTERS, logger, record_idempotency_replay
 
 
 EventHandler = Callable[[Session, dict], None]
@@ -221,6 +223,14 @@ class LegacyIdService:
                 "sourceSystem": mapping.source_system, "legacyId": mapping.legacy_id}
 
 
+def operation_kind(operation: str) -> str:
+    """Nome da operação sem o identificador (ex.: activate_contract:<uuid> → activate_contract).
+
+    Mantém a cardinalidade fixa nas métricas e não expõe identificadores.
+    """
+    return operation.split(":", 1)[0]
+
+
 class IdempotencyStore:
     """Guarda a resposta de um comando e a impressão digital da requisição."""
 
@@ -240,6 +250,7 @@ class IdempotencyStore:
             raise IdempotencyConflictError(conflict_message)
         if not stored.request_hash and any(stored.response.get(field) != request[field] for field in legacy_fields):
             raise IdempotencyConflictError(conflict_message)
+        record_idempotency_replay(operation_kind(operation))
         return stored.response
 
     @staticmethod
@@ -249,7 +260,11 @@ class IdempotencyStore:
         if key is not None:
             query = query.where(IdempotencyRecord.key == key)
         stored = session.scalar(query)
-        return stored.response if stored else None
+        if stored is None:
+            return None
+        # Todos os chamadores devolvem a resposta guardada como repetição.
+        record_idempotency_replay(operation_kind(operation))
+        return stored.response
 
     @staticmethod
     def save_legacy(session: Session, key: str, operation: str, response: dict) -> None:
@@ -260,3 +275,60 @@ class IdempotencyStore:
     def save(cls, session: Session, key: str, operation: str, request: dict, response: dict) -> None:
         """Guarda a resposta e a impressão digital da requisição."""
         session.add(IdempotencyRecord(key=key, operation=operation, response=response, request_hash=cls.fingerprint(request)))
+
+
+def _as_utc(moment: datetime) -> datetime:
+    """SQLite devolve datas sem fuso; os registros são gravados em UTC."""
+    return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
+
+
+def _percentile(values: list[float], fraction: float) -> float:
+    """Percentil pelo posto mais próximo, sobre valores já ordenados."""
+    return values[max(0, math.ceil(fraction * len(values)) - 1)]
+
+
+def operational_insights(session: Session) -> dict:
+    """Agrega outbox, inbox, auditoria e idempotência em indicadores para decisão.
+
+    Só lê tabelas do próprio contexto Integration; não expõe payloads, motivos de
+    falha nem detalhes de auditoria, apenas contagens e tempos.
+    """
+    events = []
+    rows = session.execute(select(OutboxEvent.event_type, OutboxEvent.status, OutboxEvent.attempts)).all()
+    for event_type in sorted({row.event_type for row in rows}):
+        selected = [row for row in rows if row.event_type == event_type]
+        events.append({
+            "eventType": event_type,
+            "total": len(selected),
+            "published": sum(row.status == "PUBLISHED" for row in selected),
+            "pending": sum(row.status == "PENDING" for row in selected),
+            "failed": sum(row.status == "FAILED" for row in selected),
+            "retried": sum(row.status == "PUBLISHED" and row.attempts > 0 for row in selected),
+            "maxAttempts": max(row.attempts for row in selected),
+        })
+
+    lags: dict[str, list[float]] = {}
+    for consumer, processed_at, occurred_at in session.execute(
+            select(InboxEvent.consumer, InboxEvent.processed_at, OutboxEvent.occurred_at)
+            .join(OutboxEvent, OutboxEvent.event_id == InboxEvent.event_id)).all():
+        lags.setdefault(consumer, []).append(max(0.0, (_as_utc(processed_at) - _as_utc(occurred_at)).total_seconds()))
+    dispatch_lag = []
+    for consumer, values in sorted(lags.items()):
+        values.sort()
+        dispatch_lag.append({"consumer": consumer, "processed": len(values), "p50Seconds": round(_percentile(values, 0.5), 3),
+                             "p95Seconds": round(_percentile(values, 0.95), 3), "maxSeconds": round(values[-1], 3)})
+
+    audit_rows = session.execute(select(AuditLog.module, AuditLog.operation, AuditLog.result, func.count())
+                                 .group_by(AuditLog.module, AuditLog.operation, AuditLog.result)
+                                 .order_by(AuditLog.module, AuditLog.operation, AuditLog.result)).all()
+    idempotency: dict[str, int] = {}
+    for operation, count in session.execute(select(IdempotencyRecord.operation, func.count()).group_by(IdempotencyRecord.operation)).all():
+        idempotency[operation_kind(operation)] = idempotency.get(operation_kind(operation), 0) + count
+    return {
+        "generatedAt": datetime.now(timezone.utc),
+        "events": events,
+        "dispatchLag": dispatch_lag,
+        "audit": [{"module": module, "operation": operation, "result": result, "count": count}
+                  for module, operation, result, count in audit_rows],
+        "idempotencyKeys": [{"operation": operation, "count": count} for operation, count in sorted(idempotency.items())],
+    }

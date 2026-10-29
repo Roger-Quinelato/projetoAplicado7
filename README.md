@@ -21,7 +21,7 @@ A solução é uma SOA pragmática entregue como monólito modular ([ADR-001](do
 
 ## Regras para agentes
 
-Antes de trabalhar no repositório, leia [`AGENTS.md`](AGENTS.md). As regras **SEMPRE** são obrigatórias e as regras **NUNCA** são proibições permanentes. Agentes Claude Code também leem [`CLAUDE.md`](CLAUDE.md), que encaminha ao guia completo. A proposta de skills por papel (implementador e revisor) está em [`docs/agentes/LEVANTAMENTO_SKILLS.md`](docs/agentes/LEVANTAMENTO_SKILLS.md) e ainda aguarda aceite.
+Antes de trabalhar no repositório, leia [`AGENTS.md`](AGENTS.md). As regras **SEMPRE** são obrigatórias e as regras **NUNCA** são proibições permanentes. Agentes Claude Code também leem [`CLAUDE.md`](CLAUDE.md), que encaminha ao guia completo. No fechamento, cada PR passa pelo verificador `archcorp-qa`, e cada etapa de entrega pela revisão `archcorp-fde`. Os dois só leem e não alteram arquivos ([`docs/agentes/AGENTES_FDE_QA.md`](docs/agentes/AGENTES_FDE_QA.md)).
 
 Nunca descreva o protótipo como conectado a sistemas reais da Localiza.
 
@@ -40,7 +40,7 @@ Cada contexto é dono dos próprios dados e expõe uma interface pública. Nenhu
 
 Os três fluxos integrados do plano são:
 
-- **F1. Cliente → reserva → contrato:** o contrato nasce da reserva com o cliente oficial do CRM, sem recadastro. A leitura do CRM é resiliente: repete apenas falhas transitórias, com atraso exponencial e jitter, e devolve `503` sem gravar nada quando o CRM não responde ([ADR-006](docs/adr/ADR-006-leitura-resiliente-do-crm.md), proposto).
+- **F1. Cliente → reserva → contrato:** o contrato nasce da reserva com o cliente oficial do CRM, sem recadastro.
 - **F2. Ativação → faturamento e preparação de retirada:** `ContractActivated.v1` gera uma única fatura `INITIAL` e um processo `ONBOARDING`, mesmo com despacho repetido.
 - **F3. Chamado → processo de resolução → resolução:** o chamado herda o SLA do contrato. O processo `TICKET_RESOLUTION` copia o `dueAt` publicado pelo atendimento, então atraso ou reentrega do despacho não estendem o prazo.
 
@@ -69,6 +69,25 @@ O Compose publica todas as portas somente em `127.0.0.1`:
 A aplicação executa as migrações Alembic (`upgrade head`) ao iniciar, e os dados ficam no volume `archcorp-data`. Para parar a stack sem perder dados, use `docker compose down`. Não use `down -v`, que apaga o volume.
 
 Para acesso pela rede, use `PUBLIC_DEMO=true` com `DEMO_ACCESS_TOKEN`. Nunca abra as portas com os tokens locais ativos.
+
+### Modo local sem Docker (demonstração oficial)
+
+A demonstração oficial roda no notebook, sem Docker ([ADR-007](docs/adr/ADR-007-demonstracao-local-sem-supabase.md)). A API serve a interface compilada e usa SQLite. A cópia dos eventos no RabbitMQ é opcional e fica desligada.
+
+```powershell
+cd web; npm ci; npm run build; cd ..
+$env:PYTHONPATH = "src"
+$env:DATABASE_URL = "sqlite:///./tmp/demo.db"
+./.venv/Scripts/python -m uvicorn archcorp.main:app --port 8000
+```
+
+Em outro terminal, antes de apresentar:
+
+```powershell
+./scripts/verificar_demo.ps1
+```
+
+O script confere o commit, `/health/ready`, o token, a interface, os fluxos F1, F2 e F3 e gera o relatório operacional. Ele sai com `0` só se tudo passar.
 
 ## Demonstração dos fluxos
 
@@ -158,7 +177,9 @@ Outras tarefas de desenvolvimento:
 - **Contrato REST:** depois de alterar rotas ou schemas, rode `python tools/export_openapi.py`. Com `--check`, o comando só compara e falha se o OpenAPI estiver desatualizado.
 - **Migrações:** o esquema é versionado com Alembic, e as migrações são aditivas ([ADR-002](docs/adr/ADR-002-migracoes-aditivas.md)).
 - **Dados sintéticos:** `scripts/seed_sintetico.py` é idempotente e segue as [regras de dados sintéticos](docs/DADOS_SINTETICOS.md).
-- **Desempenho:** `scripts/performance_smoke.py` semeia dados sintéticos e mede o p95 das consultas de negócio dos cinco contextos (meta de 500 ms do RNF-07), em SQLite temporário ou no banco de `DATABASE_URL`, que é recriado.
+- **Desempenho:** `scripts/performance_smoke.py` semeia dados sintéticos e mede o p95 das consultas de negócio dos cinco contextos (meta de 500 ms do RNF-07), em SQLite temporário ou no banco de `DATABASE_URL`, que é recriado. Com `--json <arquivo>`, grava o resultado.
+- **Informação operacional:** com a API no ar, `scripts/relatorio_operacional.py` lê os resumos, `GET /api/v1/integration/insights` e `/metrics` e grava em `output/insights/` um relatório com indicadores e decisões sugeridas (funil F1→F2→F3, SLA, atraso de despacho, falhas, duplicidades evitadas, p95 e erros por código, uso por módulo).
+- **Evidências:** `tools/consolidar_evidencias.py` roda as verificações locais e grava `output/evidencias/evidencias.json` com o commit e os resultados. É a fonte única dos números citados na documentação, no relatório e nos slides.
 - **Erros:** todas as respostas de erro seguem `application/problem+json` (RFC 9457), com `code` e `correlationId`. Os erros `422` não ecoam a entrada recebida. Consulte o [contrato de erro](docs/INTEGRACOES.md#contrato-de-erro).
 
 ### Integração contínua
@@ -180,17 +201,18 @@ O workflow `Verify` roda em cada PR:
 | `GET /api/v1/operations/{correlationId}` | Trilha de auditoria de uma operação |
 | `POST /api/v1/integration/outbox/dispatch` | Despacho explícito da outbox, também disponível na interface |
 | `GET /api/v1/integration/outbox/summary` | Quantidade de eventos pendentes e com falha permanente; alimenta a barra de eventos da interface e exige `operations` ou `admin` |
+| `GET /api/v1/integration/insights` | Indicadores agregados: eventos por estado, retentativas, atraso do despacho por consumidor, uso por módulo na auditoria e chaves de idempotência; exige `operations` ou `admin` |
 | `GET /api/v1/integration/failures` | Eventos com falha permanente |
 | `POST /api/v1/integration/failures/{eventId}/reprocess` | Reprocessamento auditável, sem duplicar efeitos |
 | `GET /api/v1/integration/legacy-ids/{sourceSystem}/{legacyId}` | UUID global de um identificador legado |
 
 Toda requisição aceita `X-Correlation-ID` (UUID). Sem ele, a API gera um. O valor aparece na resposta, nos logs, nos eventos e na auditoria. Uma falha num consumidor desfaz os efeitos parciais, registra a tentativa sem guardar dados da exceção e não bloqueia os demais eventos.
 
-## Publicação gratuita
+## Publicação futura
 
-O `render.yaml` prepara um serviço **Render Free** com PostgreSQL do **Supabase Free**. Configure `DATABASE_URL` e `DEMO_ACCESS_TOKEN` no painel do provedor, nunca no Git. Com PostgreSQL, a inicialização ativa RLS e revoga os privilégios de `anon` e `authenticated` nas tabelas do protótipo, pois o acesso passa somente pela API ([orientação de segurança do Supabase](https://supabase.com/docs/guides/database/postgres/row-level-security)).
+A demonstração oficial é local ([ADR-007](docs/adr/ADR-007-demonstracao-local-sem-supabase.md)). O Supabase saiu do projeto, e a publicação pública ficou como evolução.
 
-**A publicação ainda não foi verificada.** Antes de declará-la pronta, vincule as contas, forneça os segredos e confirme a URL HTTPS, `/health/ready`, a criação e a leitura de dados e a persistência após reinício. A camada gratuita pode suspender ou hibernar por inatividade; consulte [Render Free](https://render.com/docs/free) e [pausa de projetos do Supabase Free](https://supabase.com/docs/guides/platform/free-project-pausing).
+O `render.yaml` permanece como artefato opcional e **não verificado**. Se for usado, configure no painel do provedor, nunca no Git, o `DEMO_ACCESS_TOKEN` e uma `DATABASE_URL` de um PostgreSQL escolhido. Antes de declarar uma publicação pronta, confirme a URL HTTPS, `/health/ready`, a criação e a leitura de dados e a persistência após reinício.
 
 ## Documentação
 
@@ -210,7 +232,8 @@ Comece por estes documentos:
 | [ADR-003](docs/adr/ADR-003-financeiro-fatura-final-e-excecao-aditiva.md) | Fatura final, vencimento por evento e exceção à regra aditiva | Aceito |
 | [ADR-004](docs/adr/ADR-004-estabilizacao-v1-e-convergencia.md) | Compatibilidade v1, privacidade e convergência T12/T15 | Aceito |
 | [ADR-005](docs/adr/ADR-005-fronteiras-http-e-integracao-publica.md) | Rotas e schemas por módulo; fachada pública de integração | Aceito |
-| [ADR-006](docs/adr/ADR-006-leitura-resiliente-do-crm.md) | Leitura resiliente do CRM no F1: retentativa limitada e `503` | Proposto |
+| [ADR-006](docs/adr/ADR-006-leitura-resiliente-do-crm.md) | Leitura resiliente do CRM no F1: retentativa limitada e `503` | Não adotado; evolução para CRM externo |
+| [ADR-007](docs/adr/ADR-007-demonstracao-local-sem-supabase.md) | Demonstração oficial local; Supabase retirado; publicação como evolução | Aceito |
 
 ### Inventário de artefatos
 
@@ -285,5 +308,5 @@ A ordem segue a estrutura do `Guia.pdf`:
 - O enunciado não informa os produtos dos cinco sistemas existentes. O AS-IS é uma hipótese a validar, e a demonstração usa módulos e simulações internas.
 - O RabbitMQ recebe cópias dos eventos, mas os consumidores do protótipo são chamados pelo despachante da API.
 - Não há OIDC/OAuth, contas individuais, tracing distribuído nem escala horizontal verificados.
-- O ADR-006 ainda aguarda aceite do responsável do projeto.
-- A URL pública, o PostgreSQL do Supabase e os arquivos finais só serão declarados entregues após conferência.
+- O ADR-006 não foi adotado: o adaptador de leitura resiliente do CRM continua no código, mas só faz sentido com um CRM externo.
+- Não há publicação pública: a demonstração é local (ADR-007). Os arquivos finais só serão declarados entregues após conferência.

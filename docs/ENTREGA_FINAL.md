@@ -45,7 +45,7 @@ preparação) e F3 (chamado → processo de resolução).
 | Participante | Contribuição declarada |
 |---|---|
 | Roger Quinelato | Backend, produto e negócio |
-| Raquel | Frontend e levantamento de requisitos |
+| Raquel Pereira | Frontend e levantamento de requisitos |
 
 Contribuições informadas pelo responsável em 28/10/2026.
 
@@ -66,13 +66,13 @@ reconciliação e verificação de vencimentos exigem ação explícita.
 Faturamento e pagamentos são simulados. Integração real, frota completa,
 emissão fiscal, alta disponibilidade e escala horizontal são evoluções.
 
-O guia permite demonstração local e sistemas simulados. A publicação
-Render/Supabase é um compromisso adicional do plano do projeto e depende de
-aceite verificável; não é comprovada apenas pela existência de `render.yaml`.
+O guia permite demonstração local e sistemas simulados. A demonstração
+oficial é local; o Supabase saiu do projeto e a publicação pública passou a
+ser evolução ([ADR-007](adr/ADR-007-demonstracao-local-sem-supabase.md)).
 
 ## Conferência antes da submissão
 
-- Conferir a identificação já preenchida: Roger Quinelato — backend, produto e negócio; Raquel — frontend e levantamento de requisitos.
+- Conferir a identificação já preenchida: Roger Quinelato — backend, produto e negócio; Raquel Pereira — frontend e levantamento de requisitos.
 - Confirmar se o professor aceita as premissas do cenário e a demonstração local
   ou se mantém a publicação pública prevista no plano.
 - Conferir relatório de 15–20 páginas, figuras legíveis, citações e referências.

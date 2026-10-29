@@ -27,7 +27,7 @@ operacionais ou as issues. Na consulta de 28/10, #15–#22 continuam abertas.
 | T20 / #23 / #64 — publicação | Aceite externo não comprovado | HTTPS, health, operações autenticadas, migrações, proteção e persistência após reinício |
 | T21 / #24 — vínculos oficiais | Estado externo não reconferido | Arquivos e links oficiais conferidos; não é exigência adicional de arquitetura do guia |
 | T22 / #25 / #66 — entrega | Pendente | Aceite docente, autoria, ensaio e submissão |
-| ADR-006 | Proposto | Decisão explícita do responsável, sem presumir aprovação |
+| ADR-006 | Não adotado (29/10/2026) | Mantido como evolução para CRM externo; sem pendência |
 
 O [panorama de prontidão](PANORAMA_PRONTIDAO.md) detalha riscos, esforço e
 dependências. O [índice final](ENTREGA_FINAL.md) organiza apenas os materiais

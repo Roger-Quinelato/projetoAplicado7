@@ -3,6 +3,8 @@ name: organizador-de-frentes-archcorp
 description: Organizar a frente acadêmica ArchCorp no Jira, Trello, Notion, Drive e GitHub sem duplicar a fonte de verdade.
 ---
 
+> **Registro histórico (27–30/09/2026).** Preservado como contexto da organização inicial. O estado vigente está em [ESTADO_IMPLEMENTACAO.md](../ESTADO_IMPLEMENTACAO.md) e o fechamento em [ENTREGA_FINAL.md](../ENTREGA_FINAL.md).
+
 # Fluxo do organizador de frentes — ArchCorp
 
 Adaptação do `SKILL (2).md` enviado por Roger. Este arquivo documenta o processo do projeto; não instala uma skill global.
