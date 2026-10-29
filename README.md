@@ -158,7 +158,9 @@ Outras tarefas de desenvolvimento:
 - **Contrato REST:** depois de alterar rotas ou schemas, rode `python tools/export_openapi.py`. Com `--check`, o comando só compara e falha se o OpenAPI estiver desatualizado.
 - **Migrações:** o esquema é versionado com Alembic, e as migrações são aditivas ([ADR-002](docs/adr/ADR-002-migracoes-aditivas.md)).
 - **Dados sintéticos:** `scripts/seed_sintetico.py` é idempotente e segue as [regras de dados sintéticos](docs/DADOS_SINTETICOS.md).
-- **Desempenho:** `scripts/performance_smoke.py` semeia dados sintéticos e mede o p95 das consultas de negócio dos cinco contextos (meta de 500 ms do RNF-07), em SQLite temporário ou no banco de `DATABASE_URL`, que é recriado.
+- **Desempenho:** `scripts/performance_smoke.py` semeia dados sintéticos e mede o p95 das consultas de negócio dos cinco contextos (meta de 500 ms do RNF-07), em SQLite temporário ou no banco de `DATABASE_URL`, que é recriado. Com `--json <arquivo>`, grava o resultado.
+- **Informação operacional:** com a API no ar, `scripts/relatorio_operacional.py` lê os resumos, `GET /api/v1/integration/insights` e `/metrics` e grava em `output/insights/` um relatório com indicadores e decisões sugeridas (funil F1→F2→F3, SLA, atraso de despacho, falhas, duplicidades evitadas, p95 e erros por código, uso por módulo).
+- **Evidências:** `tools/consolidar_evidencias.py` roda as verificações locais e grava `output/evidencias/evidencias.json` com o commit e os resultados. É a fonte única dos números citados na documentação, no relatório e nos slides.
 - **Erros:** todas as respostas de erro seguem `application/problem+json` (RFC 9457), com `code` e `correlationId`. Os erros `422` não ecoam a entrada recebida. Consulte o [contrato de erro](docs/INTEGRACOES.md#contrato-de-erro).
 
 ### Integração contínua
@@ -180,6 +182,7 @@ O workflow `Verify` roda em cada PR:
 | `GET /api/v1/operations/{correlationId}` | Trilha de auditoria de uma operação |
 | `POST /api/v1/integration/outbox/dispatch` | Despacho explícito da outbox, também disponível na interface |
 | `GET /api/v1/integration/outbox/summary` | Quantidade de eventos pendentes e com falha permanente; alimenta a barra de eventos da interface e exige `operations` ou `admin` |
+| `GET /api/v1/integration/insights` | Indicadores agregados: eventos por estado, retentativas, atraso do despacho por consumidor, uso por módulo na auditoria e chaves de idempotência; exige `operations` ou `admin` |
 | `GET /api/v1/integration/failures` | Eventos com falha permanente |
 | `POST /api/v1/integration/failures/{eventId}/reprocess` | Reprocessamento auditável, sem duplicar efeitos |
 | `GET /api/v1/integration/legacy-ids/{sourceSystem}/{legacyId}` | UUID global de um identificador legado |

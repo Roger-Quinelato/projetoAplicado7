@@ -325,6 +325,107 @@ paths:
           type: string
           format: uuid
         example: 11111111-1111-4111-8111-111111111111
+  /api/v1/integration/insights:
+    get:
+      tags:
+      - Integração
+      summary: Integration Insights
+      description: Agrega outbox, inbox, auditoria e idempotência em indicadores para
+        decisão (somente leitura).
+      operationId: integrationInsights
+      security:
+      - HTTPBearer: []
+      responses:
+        '200':
+          description: Indicadores agregados de eventos, atraso de despacho por consumidor,
+            auditoria e idempotência. Sem payloads nem dados pessoais.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationalInsightsResponse'
+              example:
+                generatedAt: '2026-10-29T15:00:00Z'
+                events:
+                - eventType: ContractActivated.v1
+                  total: 12
+                  published: 11
+                  pending: 0
+                  failed: 1
+                  retried: 2
+                  maxAttempts: 3
+                dispatchLag:
+                - consumer: finance
+                  processed: 11
+                  p50Seconds: 4.2
+                  p95Seconds: 38.5
+                  maxSeconds: 61.0
+                audit:
+                - module: contracts
+                  operation: activate_contract
+                  result: success
+                  count: 11
+                idempotencyKeys:
+                - operation: activate_contract
+                  count: 11
+          headers:
+            X-Correlation-ID:
+              description: UUID usado para correlacionar a requisição, os logs e os
+                eventos.
+              schema:
+                type: string
+                format: uuid
+              example: 11111111-1111-4111-8111-111111111111
+        '400':
+          description: Cabeçalho de correlação inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:bad-request
+                title: Requisição inválida
+                status: 400
+                detail: X-Correlation-ID deve ser UUID
+                instance: /api/v1/contracts/drafts
+                code: BAD_REQUEST
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/contracts/drafts
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/contracts/drafts
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+      parameters:
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
   /api/v1/integration/failures:
     get:
       tags:
@@ -5849,6 +5950,27 @@ components:
       - entityId
       - details
       title: AuditEntryResponse
+    AuditInsight:
+      properties:
+        module:
+          type: string
+          title: Module
+        operation:
+          type: string
+          title: Operation
+        result:
+          type: string
+          title: Result
+        count:
+          type: integer
+          title: Count
+      type: object
+      required:
+      - module
+      - operation
+      - result
+      - count
+      title: AuditInsight
     Billing-Input:
       properties:
         amount:
@@ -6455,6 +6577,32 @@ components:
         legacyMappings: 3
         processes: 2
         tickets: 1
+    DispatchLagInsight:
+      properties:
+        consumer:
+          type: string
+          title: Consumer
+        processed:
+          type: integer
+          title: Processed
+        p50Seconds:
+          type: number
+          title: P50Seconds
+          description: Mediana do tempo entre occurredAt e o processamento pelo consumidor.
+        p95Seconds:
+          type: number
+          title: P95Seconds
+        maxSeconds:
+          type: number
+          title: Maxseconds
+      type: object
+      required:
+      - consumer
+      - processed
+      - p50Seconds
+      - p95Seconds
+      - maxSeconds
+      title: DispatchLagInsight
     DispatchResponse:
       properties:
         processed:
@@ -6483,6 +6631,40 @@ components:
       - eligible
       - slaHours
       title: EntitlementResponse
+    EventInsight:
+      properties:
+        eventType:
+          type: string
+          title: Eventtype
+        total:
+          type: integer
+          title: Total
+        published:
+          type: integer
+          title: Published
+        pending:
+          type: integer
+          title: Pending
+        failed:
+          type: integer
+          title: Failed
+        retried:
+          type: integer
+          title: Retried
+          description: Publicados depois de pelo menos uma tentativa com falha.
+        maxAttempts:
+          type: integer
+          title: Maxattempts
+      type: object
+      required:
+      - eventType
+      - total
+      - published
+      - pending
+      - failed
+      - retried
+      - maxAttempts
+      title: EventInsight
     FailureResponse:
       properties:
         eventId:
@@ -6543,6 +6725,20 @@ components:
       - broker: UP
         database: UP
         status: UP
+    IdempotencyInsight:
+      properties:
+        operation:
+          type: string
+          title: Operation
+        count:
+          type: integer
+          title: Count
+          description: Chaves de idempotência registradas para a operação.
+      type: object
+      required:
+      - operation
+      - count
+      title: IdempotencyInsight
     InvoiceCancelInput:
       properties:
         reason:
@@ -6751,6 +6947,40 @@ components:
       - audit
       - events
       title: OperationTraceResponse
+    OperationalInsightsResponse:
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+          title: Generatedat
+        events:
+          items:
+            $ref: '#/components/schemas/EventInsight'
+          type: array
+          title: Events
+        dispatchLag:
+          items:
+            $ref: '#/components/schemas/DispatchLagInsight'
+          type: array
+          title: Dispatchlag
+        audit:
+          items:
+            $ref: '#/components/schemas/AuditInsight'
+          type: array
+          title: Audit
+        idempotencyKeys:
+          items:
+            $ref: '#/components/schemas/IdempotencyInsight'
+          type: array
+          title: Idempotencykeys
+      type: object
+      required:
+      - generatedAt
+      - events
+      - dispatchLag
+      - audit
+      - idempotencyKeys
+      title: OperationalInsightsResponse
     OpportunityInput:
       properties:
         customerId:

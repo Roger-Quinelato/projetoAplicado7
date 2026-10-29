@@ -27,7 +27,7 @@ from archcorp.infrastructure.migrate import upgrade_to_head
 from archcorp.integration.service import EventDispatcher, broker_status
 from archcorp.integration.public import LegacyIdService
 from archcorp.integration.routes import configure as configure_integration, router as integration_router
-from archcorp.observability import correlation_id_var, logger, metrics_middleware, render_metrics
+from archcorp.observability import correlation_id_var, logger, metrics_middleware, operation_label, render_metrics
 from archcorp.schemas import (
     DemoStateResponse,
     HealthResponse,
@@ -117,7 +117,8 @@ async def correlation_middleware(request: Request, call_next):
             logger.error(f"Erro não tratado ({type(exc).__name__})", extra={"operation": request.url.path, "result": "failure"})
             response = problem_response(request, 500, "Erro interno inesperado")
         response.headers["X-Correlation-ID"] = correlation_id
-        logger.info("Requisição concluída", extra={"operation": request.url.path, "result": response.status_code})
+        # Template da rota, como nas métricas: o caminho bruto traria identificadores ao log.
+        logger.info("Requisição concluída", extra={"operation": operation_label(request), "result": response.status_code})
         return response
     finally:
         correlation_id_var.reset(token)

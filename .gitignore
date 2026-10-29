@@ -234,3 +234,8 @@ docs/JIRA_STATUS.json
 web/test-results/
 web/playwright-report/
 web/blob-report/
+
+# Artefatos intermediários das evidências e do relatório operacional (o evidencias.json é versionado)
+output/evidencias/pytest.xml
+output/evidencias/desempenho.json
+output/insights/

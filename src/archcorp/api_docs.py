@@ -258,6 +258,24 @@ OUTBOX_SUMMARY_RESPONSES = {
 }
 
 
+INSIGHTS_RESPONSES = {
+    **COMMON_API_ERRORS,
+    200: {
+        "description": "Indicadores agregados de eventos, atraso de despacho por consumidor, auditoria e idempotência. Sem payloads nem dados pessoais.",
+        "headers": {"X-Correlation-ID": CORRELATION_RESPONSE_HEADER},
+        "content": {
+            "application/json": {"example": {
+                "generatedAt": "2026-10-29T15:00:00Z",
+                "events": [{"eventType": "ContractActivated.v1", "total": 12, "published": 11, "pending": 0, "failed": 1, "retried": 2, "maxAttempts": 3}],
+                "dispatchLag": [{"consumer": "finance", "processed": 11, "p50Seconds": 4.2, "p95Seconds": 38.5, "maxSeconds": 61.0}],
+                "audit": [{"module": "contracts", "operation": "activate_contract", "result": "success", "count": 11}],
+                "idempotencyKeys": [{"operation": "activate_contract", "count": 11}],
+            }}
+        },
+    },
+}
+
+
 FAILURE_LIST_RESPONSES = {
     **COMMON_API_ERRORS,
     200: {
