@@ -16,7 +16,7 @@ prontidão acadêmica.
 Os três defeitos reproduzidos foram corrigidos com testes de regressão: F3
 fora de ordem, cancelamento financeiro vencido e agregado do processo após
 encerramento. A autoria foi preenchida: Roger Quinelato (backend, produto e
-negócio); Raquel (frontend e levantamento de requisitos). A evidência detalhada
+negócio); Raquel Pereira (frontend e levantamento de requisitos). A evidência detalhada
 está em EVIDENCIAS_VALIDACAO.md. Permanecem ensaio, ambiente e aceite docente.
 
 | Frente | Situação observada | O que falta para aceite |

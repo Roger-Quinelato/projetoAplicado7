@@ -29,7 +29,7 @@ de encerramento agora exige processo e tarefas cancelados quando a preparação
 não foi executada, conforme a regra do agregado. Nenhuma checagem foi retirada.
 
 Autoria declarada: **Roger Quinelato — backend, produto e negócio**;
-**Raquel — frontend e levantamento de requisitos**. Relatório DOCX/PDF e slides
+**Raquel Pereira — frontend e levantamento de requisitos**. Relatório DOCX/PDF e slides
 regenerados com essas contribuições e as regras corrigidas. O PDF permanece
 com **20 páginas** e a apresentação com **18 slides**, com revisão visual e
 validação estrutural. Os registros anteriores abaixo são históricos.

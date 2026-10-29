@@ -15,7 +15,7 @@ const workspaceDir = (process.env.ARCHCORP_ROOT ?? path.resolve(path.dirname(fil
 const SKILL_DIR = process.env.PRESENTATIONS_SKILL_DIR ?? "C:/Users/roger/.codex/plugins/cache/openai-primary-runtime/presentations/26.1025.11240/skills/presentations";
 const IMG_DIR = path.join(workspaceDir, "docs/arquitetura/img");
 // Preencha antes da submissão, na mesma ordem do relatório (tools/build_report.py, EQUIPE).
-const EQUIPE = ["Roger Quinelato — backend, produto e negócio", "Raquel — frontend e levantamento de requisitos"];
+const EQUIPE = ["Roger Quinelato — backend, produto e negócio", "Raquel Pereira — frontend e levantamento de requisitos"];
 const DATA_RELATORIO = "28/10/2026";
 const ENTREGA_PRONTA = "09/11/2026";
 const APRESENTACAO = "23/11/2026";
@@ -84,7 +84,7 @@ function notes(slide, text) {
   textbox(slide, "Projeto Aplicado  |  Cenário 4", { left: 94, top: 390, width: 600, height: 50 }, 27, "#C8DFE2");
   const accent = slide.shapes.add({ geometry: "rect", position: { left: 95, top: 130, width: 180, height: 10 }, fill: C.rust, line: { fill: "none", width: 0 } });
   textbox(slide, `${EQUIPE.length ? EQUIPE.join("\n") : "Nomes e contribuições individuais ainda não informados"}\nVersão ${DATA_RELATORIO}  ·  Base main ${VERSAO_BASE}\nEntrega pronta ${ENTREGA_PRONTA}  ·  Apresentação ${APRESENTACAO} (previstas)`, { left: 94, top: 545, width: 1100, height: 110 }, 20, C.white);
-  notes(slide, "Fonte principal: Guia.pdf, enunciado acadêmico ArchCorp, 2026, 13 páginas. Cenário 4 aplicado a uma locadora fictícia inspirada na Localiza, com dados sintéticos. Referência técnica: main f1669d78f01e2d279b3de60a999ed778e6c9916e, PR #75 de 25/10/2026, https://github.com/Roger-Quinelato/projetoAplicado7/pull/75, commit consultado localmente. Marcos previstos conforme orientação da entrega. Autoria: Roger Quinelato — backend, produto e negócio; Raquel — frontend e levantamento de requisitos. Não há declaração de aceite docente.");
+  notes(slide, "Fonte principal: Guia.pdf, enunciado acadêmico ArchCorp, 2026, 13 páginas. Cenário 4 aplicado a uma locadora fictícia inspirada na Localiza, com dados sintéticos. Referência técnica: main f1669d78f01e2d279b3de60a999ed778e6c9916e, PR #75 de 25/10/2026, https://github.com/Roger-Quinelato/projetoAplicado7/pull/75, commit consultado localmente. Marcos previstos conforme orientação da entrega. Autoria: Roger Quinelato — backend, produto e negócio; Raquel Pereira — frontend e levantamento de requisitos. Não há declaração de aceite docente.");
 }
 
 // 2
@@ -303,9 +303,9 @@ function notes(slide, text) {
   textbox(slide, "Conclusões", { left: 90, top: 145, width: 430, height: 48 }, 29, C.teal, true);
   bullets(slide, ["Os três fluxos têm evidências no protótipo acadêmico", "Contratos e fronteiras permitem evolução incremental", "Regressões cobrem recuperação e estados finais"], { left: 85, top: 215, width: 520, height: 270 }, 24);
   textbox(slide, "Limites e evolução", { left: 700, top: 145, width: 430, height: 48 }, 29, C.teal, true);
-  bullets(slide, ["F3 aguarda a abertura e permite reprocessamento", "Processo respeita o agregado das tarefas", "Fatura vencida não aceita cancelamento", "Roger Quinelato e Raquel: autoria preenchida"], { left: 695, top: 205, width: 500, height: 310 }, 23);
+  bullets(slide, ["F3 aguarda a abertura e permite reprocessamento", "Processo respeita o agregado das tarefas", "Fatura vencida não aceita cancelamento", "Roger Quinelato e Raquel Pereira: autoria preenchida"], { left: 695, top: 205, width: 500, height: 310 }, 23);
   textbox(slide, `Entrega pronta prevista para ${ENTREGA_PRONTA}\nApresentação prevista para ${APRESENTACAO}`, { left: 165, top: 540, width: 950, height: 82 }, 27, C.rust, true);
-  notes(slide, "Correções de fechamento: F3 não confirma resolução/reconciliação sem processo; eventos mantêm retentativa e reprocessamento explícito. Encerramento do contrato cancela tarefas pendentes e deriva o estado agregado, preservando tarefas finais. Cancelamento financeiro usa a data UTC e o estado efetivo da consulta; vencida recebe 409. As correções não alteram registros antigos já consumidos. Autoria declarada: Roger Quinelato — backend, produto e negócio; Raquel — frontend e levantamento de requisitos. Permanecem ensaio, aceite docente e comprovação da hospedagem prevista no plano. OIDC, tracing distribuído e consumo pelo broker são evoluções.");
+  notes(slide, "Correções de fechamento: F3 não confirma resolução/reconciliação sem processo; eventos mantêm retentativa e reprocessamento explícito. Encerramento do contrato cancela tarefas pendentes e deriva o estado agregado, preservando tarefas finais. Cancelamento financeiro usa a data UTC e o estado efetivo da consulta; vencida recebe 409. As correções não alteram registros antigos já consumidos. Autoria declarada: Roger Quinelato — backend, produto e negócio; Raquel Pereira — frontend e levantamento de requisitos. Permanecem ensaio, aceite docente e comprovação da hospedagem prevista no plano. OIDC, tracing distribuído e consumo pelo broker são evoluções.");
 }
 
 for (let i = 0; i < deck.slides.items.length; i++) {

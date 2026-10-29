@@ -45,7 +45,7 @@ preparação) e F3 (chamado → processo de resolução).
 | Participante | Contribuição declarada |
 |---|---|
 | Roger Quinelato | Backend, produto e negócio |
-| Raquel | Frontend e levantamento de requisitos |
+| Raquel Pereira | Frontend e levantamento de requisitos |
 
 Contribuições informadas pelo responsável em 28/10/2026.
 
@@ -72,7 +72,7 @@ aceite verificável; não é comprovada apenas pela existência de `render.yaml`
 
 ## Conferência antes da submissão
 
-- Conferir a identificação já preenchida: Roger Quinelato — backend, produto e negócio; Raquel — frontend e levantamento de requisitos.
+- Conferir a identificação já preenchida: Roger Quinelato — backend, produto e negócio; Raquel Pereira — frontend e levantamento de requisitos.
 - Confirmar se o professor aceita as premissas do cenário e a demonstração local
   ou se mantém a publicação pública prevista no plano.
 - Conferir relatório de 15–20 páginas, figuras legíveis, citações e referências.

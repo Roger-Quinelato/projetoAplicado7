@@ -19,6 +19,7 @@ As regras **SEMPRE** são requisitos de execução em toda tarefa. As regras **N
 
 ### NUNCA
 
+- Registre agente de IA como autor, committer ou co-autor (`Claude <noreply@anthropic.com>`, `Co-Authored-By: ...`, `Generated with ...`) em commits, PRs, issues ou documentos. Todo commit e PR sai somente com a identidade do autor do projeto, Roger Quinelato; confira `git config user.name` e `user.email` antes de commitar.
 - Afirme ou sugira que o protótipo acessa, sincroniza ou integra sistemas reais da Localiza; não há essa conexão comprovada.
 - Apresente OIDC/OAuth, tracing distribuído, fila de erro no broker, escala horizontal, deploy público ou integração externa como implementados sem evidência verificável.
 - Inclua dados pessoais reais, credenciais, tokens, senhas, dados bancários ou conteúdo sensível de chamados em código, logs, exemplos, issues ou documentação.
