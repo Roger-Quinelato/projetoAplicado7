@@ -74,7 +74,7 @@ Em caso de conflito, o enunciado tem precedência. Não transforme premissas do 
 
 Cada entidade compartilhada usa UUID global e pode manter identificadores legados associados ao sistema de origem. Em divergências, não aplique estratégia de "última escrita vence" sem uma decisão explícita; preserve a fonte oficial e registre a inconsistência.
 
-## Reservas e contratos de integração
+## Contratos de integração
 
 - REST/JSON para comandos e consultas que exigem resposta imediata.
 - Eventos para fatos confirmados e efeitos desacoplados.
@@ -134,7 +134,7 @@ Uma correção de bug deve incluir teste que falha antes da correção. Não rem
 1. Identifique o requisito e a fonte oficial afetados.
 2. Confirme se a mudança respeita o ADR vigente; se não, proponha novo ADR antes de implementar.
 3. Faça a menor mudança coerente e mantenha as fronteiras de módulo.
-4. Atualize reservas e contratos antes ou junto da implementação.
+4. Atualize os contratos de integração (OpenAPI e AsyncAPI) antes ou junto da implementação.
 5. Execute testes e verificações de contrato relevantes.
 6. Atualize diagramas, exemplos e rastreabilidade do requisito.
 7. Registre limitações, premissas e riscos ainda abertos.
@@ -146,7 +146,7 @@ Uma tarefa só está concluída quando:
 - comportamento e critérios de aceite estão atendidos;
 - testes relevantes passam;
 - logs não expõem dados sensíveis;
-- reservas e contratos e documentação estão atualizados;
+- contratos de integração e documentação estão atualizados;
 - migrações são reproduzíveis e têm estratégia de compatibilidade;
 - falhas e reprocessamentos têm comportamento definido;
 - não foi criado acesso indevido entre módulos;

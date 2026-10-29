@@ -71,7 +71,7 @@ atribuições e histórico; Workflow, tarefas. A persistência abaixo lista tabe
 principais, sem representar um inventário completo. Não há gestão de frota nem
 integração com sistemas corporativos reais.
 
-| Contexto | Serviços e casos de uso | Interface pública | Dados oficiais | Persistência do protótipo |
+| Contexto | Serviços e casos de uso | Interface pública | Dados oficiais (domínio proposto) | Persistência do protótipo |
 |---|---|---|---|---|
 | CRM | Cadastro, atualização, elegibilidade e consentimento | API CRM e `CustomerReader` | Cliente, contatos, consentimentos, perfil de locação e oportunidade | `crm_customers` |
 | Contracts | Reserva, rascunho, ativação, encerramento, vigência e SLA | API Contracts e `ContractEntitlementPort` | Reserva, contrato de locação, grupo de veículo, vigência, proteções e SLA | `contracts_reservations`, `contracts_contracts` |

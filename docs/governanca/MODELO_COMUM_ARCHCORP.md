@@ -1,5 +1,7 @@
 # Modelo comum de demandas da ArchCorp
 
+> **Registro histórico (27–30/09/2026).** Preservado como contexto da organização inicial. O estado vigente está em [ESTADO_IMPLEMENTACAO.md](../ESTADO_IMPLEMENTACAO.md) e o fechamento em [ENTREGA_FINAL.md](../ENTREGA_FINAL.md).
+
 Adaptação do `modelo-comum.md` enviado por Roger. Atualizado em 27/09/2026.
 
 | Dimensão | Valores usados | Aplicação |
