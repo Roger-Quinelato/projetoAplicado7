@@ -356,3 +356,10 @@ def test_replay_persistido_do_suporte_nao_muda_com_relogio_ou_estado(client, adm
     assert conflict.status_code == 409 and conflict.json()["code"] == "IDEMPOTENCY_CONFLICT"
     with SessionLocal() as session:
         assert len(session.scalars(select(OutboxEvent).where(OutboxEvent.event_type == "TicketResolved.v1")).all()) == 1
+
+
+def test_log_json_registra_horario_em_utc():
+    # O sufixo Z declara UTC; o horário precisa ser convertido, não o local.
+    record = logging.LogRecord("archcorp", logging.INFO, __file__, 1, "sintético", None, None)
+    record.created = datetime(2030, 1, 10, 1, 2, 3, tzinfo=timezone.utc).timestamp()
+    assert '"timestamp": "2030-01-10T01:02:03Z"' in JsonFormatter().format(record)

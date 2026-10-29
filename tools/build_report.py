@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from docx import Document
@@ -149,16 +150,23 @@ EQUIPE: list[tuple[str, str]] = [
     ("Raquel Pereira", "Frontend e levantamento de requisitos"),
 ]
 
-# Datas editoriais e proveniência das verificações; não são novas execuções.
-DATA_RELATORIO = "28 de outubro de 2026"
+# Datas editoriais. Os números de verificação vêm de output/evidencias/evidencias.json,
+# gerado por tools/consolidar_evidencias.py; nada é transcrito à mão.
+DATA_RELATORIO = "29 de outubro de 2026"
 ENTREGA_PRONTA = "09/11/2026"
 APRESENTACAO = "23/11/2026"
-VERSAO_BASE = "f1669d7"
-DATA_EVIDENCIA = "20 de outubro de 2026"
-TESTES_HISTORICOS = "246 testes aprovados com PostgreSQL 16 e RabbitMQ 3.12 reais (232 aprovados e 14 ignorados com SQLite puro)"
-CI_EXECUCAO = "40199072801"
-TESTES = "Suítes da CI 40199072801 verificadas separadamente (seção 4.10)"
-P95 = "45,1 ms"
+EVIDENCIAS = json.loads((ROOT / "output" / "evidencias" / "evidencias.json").read_text(encoding="utf-8"))
+VERSAO_BASE = EVIDENCIAS["commitCurto"]
+_PYTEST = EVIDENCIAS["verificacoes"]["pytest"]
+_DESEMPENHO = EVIDENCIAS["verificacoes"]["desempenho"]
+_WEB = EVIDENCIAS["verificacoes"].get("web", {})
+DATA_EVIDENCIA = "/".join(reversed(EVIDENCIAS["geradoEm"][:10].split("-")))
+TESTES = f"{_PYTEST['aprovados']} aprovados e {_PYTEST['ignorados']} ignorados (SQLite)"
+P95 = f"{_DESEMPENHO['maiorP95Ms']:.2f} ms".replace(".", ",")
+WEB = next((item.split()[1] for item in _WEB.get("resumo", []) if item.startswith("pass ")), "não registrados")
+CI = EVIDENCIAS.get("ci", {})
+CI_TEXTO = (f"a execução {CI['execucao']} do GitHub Actions concluiu com {CI['conclusao']}" if CI.get("disponivel")
+            else "a CI do pull request executa os jobs de aplicação, PostgreSQL 16, RabbitMQ e navegador")
 
 
 def figure(doc, name, caption, width=6.9):
@@ -231,7 +239,7 @@ meta.add_run(f"{autores}\nVersão de {DATA_RELATORIO}\nEntrega pronta prevista p
 page(doc, "Resumo")
 para(doc, "O Cenário 4 do Projeto Aplicado descreve uma empresa de serviços com CRM, sistema de contratos, sistema financeiro, sistema de atendimento e sistema de gestão de processos que não se comunicam adequadamente (ARCHCORP, 2026a). O trabalho aplica o cenário a uma locadora de veículos fictícia inspirada na Localiza, com dados sintéticos e sem acesso a sistemas reais. O problema consiste em duplicidade de cadastro, lançamentos manuais, falhas difíceis de rastrear e processos fragmentados.")
 para(doc, "A solução proposta é uma arquitetura orientada a serviços entregue como monólito modular, com arquitetura hexagonal, APIs REST para interações imediatas e eventos para efeitos desacoplados. A metodologia combinou análise do enunciado, levantamento de requisitos, modelagem AS-IS e TO-BE, registro de decisões em ADR, implementação incremental e verificação automatizada. O protótipo separa os contextos CRM, Contracts, Finance, Support, Workflow e Integration, e a entrega confiável usa outbox, inbox, idempotência, correlação e reprocessamento auditado.")
-para(doc, f"A análise considera a main em {VERSAO_BASE}, integrada pelo PR #75 em 25/10/2026. Na CI {CI_EXECUCAO}, de 25/10, os quatro jobs concluíram com sucesso: application (252 aprovados e 14 ignorados), postgresql (262 aprovados e 4 ignorados), rabbitmq (22 aprovados) e e2e (25 roteiros aprovados e uma verificação axe aprovada). As suítes se sobrepõem e suas contagens não devem ser somadas. Como evidência histórica, em {DATA_EVIDENCIA} foram registrados {TESTES_HISTORICOS} e verificações dos fluxos F1 (20/20), F2 (14/14) e F3 (15/15). A medição histórica do RNF-07, com 60 clientes e 100 amostras por consulta em 10 consultas de negócio, apresentou maior p95 de {P95} no PostgreSQL, abaixo da meta de 500 ms. Os resultados usam dados sintéticos e não comprovam hospedagem pública nem nova medição de desempenho sobre essa main (PROJETO APLICADO 7, 2026a, 2026b, 2026c).")
+para(doc, f"A análise considera a versão {VERSAO_BASE}. Em {DATA_EVIDENCIA}, a verificação consolidada registrou {TESTES}, {WEB} testes da interface aprovados, contrato OpenAPI sincronizado e os roteiros F1, F2 e F3 concluídos sem falha; {CI_TEXTO}. A medição do RNF-07, com 60 clientes e 100 amostras em 10 consultas de negócio, apresentou maior p95 de {P95}, abaixo da meta de 500 ms. Um relatório operacional converte métricas, auditoria e eventos em indicadores com decisão sugerida. Os resultados usam dados sintéticos e uma demonstração local (PROJETO APLICADO 7, 2026a, 2026c).")
 para(doc, "Palavras-chave: arquitetura de sistemas corporativos; SOA; monólito modular; integração de sistemas; interoperabilidade; eventos.")
 
 # 1 Introdução
@@ -292,10 +300,10 @@ table(doc, ["Finalidade", "Recurso"], [
     ["Versionamento", "Git e GitHub (issues, pull requests e Actions)"],
     ["Gestão do trabalho", "Jira (registro principal), Trello, Notion e Google Drive"],
     ["Desenvolvimento", "Python, FastAPI, SQLAlchemy, Alembic; React e TypeScript na interface"],
-    ["Persistência e mensageria", "PostgreSQL e RabbitMQ no Docker Compose; SQLite nos testes"],
+    ["Persistência e mensageria", "PostgreSQL e RabbitMQ no Docker Compose; SQLite na demonstração local e nos testes"],
     ["Contratos", "Swagger/OpenAPI 3.1 e AsyncAPI 3.0"],
     ["Modelagem e documentação", "Mermaid, Markdown, python-docx e LibreOffice"],
-    ["Verificação", "Pytest, testes de contrato e de fronteira, Playwright e roteiros httpx"],
+    ["Verificação", "Pytest, testes de contrato e de fronteira, Playwright com axe, roteiros httpx e agentes de revisão FDE e QA somente leitura"],
 ], [2.0, 4.7])
 doc.add_heading("3.3 Métodos", level=2)
 table(doc, ["Atividade", "Método"], [
@@ -310,7 +318,7 @@ table(doc, ["Atividade", "Método"], [
 heading = doc.add_heading("3.4 Procedimentos metodológicos", level=2)
 heading.paragraph_format.page_break_before = True
 para(doc, "Os procedimentos compreenderam análise do escopo, levantamento de requisitos e AS-IS, modelagem TO-BE e contratos, implementação dos contextos e avaliação dos fluxos e atributos de qualidade. A matriz de rastreabilidade relaciona requisito, decisão, implementação e evidência. O enunciado prevalece sobre premissas, e detalhes organizacionais ausentes permanecem como hipóteses a validar.")
-para(doc, f"O recorte documental é {DATA_RELATORIO}, com referência técnica na main {VERSAO_BASE} (PR #75, 25/10/2026). O planejamento estabelece a entrega pronta em {ENTREGA_PRONTA} e a apresentação em {APRESENTACAO}. Esses marcos são compromissos previstos, sem declaração de submissão, apresentação realizada ou aceite docente. A conclusão formal depende também da identificação dos participantes e de suas contribuições.")
+para(doc, f"O recorte documental é {DATA_RELATORIO}, com referência técnica na versão {VERSAO_BASE}. Cada mudança passou por um portão de qualidade determinístico (testes, contrato e CI) e por revisão independente: um agente de QA verifica o código e um agente FDE confronta a entrega com o Guia, ambos sem permissão de alterar arquivos. O planejamento estabelece a entrega pronta em {ENTREGA_PRONTA} e a apresentação em {APRESENTACAO}. Esses marcos são compromissos previstos, sem declaração de submissão, apresentação realizada ou aceite docente. A conclusão formal depende também da identificação dos participantes e de suas contribuições.")
 
 # 4 Cenário atual
 page(doc, "4 Descrição e análise dos resultados")
@@ -393,7 +401,7 @@ table(doc, ["Camada", "Elementos", "Regra de dependência"], [
 doc.add_heading("4.3.2 Justificativa, vantagens e limitações", level=3)
 para(doc, "O estilo é adequado porque o problema é de integração e propriedade de dados, não de escala extrema: os volumes reais não foram informados e a equipe é júnior. As vantagens são uma única unidade de implantação, transações locais, testes rápidos e fronteiras que permitem extrair um contexto quando métricas justificarem. As limitações são escala conjunta de todos os módulos, banco compartilhado (protegido por convenção, prefixos e teste de fronteira) e uma falha de processo que afeta todos os contextos. O ADR-001 registra as alternativas descartadas: REST ponto a ponto, microsserviços completos e ESB com regras centrais.")
 doc.add_heading("4.3.3 Segurança", level=3)
-para(doc, "O protótipo aplica papéis por tokens locais e permite configurar um segredo compartilhado para o modo público. A validação ocorre na fronteira, e eventos não carregam documentos, dados bancários nem a descrição do chamado. A versão de referência compara credenciais em bytes para tratar caracteres não ASCII e limita o registro de exceções inesperadas ao tipo do erro, sem mensagem sensível nem traceback (PROJETO APLICADO 7, 2026b). Um ambiente real exigiria provedor OIDC, contas individuais e TLS verificado; esses itens não estão demonstrados.")
+para(doc, "O protótipo aplica papéis por tokens locais e permite configurar um segredo compartilhado para o modo público. A validação ocorre na fronteira, e eventos não carregam documentos, dados bancários nem a descrição do chamado. A versão de referência compara credenciais em bytes para tratar caracteres não ASCII e limita o registro de exceções inesperadas ao tipo do erro, sem mensagem sensível nem traceback (PROJETO APLICADO 7, 2026b). Um ambiente real exigiria provedor OIDC, contas individuais e TLS verificado; esses itens não estão demonstrados. A demonstração é local, sem publicação pública (ADR-007).")
 
 # 7 Sistemas corporativos e interoperabilidade
 doc.add_heading("4.4 Sistemas corporativos e interoperabilidade", level=2)
@@ -458,11 +466,11 @@ table(doc, ["Atributo", "Necessidade", "Risco", "Estratégia adotada", "Resultad
     ["Observabilidade", "Seguir operação entre módulos", "Falha sem causa identificável", "correlationId, logs, métricas e auditoria", "Trilha completa por consulta"],
     ["Manutenibilidade", "Mudar um contexto isoladamente", "Dependências cruzadas", "Portas públicas e teste de fronteira", "Mudanças localizadas"],
     ["Disponibilidade", "Não perder chamado", "Contracts indisponível", "Estado pendente e reconciliação", "Chamado preservado"],
-    ["Desempenho", "Resposta rápida na demo", "Latência de banco e serialização", "API sem estado e índices", f"p95 histórico de {P95} (20/10)"],
+    ["Desempenho", "Resposta rápida na demo", "Latência de banco e serialização", "API sem estado e índices", f"p95 máximo de {P95}"],
     ["Escalabilidade", "Crescer sem redesenho", "Saturação da API ou da fila", "API sem estado e consumidores idempotentes", "Escala no componente pressionado"],
     ["Testabilidade", "Reproduzir fluxos e falhas", "Erro só na apresentação", "Adaptadores substituíveis e suíte automatizada", TESTES],
 ], [1.05, 1.25, 1.2, 1.75, 1.45])
-para(doc, "A medição de desempenho de 20/10 representa um ambiente local (contêiner Linux, Python 3.13, PostgreSQL 16 e RabbitMQ 3.12) com dados sintéticos. A CI de 25/10 verifica a main de referência em jobs distintos de aplicação, PostgreSQL, RabbitMQ e navegador. As suítes se sobrepõem; suas contagens não constituem um total único. A verificação local de 28/10 registrou Python 264 aprovados e 14 ignorados, frontend 19 aprovados, TypeScript e OpenAPI aprovados. A hospedagem pública, o PostgreSQL gerenciado e a capacidade com volumes reais permanecem sem comprovação.")
+para(doc, f"A medição de desempenho de {DATA_EVIDENCIA} usa SQLite local com dados sintéticos; a CI verifica a mesma base com PostgreSQL 16, RabbitMQ e navegador. A capacidade com volumes reais permanece sem comprovação.")
 
 # 12 Evolução
 doc.add_heading("4.9 Escalabilidade, manutenção, evolução e viabilidade", level=2)
@@ -482,17 +490,18 @@ para(doc, "Viabilidade: o monólito modular limita custo de infraestrutura e com
 
 # 13 Análise e considerações finais
 doc.add_heading("4.10 Análise dos resultados", level=2)
-para(doc, f"A base da implementação é a main {VERSAO_BASE}, incorporada pelo PR #75 em 25/10/2026, com as correções de fechamento descritas nesta seção (PROJETO APLICADO 7, 2026b). A CI {CI_EXECUCAO}, executada em 25/10 nessa main, concluiu os quatro jobs com sucesso. Os resultados abaixo foram conferidos nos logs do GitHub Actions (PROJETO APLICADO 7, 2026c).")
-table(doc, ["Job da CI", "Resultado da verificação"], [
-    ["application", "252 testes aprovados e 14 ignorados"],
-    ["postgresql", "262 testes aprovados e 4 ignorados"],
-    ["rabbitmq", "22 testes aprovados"],
-    ["e2e", "25 roteiros de navegador aprovados; verificação axe separada: 1 aprovada"],
-], [1.3, 5.4])
-para(doc, f"As suítes se sobrepõem e não devem ser somadas. A verificação local informada em 28/10 registrou 264 testes Python aprovados e 14 ignorados, 19 testes da interface aprovados, checagem TypeScript e conferência OpenAPI aprovadas (PROJETO APLICADO 7, 2026d). A evidência de 20/10 (246 testes com PostgreSQL/RabbitMQ, 22 roteiros de navegador e p95 máximo de {P95}) permanece histórica; o p95 não foi medido novamente sobre a main {VERSAO_BASE} nesta revisão (PROJETO APLICADO 7, 2026a).")
+para(doc, f"A versão analisada é {VERSAO_BASE}, que parte da integração das tarefas T06–T19 (PROJETO APLICADO 7, 2026b) e incorpora as correções de fechamento descritas nesta seção (PROJETO APLICADO 7, 2026d). Os números a seguir foram gerados automaticamente a partir das execuções, sem transcrição manual (PROJETO APLICADO 7, 2026a).")
+table(doc, ["Verificação", "Resultado"], [
+    ["Suíte Python", TESTES],
+    ["Interface (node:test)", f"{WEB} testes aprovados"],
+    ["Contrato OpenAPI", "sincronizado com a aplicação"],
+    ["Desempenho (RNF-07)", f"maior p95 de {P95} em 10 consultas; meta de 500 ms"],
+    ["CI do GitHub Actions", CI_TEXTO],
+], [1.8, 4.9])
+para(doc, "O relatório operacional transforma os dados já gravados pela API em informação para decisão: funil F1→F2→F3, cumprimento de SLA, atraso do despacho por consumidor, retentativas e falhas por evento, repetições absorvidas pela idempotência, p95 e erros por código e uso por módulo. No ensaio, o funil indicou que nenhuma fatura foi paga, porque os roteiros não exercitam pagamento; esse tipo de leitura orienta o que demonstrar e onde evoluir (PROJETO APLICADO 7, 2026c).")
 para(doc, "Nos cenários exercitados, os três fluxos evitam recadastro, automatizam cobrança e preparação de retirada e levam o SLA ao atendimento. Os resultados sustentam a viabilidade do desenho, mas não garantem convergência em toda ordem de eventos ou consistência de todos os estados. Os componentes estão organizados por propriedade de dados, com teste estático das fronteiras. REST atende respostas imediatas e eventos coordenam efeitos posteriores. Portas, contratos aditivos e ADRs permitem evolução com mudanças localizadas.")
 para(doc, "O fechamento corrige três falhas reproduzidas e protegidas por regressões (PROJETO APLICADO 7, 2026d). No F3, resolução ou reconciliação sem processo existente falham de forma recuperável e não confirmam a inbox; após recuperar a abertura, o despacho conclui o processo, com reprocessamento explícito quando o evento chegou a FAILED. No encerramento de contrato, tarefas ainda abertas são canceladas e o estado do processo deriva do agregado: todas DONE resultam em COMPLETED; qualquer tarefa CANCELLED entre tarefas finais resulta em CANCELLED. O cancelamento financeiro usa o mesmo estado efetivo da consulta: fatura vencida é recusada com 409, mesmo antes do registro explícito da inadimplência. As mudanças não reparam retroativamente registros consumidos em versões anteriores.")
-para(doc, "Riscos e limitações: os dados organizacionais reais são desconhecidos; não há OIDC, tracing distribuído nem agendador (vencimento de fatura e SLA dependem de acionamento); o RabbitMQ recebe cópia dos eventos, mas não entrega aos consumidores, e FAILED é um estado da aplicação, não uma fila de erro do broker. O prazo da leitura do CRM limita tentativas e esperas, mas não interrompe uma chamada no mesmo processo; o ADR-006 permanece proposto, aguardando aceite. A hospedagem pública e o PostgreSQL gerenciado não foram verificados. Integração na main não comprova aceite docente, validação das premissas ou conclusão formal da entrega.")
+para(doc, "Riscos e limitações: os dados organizacionais reais são desconhecidos; não há OIDC, tracing distribuído nem agendador (vencimento de fatura e SLA dependem de acionamento); o RabbitMQ recebe cópia dos eventos, mas não entrega aos consumidores, e FAILED é um estado da aplicação, não uma fila de erro do broker. O prazo da leitura do CRM limita tentativas e esperas, mas não interrompe uma chamada no mesmo processo; o ADR-006 permanece proposto, aguardando aceite. A demonstração é local e a publicação pública ficou como evolução (ADR-007). Integração na main não comprova aceite docente, validação das premissas ou conclusão formal da entrega.")
 heading = doc.add_heading("5 Considerações finais", level=1)
 heading.paragraph_format.page_break_before = True
 para(doc, "Os objetivos técnicos possuem evidências no nível de protótipo acadêmico: requisitos, AS-IS, TO-BE, padrões, três integrações, interoperabilidade, qualidade e evolução estão documentados e demonstrados no recorte de validação apresentado. A autoria e as contribuições individuais estão identificadas na metodologia. A entrega acadêmica permanece condicionada à revisão docente das premissas e ao ensaio no ambiente escolhido. As decisões mais relevantes foram o monólito modular com fronteiras extraíveis, a outbox com inbox para efeitos únicos e o tratamento explícito da indisponibilidade (503 no F1 e estado pendente no F3). Os principais desafios foram manter fronteiras com banco e processo compartilhados e garantir a mesma correlação em HTTP, auditoria e eventos.")
@@ -502,7 +511,6 @@ para(doc, "As correções de convergência e coerência de estados da seção 4.
 page(doc, "6 Referências")
 refs = [
     "ARCHCORP. Projeto Aplicado – ArchCorp: Arquitetura de Sistemas Corporativos. Enunciado acadêmico do Projeto Aplicado. 2026a.",
-    "ARCHCORP. Plano de Execução e Cronograma Detalhado. Material acadêmico fornecido ao projeto. 2026b.",
     "ASYNCAPI INITIATIVE. AsyncAPI Specification 3.0.0. 2023. Disponível em: https://www.asyncapi.com/docs/reference/specification/v3.0.0. Acesso em: 17 out. 2026.",
     "BASS, Len; CLEMENTS, Paul; KAZMAN, Rick. Software architecture in practice. 4. ed. Boston: Addison-Wesley, 2021.",
     "BUTTLE, Francis; MAKLAN, Stan. Customer relationship management: concepts and technologies. 4. ed. London: Routledge, 2019.",
@@ -519,17 +527,17 @@ refs = [
     "NEWMAN, Sam. Building microservices: designing fine-grained systems. 2. ed. Sebastopol: O'Reilly Media, 2021.",
     "NYGARD, Michael T. Release it!: design and deploy production-ready software. 2. ed. Raleigh: Pragmatic Bookshelf, 2018.",
     "OPENAPI INITIATIVE. OpenAPI Specification 3.1.1. 2024. Disponível em: https://spec.openapis.org/oas/v3.1.1.html. Acesso em: 17 out. 2026.",
-    "PROJETO APLICADO 7. Evidências de validação. Seções de 20/10 e 21/10/2026. Documento do repositório docs/EVIDENCIAS_VALIDACAO.md, versão f1669d7. 2026a.",
+    f"PROJETO APLICADO 7. Evidências de validação. Documento docs/EVIDENCIAS_VALIDACAO.md e arquivo output/evidencias/evidencias.json, versão {VERSAO_BASE}, {DATA_EVIDENCIA}. 2026a.",
     "PROJETO APLICADO 7. Integra as tarefas T06–T19 à main e recupera correções do T17. PR #75, commit f1669d78f01e2d279b3de60a999ed778e6c9916e, 25 out. 2026. Disponível em: https://github.com/Roger-Quinelato/projetoAplicado7/pull/75. Registro do commit consultado localmente em: 28 out. 2026. 2026b.",
-    "PROJETO APLICADO 7. Verify: execução 40199072801 na main f1669d7. GitHub Actions, 25 out. 2026. Disponível em: https://github.com/Roger-Quinelato/projetoAplicado7/actions/runs/40199072801. Logs consultados no GitHub Actions em: 28 out. 2026. 2026c.",
-    "PROJETO APLICADO 7. Registros de testes locais e revisão de código de 28 out. 2026. Resultados e reproduções informados pela equipe; conferência dos consumidores em src/archcorp/workflow/service.py e das regras em src/archcorp/finance/service.py e domain.py. 2026d.",
+    "PROJETO APLICADO 7. Relatório operacional e agentes de verificação. Arquivos scripts/relatorio_operacional.py, tools/consolidar_evidencias.py e docs/agentes/AGENTES_FDE_QA.md. 2026c.",
+    "PROJETO APLICADO 7. Corrige recuperação do F3, estados de fechamento e autoria da entrega. PR #78, commit 714b17c, 28 out. 2026. Disponível em: https://github.com/Roger-Quinelato/projetoAplicado7/pull/78. 2026d.",
     "RICHARDS, Mark; FORD, Neal. Fundamentals of software architecture: an engineering approach. Sebastopol: O'Reilly Media, 2020.",
 ]
 for ref in refs:
     p = doc.add_paragraph()
     p.paragraph_format.space_after = Pt(4)
     p.add_run(ref).font.size = Pt(9)
-para(doc, "Documentos complementares do repositório: ADR-001 a ADR-006; requisitos; plano de implementação; matriz de rastreabilidade; arquitetura AS-IS, TO-BE e fluxos de integração; exemplos de API; contratos OpenAPI e AsyncAPI; roteiros de demonstração; evidências de validação.")
+para(doc, "Documentos complementares do repositório: ADR-001 a ADR-007; requisitos; plano de implementação; matriz de rastreabilidade; arquitetura AS-IS, TO-BE e fluxos de integração; exemplos de API; contratos OpenAPI e AsyncAPI; roteiros de demonstração; evidências de validação.")
 
 doc.core_properties.title = "Arquitetura de Integração para Empresa de Serviços"
 doc.core_properties.subject = "Projeto Aplicado Cenário 4"

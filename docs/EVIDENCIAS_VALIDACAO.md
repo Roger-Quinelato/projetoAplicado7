@@ -1,5 +1,36 @@
 # Evidências de validação
 
+> O estado atual de execução está no [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e no [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
+
+Este documento é a fonte única dos números de verificação (testes, p95, roteiros). Os demais documentos citam esta página em vez de repetir os valores. As seções estão em ordem cronológica inversa; cada uma vale apenas para o commit e o ambiente indicados.
+
+## Evidência consolidada em 29/10/2026 (commit `534eab2`)
+
+Gerada por `tools/consolidar_evidencias.py --com-web` com a árvore limpa; o arquivo bruto é [`output/evidencias/evidencias.json`](../output/evidencias/evidencias.json). Windows 11, Python 3.12, SQLite.
+
+| Verificação | Resultado |
+|---|---|
+| `pytest -q` (suíte completa) | **269 aprovados, 14 ignorados**, 0 falhas, em 420 s. Os ignorados exigem PostgreSQL ou RabbitMQ reais |
+| `tools/export_openapi.py --check` | Aprovado |
+| `scripts/performance_smoke.py` (10 consultas, 100 amostras cada) | Maior p95: **21,53 ms**; meta do RNF-07: 500 ms |
+| `npm test` (web) | **19 aprovados**, 0 falhas |
+| Fluxos `demo_f1.py`, `demo_f2.py` e `demo_f3.py` contra `uvicorn` local | Saída `0` nos três (execução de 29/10/2026 na mesma base de código) |
+| CI do commit | Consultar o PR #79; o job registra Docker, PostgreSQL, RabbitMQ e E2E |
+
+Em relação ao fechamento técnico abaixo, entraram 4 testes da informação operacional (`tests/test_insights_operacionais.py`).
+
+## Fechamento técnico em 29/10/2026 (PR #79)
+
+Commit `ceff8f6`, branch `fix/etapa2-sem-supabase-e-correcoes`. Python 3.12 no Windows 11, SQLite em `tmp/test-archcorp.db`, `PYTHONPATH=src`.
+
+| Verificação | Resultado |
+|---|---|
+| `pytest -q` (suíte completa) | **265 aprovados, 14 ignorados**, em 334 s. Os ignorados exigem PostgreSQL ou RabbitMQ reais |
+| Testes novos antes da correção | `test_reserva_compara_inicio_com_a_data_utc` e `test_log_json_registra_horario_em_utc` falharam, como esperado |
+| `tools/export_openapi.py --check` | Aprovado |
+
+A contagem difere da de 28/10 (264) porque saiu o teste da proteção RLS do Supabase (ADR-007) e entraram os dois testes de UTC. Docker e PostgreSQL ficam com a CI do PR.
+
 ## Fechamento das correções e autoria em 28/10/2026
 
 As três falhas da revisão foram corrigidas: resolução do F3 aguarda a abertura
@@ -60,9 +91,9 @@ resultados, conclusões e referências. A demonstração admite sistemas simulad
 e exige pelo menos três fluxos integrados. A cobertura está em
 [ENTREGA_FINAL.md](ENTREGA_FINAL.md).
 
-Ainda exigem conferência de entrega: nomes/contribuições, revisão da versão
-renderizada a submeter, ensaio completo no ambiente escolhido e aceite
-docente. Configuração de deploy não comprova HTTPS ou persistência no provedor.
+Ainda exigem conferência de entrega: revisão da versão renderizada a submeter,
+ensaio completo no ambiente local e aceite docente. Não há publicação pública
+(ADR-007).
 
 ### Execução local em 28/10/2026
 
@@ -76,7 +107,7 @@ docente. Configuração de deploy não comprova HTTPS ou persistência no proved
 - Sondas adicionais identificaram recuperação fora de ordem no F3, divergência
   entre vencimento calculado e cancelamento, e encerramento com processo
   concluído/tarefa cancelada. Cenários e prioridades no
-  [panorama](PANORAMA_PRONTIDAO.md). Não foram corrigidos nesta revisão documental.
+  [panorama](PANORAMA_PRONTIDAO.md). Não foram corrigidos nesta revisão documental; a correção está registrada na seção de fechamento de 28/10, acima.
 
 ### Artefatos regenerados em 28/10/2026
 
@@ -85,9 +116,7 @@ apresentação regenerada com **18 slides**. Houve revisão visual e validação
 estrutural do PPTX. Datas, evidências e limitações conhecidas foram atualizadas.
 O runtime gráfico dos slides devolveu código 1 após salvar os arquivos, embora
 os arquivos e validações tenham sido produzidos; não é declarado sucesso
-irrestrito do comando de geração. Autoria e contribuições continuam pendentes.
-
-> O estado atual de execução está no [Estado da implementação](ESTADO_IMPLEMENTACAO.md) e no [Cronograma executável](CRONOGRAMA_EXECUCAO.md). As seções de desenho abaixo incluem metas futuras e premissas acadêmicas; o código e os testes são a evidência do comportamento atual.
+irrestrito do comando de geração. Autoria e contribuições estavam pendentes nesta data e foram preenchidas no fechamento de 28/10, acima.
 
 ## Indicadores da Visão geral contados no servidor (#73, 2026-10-21)
 
@@ -222,7 +251,7 @@ As evidências de 13/09 e 14/09 abaixo são históricas e descrevem a versão an
 - Degradação: atendimento e assistência 24h registrou `PENDING_ENTITLEMENT` e reconciliou após retorno de Contracts.
 - Segurança: papel de atendimento e assistência 24h recebeu 403 ao tentar criar cliente.
 - Falha permanente: evento chegou a `FAILED` após três tentativas, apareceu na consulta e voltou a `PENDING` por reprocessamento auditado.
-- Reservas e contratos: o OpenAPI salvo corresponde ao `app.openapi()`, contém esquemas de resposta, exemplos dos três fluxos e UUID nos identificadores globais; o AsyncAPI contém três eventos com o envelope obrigatório, incluindo `causationId`.
+- Contratos de integração: o OpenAPI salvo corresponde ao `app.openapi()`, contém esquemas de resposta, exemplos dos três fluxos e UUID nos identificadores globais; o AsyncAPI contém três eventos com o envelope obrigatório, incluindo `causationId`.
 - Arquitetura: teste estático não encontrou importação de modelos internos entre contextos de negócio.
 - Desempenho local: 200 consultas de prontidão tiveram p95 de 6,36 ms, abaixo da meta de 500 ms no ambiente de teste local.
 

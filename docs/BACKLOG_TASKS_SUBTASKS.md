@@ -74,7 +74,7 @@
 - [x] Subtask 8.2 Criar roteiro de demonstração.
 - [x] Subtask 8.3 Criar relatório técnico de 15 a 20 páginas.
 - [x] Subtask 8.4 Criar apresentação técnica.
-- [ ] Subtask 8.5 Inserir nomes dos integrantes e contribuições individuais antes da submissão.
+- [x] Subtask 8.5 Inserir nomes dos integrantes e contribuições individuais antes da submissão (28/10/2026: Roger Quinelato e Raquel Pereira).
 
 ## Task 9 Revisão final da entrega
 

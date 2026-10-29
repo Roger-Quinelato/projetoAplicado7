@@ -160,7 +160,7 @@ Cliente inexistente, inelegível ou sem consentimento, resposta `422`:
 
 Um corpo estruturalmente inválido também recebe `422` com código `VALIDATION_ERROR`.
 Para manter compatibilidade com a versão 1, `detail` continua sendo a lista de erros
-do FastAPI; a mesma lista aparece em `errors`. Exemplo com `customerId` inválido:
+do FastAPI, sem ecoar a entrada recebida (`input` e `ctx` são omitidos, e `msg` é genérica); a mesma lista aparece em `errors`. Exemplo com `customerId` inválido:
 
 ```json
 {
@@ -174,8 +174,7 @@ do FastAPI; a mesma lista aparece em `errors`. Exemplo com `customerId` inválid
         "body",
         "customerId"
       ],
-      "msg": "Input should be a valid UUID",
-      "input": "not-a-uuid"
+      "msg": "Entrada inválida"
     }
   ],
   "instance": "/api/v1/contracts/drafts",
@@ -188,8 +187,7 @@ do FastAPI; a mesma lista aparece em `errors`. Exemplo com `customerId` inválid
         "body",
         "customerId"
       ],
-      "msg": "Input should be a valid UUID",
-      "input": "not-a-uuid"
+      "msg": "Entrada inválida"
     }
   ]
 }
@@ -549,8 +547,7 @@ Um UUID inválido no corpo também recebe `422` com a lista de validação estru
         "body",
         "contractId"
       ],
-      "msg": "Input should be a valid UUID",
-      "input": "not-a-uuid"
+      "msg": "Entrada inválida"
     }
   ],
   "instance": "/api/v1/support/tickets",
@@ -563,8 +560,7 @@ Um UUID inválido no corpo também recebe `422` com a lista de validação estru
         "body",
         "contractId"
       ],
-      "msg": "Input should be a valid UUID",
-      "input": "not-a-uuid"
+      "msg": "Entrada inválida"
     }
   ]
 }
@@ -889,6 +885,171 @@ Authorization: Bearer demo-operations
 ```
 
 `running` exclui os estados finais `COMPLETED` e `CANCELLED`.
+
+### Financeiro: pagamento simulado, vencimento e cancelamento
+
+Pagamento simulado, com `Idempotency-Key` opcional. A moeda deve ser a da fatura, o valor deve ter duas casas e não pode exceder o saldo:
+
+```http
+POST /api/v1/finance/invoices/ffffffff-ffff-4fff-8fff-ffffffffffff/payments HTTP/1.1
+Authorization: Bearer demo-finance
+Idempotency-Key: pagamento-0001
+Content-Type: application/json
+
+{"amount": 2500.00, "currency": "BRL", "reference": "SIMULATED-001"}
+```
+
+Resposta `201` (a repetição com a mesma chave devolve `Idempotency-Replayed: true`):
+
+```json
+{
+  "paymentId": "12121212-1212-4121-8121-121212121212",
+  "invoice": {
+    "invoiceId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+    "kind": "INITIAL",
+    "amount": 2500.0,
+    "currency": "BRL",
+    "paidAmount": 2500.0,
+    "balance": 0.0,
+    "status": "PAID"
+  }
+}
+```
+
+Verificação de vencimento, comando explícito e idempotente pelo estado:
+
+```http
+POST /api/v1/finance/invoices/overdue-check HTTP/1.1
+Authorization: Bearer demo-finance
+Content-Type: application/json
+
+{"asOf": "2026-10-25"}
+```
+
+```json
+{
+  "asOf": "2026-10-25",
+  "evaluatedAt": "2026-10-25T09:00:00Z",
+  "markedOverdue": ["ffffffff-ffff-4fff-8fff-ffffffffffff"],
+  "alreadyOverdue": 0
+}
+```
+
+Cancelamento de fatura aberta e sem pagamento. O motivo vai para a auditoria e não pode conter dado sensível. Uma fatura paga, já cancelada ou vencida recebe `409 INVALID_STATE`:
+
+```http
+POST /api/v1/finance/invoices/ffffffff-ffff-4fff-8fff-ffffffffffff/cancel HTTP/1.1
+Authorization: Bearer demo-finance
+Content-Type: application/json
+
+{"reason": "Cobrança emitida em duplicidade"}
+```
+
+As respostas completas, com todos os campos e erros, estão em `docs/api/openapi.yaml`.
+
+## Eventos de encerramento, cadastro e atendimento
+
+Os envelopes seguem o formato obrigatório (`eventId`, `eventType`, `eventVersion`, `occurredAt`, `correlationId`, `causationId`, `producer`, `payload`). Os exemplos são os mesmos de `docs/events/asyncapi.yaml`.
+
+`ContractClosed.v1`, consumido pelo Workflow (encerramento do processo) e pelo Finance (fatura final):
+
+```json
+{
+  "eventId": "18181818-1818-4181-8181-181818181818",
+  "eventType": "ContractClosed.v1",
+  "eventVersion": 1,
+  "occurredAt": "2027-01-08T15:00:00Z",
+  "correlationId": "11111111-1111-4111-8111-111111111111",
+  "causationId": null,
+  "producer": "contracts",
+  "payload": {
+    "contractId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "serviceCode": "RENTAL-FLEX",
+    "startsOn": "2026-10-01",
+    "endsOn": "2027-01-08",
+    "billing": {"amount": 2500.0, "currency": "BRL", "cycle": "MONTHLY"},
+    "slaHours": 8,
+    "status": "CLOSED",
+    "closeReason": "Devolução do veículo"
+  }
+}
+```
+
+`CustomerUpdated.v1`, consumido pela projeção de clientes de Contracts:
+
+```json
+{
+  "eventId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+  "eventType": "CustomerUpdated.v1",
+  "eventVersion": 1,
+  "occurredAt": "2026-10-01T09:50:00Z",
+  "correlationId": "11111111-1111-4111-8111-111111111111",
+  "causationId": null,
+  "producer": "crm",
+  "payload": {
+    "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "name": "Cliente Frota Localiza Ltda.",
+    "email": "gestor.frota@cliente-sintetico.example.com"
+  }
+}
+```
+
+`TicketEntitlementReconciled.v1`, consumido pelo Workflow, que ajusta o prazo do processo ao `dueAt` reconciliado:
+
+```json
+{
+  "eventId": "aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa",
+  "eventType": "TicketEntitlementReconciled.v1",
+  "eventVersion": 1,
+  "occurredAt": "2026-10-01T11:40:00Z",
+  "correlationId": "11111111-1111-4111-8111-111111111111",
+  "causationId": null,
+  "producer": "support",
+  "payload": {
+    "ticketId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "contractId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    "serviceCode": "RENTAL-FLEX",
+    "category": "QUESTION",
+    "status": "OPEN",
+    "priority": "NORMAL",
+    "slaHours": 8,
+    "dueAt": "2026-10-01T18:10:00Z",
+    "openedAt": "2026-10-01T10:10:00Z",
+    "resolvedAt": null,
+    "slaStatus": "WITHIN"
+  }
+}
+```
+
+`TicketResolved.v1`, consumido pelo Workflow, que conclui o processo de resolução:
+
+```json
+{
+  "eventId": "aaaaaaaa-2222-4222-8222-aaaaaaaaaaaa",
+  "eventType": "TicketResolved.v1",
+  "eventVersion": 1,
+  "occurredAt": "2026-10-01T12:10:00Z",
+  "correlationId": "11111111-1111-4111-8111-111111111111",
+  "causationId": null,
+  "producer": "support",
+  "payload": {
+    "ticketId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    "customerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "contractId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    "serviceCode": "RENTAL-FLEX",
+    "category": "OUTAGE",
+    "status": "RESOLVED",
+    "priority": "HIGH",
+    "slaHours": 8,
+    "dueAt": "2026-10-01T18:10:00Z",
+    "openedAt": "2026-10-01T10:10:00Z",
+    "resolvedAt": "2026-10-01T12:10:00Z",
+    "slaStatus": "MET"
+  }
+}
+```
 
 ## Consultar a correlação
 

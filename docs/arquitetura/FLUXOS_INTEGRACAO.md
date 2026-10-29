@@ -313,7 +313,7 @@ sequenceDiagram
     Contracts-->>Operador: 200 CLOSED com eventId
     Operador->>Dispatcher: POST /integration/outbox/dispatch
     Dispatcher->>Workflow: ContractClosed.v1
-    Workflow->>Workflow: Concluir preparação de retirada pendente
+    Workflow->>Workflow: Cancelar tarefas abertas e derivar o estado do processo (COMPLETED ou CANCELLED)
     Dispatcher->>Finance: ContractClosed.v1
     Finance->>Finance: Fatura FINAL por ciclo iniciado, menos o já faturado (única por eventId e contrato; marcador se não houver valor)
 ```
@@ -323,6 +323,11 @@ devolve a resposta original com `Idempotency-Replayed: true` e não cria outro
 evento. Sem `Idempotency-Key`, uma repetição recebe `409`. Desde a T12, Finance
 consome `ContractClosed.v1` depois do Workflow e emite a fatura final; sem valor
 restante (por exemplo, ciclo `ONCE` já faturado), apenas registra auditoria.
+
+No Workflow, o encerramento cancela as tarefas de preparação ainda abertas e
+deriva o estado do processo: `COMPLETED` quando todas as tarefas estão `DONE`;
+`CANCELLED` quando todas são finais e alguma foi cancelada. A reentrega preserva
+estados e responsáveis finais (correção de fechamento de 28/10/2026).
 
 ### Ciclo de vida da fatura e inadimplência (T12)
 

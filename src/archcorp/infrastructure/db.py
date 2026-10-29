@@ -1,7 +1,7 @@
 from collections.abc import Generator
 from typing import TypeVar
 
-from sqlalchemy import Connection, Engine, create_engine, event, func, select, text
+from sqlalchemy import Connection, Engine, create_engine, event, func, select
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from archcorp.config import settings
@@ -37,20 +37,6 @@ def use_explicit_sqlite_transactions(target: Engine) -> None:
 
 use_explicit_sqlite_transactions(engine)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
-
-
-def protect_public_demo_tables(connection: Connection) -> None:
-    """Deny Supabase Data API roles access to tables owned by the demo app."""
-    if not settings.public_demo or engine.dialect.name != "postgresql":
-        return
-
-    roles = set(connection.execute(text("SELECT rolname FROM pg_roles WHERE rolname IN ('anon', 'authenticated')")).scalars())
-    preparer = engine.dialect.identifier_preparer
-    for table in Base.metadata.sorted_tables:
-        identifier = preparer.format_table(table)
-        connection.exec_driver_sql(f"ALTER TABLE {identifier} ENABLE ROW LEVEL SECURITY")
-        for role in sorted(roles):
-            connection.exec_driver_sql(f"REVOKE ALL PRIVILEGES ON TABLE {identifier} FROM {preparer.quote(role)}")
 
 
 ModelT = TypeVar("ModelT", bound=Base)

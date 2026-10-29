@@ -107,7 +107,7 @@ flowchart LR
 - **Configuração do Docker Compose:** PostgreSQL 16, banco `archcorp`, persistido no volume `archcorp-data`.
 - **Execução sem Compose:** a configuração padrão usa SQLite; `DATABASE_URL` permite selecionar o banco.
 - **RabbitMQ:** recebe cópia dos eventos publicados; os consumidores internos são processados pelo despachante da aplicação.
-- **Ambiente externo:** a execução em Render/Supabase não foi verificada. A configuração do protótipo não comprova integração com CRM, frota, assinatura ou sistemas reais da Localiza.
+- **Ambiente externo:** a demonstração oficial é local e não há publicação pública (ADR-007). A configuração do protótipo não comprova integração com CRM, frota, assinatura ou sistemas reais da Localiza.
 
 ## Referências no código
 

@@ -1,5 +1,7 @@
 # Benchmark de bancos para o semestre e aprendizado de backend
 
+> **Nota de 29/10/2026:** pesquisa histórica. O Supabase saiu do projeto e a demonstração oficial é local ([ADR-007](adr/ADR-007-demonstracao-local-sem-supabase.md)).
+
 Data da pesquisa: 30/09/2026. Parecer consultivo, não uma decisão arquitetural aprovada. Nenhum código, infraestrutura, AGENT.md, CLAUDE.md ou ADR vigente foi alterado. Preços e ofertas refletem as páginas oficiais consultadas e devem ser conferidos antes da contratação.
 
 ## Recomendação

@@ -1,6 +1,6 @@
 # Plano de implementação - Cenário 4: Localiza - locação de veículos e mobilidade corporativa
 
-> Plano arquitetural de referência, com opções e metas ainda não implementadas. Os marcos vigentes são 09/11/2026 (projeto e documentação prontos) e 23/11/2026 (apresentação). O plano S1–S14 é histórico; o fechamento e o status verificável estão em [Cronograma executável](docs/CRONOGRAMA_EXECUCAO.md) e [Estado da implementação](docs/ESTADO_IMPLEMENTACAO.md). O protótipo acadêmico não tem OIDC, tracing distribuído nem consumidores RabbitMQ; esses itens abaixo descrevem evolução possível.
+> Plano arquitetural de referência, com opções e metas ainda não implementadas. OIDC/OAuth, traces distribuídos, fila de erro no broker, retentativa exponencial na outbox, circuit breaker, grupo de veículo no evento F2 e publicação pública (ver ADR-007) são metas, não comportamento implementado. Os marcos vigentes são 09/11/2026 (projeto e documentação prontos) e 23/11/2026 (apresentação). O plano S1–S14 é histórico; o fechamento e o status verificável estão em [Cronograma executável](docs/CRONOGRAMA_EXECUCAO.md) e [Estado da implementação](docs/ESTADO_IMPLEMENTACAO.md). O protótipo acadêmico não tem OIDC, tracing distribuído nem consumidores RabbitMQ; esses itens abaixo descrevem evolução possível.
 
 ## 1. Objetivo
 
@@ -141,7 +141,7 @@ flowchart LR
 - Identificadores globais: UUID para `customerId`, `contractId`, `invoiceId`, `ticketId` e `processId`.
 - Identificadores legados: mantidos em tabela de mapeamento por sistema de origem.
 - Envelope de evento: `eventId`, `eventType`, `eventVersion`, `occurredAt`, `correlationId`, `causationId`, `producer` e `payload`.
-- Reservas e contratos: OpenAPI para REST e AsyncAPI ou JSON Schema para eventos.
+- Contratos de integração: OpenAPI para REST e AsyncAPI ou JSON Schema para eventos.
 - Versionamento: versão maior na URL REST (`/api/v1`) e no tipo/esquema do evento; mudanças compatíveis são aditivas.
 - Consistência: forte dentro de uma transação do módulo e eventual entre sistemas.
 - Conflitos: a fonte oficial vence; divergências são registradas e enviadas para análise, sem sobrescrever silenciosamente.
@@ -151,7 +151,7 @@ flowchart LR
 
 Problema: o CRM identifica um cliente pelo e-mail, enquanto reservas e contratos usa um código numérico e atendimento e assistência 24h cria outro cadastro pelo CPF. Isso gera duplicidade e chamados vinculados ao contrato errado.
 
-Solução: ao integrar o primeiro registro, o serviço de integração gera um `customerId` global e guarda a relação com cada identificador legado. Os reservas e contratos REST e eventos carregam o identificador global. Regras de correspondência só sugerem vínculos; casos ambíguos seguem para conciliação manual e ficam auditados.
+Solução: ao integrar o primeiro registro, o serviço de integração gera um `customerId` global e guarda a relação com cada identificador legado. Os contratos REST e os eventos carregam o identificador global. Regras de correspondência só sugerem vínculos; casos ambíguos seguem para conciliação manual e ficam auditados.
 
 ## 8. Fluxos integrados da demonstração
 
@@ -222,7 +222,7 @@ Entregáveis:
 
 Aceite: cada sistema tem responsabilidade, usuários, dados produzidos/consumidos, dependências e limitações documentados.
 
-### Etapa 1 - Reservas e contratos e fundação
+### Etapa 1 - Contratos de integração e fundação
 
 Entregáveis:
 
@@ -232,7 +232,7 @@ Entregáveis:
 - Banco, migrações, outbox/inbox e correlação.
 - Autenticação simulada ou provedor OIDC local.
 
-Aceite: ambiente sobe por um único procedimento documentado; health checks respondem; reservas e contratos são validados automaticamente.
+Aceite: ambiente sobe por um único procedimento documentado; health checks respondem; os contratos de integração são validados automaticamente.
 
 ### Etapa 2 - Adaptadores e simuladores
 
@@ -342,7 +342,7 @@ Público-alvo: equipes comercial e canais digitais, jurídica, financeira, atend
 
 Proposta de valor: transformar cinco aplicações isoladas em uma cadeia de serviço rastreável, reduzindo recadastro, erros, tempo de ativação e demora no atendimento e assistência 24h.
 
-Viabilidade: o monólito modular e os simuladores limitam custo, infraestrutura e curva de aprendizagem. Os reservas e contratos e adaptadores preservam a possibilidade de conectar produtos reais ou extrair serviços quando houver justificativa. Indicadores sugeridos são tempo entre venda e ativação, percentual de recadastro, falhas por integração, chamados com SLA incorreto e tempo médio de diagnóstico.
+Viabilidade: o monólito modular e os simuladores limitam custo, infraestrutura e curva de aprendizagem. Os contratos de integração e os adaptadores preservam a possibilidade de conectar produtos reais ou extrair serviços quando houver justificativa. Indicadores sugeridos são tempo entre venda e ativação, percentual de recadastro, falhas por integração, chamados com SLA incorreto e tempo médio de diagnóstico.
 
 ## 16. Definição de pronto do projeto
 

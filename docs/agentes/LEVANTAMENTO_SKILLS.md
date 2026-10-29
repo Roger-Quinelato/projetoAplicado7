@@ -1,6 +1,8 @@
 # Levantamento de skills para o fluxo Codex (coordenação e revisão) e Claude (implementação)
 
-Data: 16/10/2026. Autor: Claude Code, a pedido do responsável pelo repositório.
+Data: 16/10/2026. Levantamento feito a pedido do responsável pelo repositório.
+
+> **Atualização de 29/10/2026:** a separação entre implementador e revisor foi aceita em parte. O revisor é o agente `archcorp-qa`, no Claude Code, acompanhado do agente `archcorp-fde`. Ver [AGENTES_FDE_QA.md](AGENTES_FDE_QA.md). As propostas para o Codex continuam pendentes.
 
 **Natureza deste documento:** insumo para a configuração do fluxo descrito no plano "Codex coordena e revisa; Claude implementa". Nada aqui foi aplicado ao repositório além deste arquivo. As seções 1 e 6 registram fatos verificados; as seções 2 a 5 são **propostas** que dependem de aceite humano e da validação no piloto.
 
