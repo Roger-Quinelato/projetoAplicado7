@@ -4,6 +4,21 @@
 
 Este documento é a fonte única dos números de verificação (testes, p95, roteiros). Os demais documentos citam esta página em vez de repetir os valores. As seções estão em ordem cronológica inversa; cada uma vale apenas para o commit e o ambiente indicados.
 
+## Evidência consolidada em 29/10/2026 (commit `534eab2`)
+
+Gerada por `tools/consolidar_evidencias.py --com-web` com a árvore limpa; o arquivo bruto é [`output/evidencias/evidencias.json`](../output/evidencias/evidencias.json). Windows 11, Python 3.12, SQLite.
+
+| Verificação | Resultado |
+|---|---|
+| `pytest -q` (suíte completa) | **269 aprovados, 14 ignorados**, 0 falhas, em 420 s. Os ignorados exigem PostgreSQL ou RabbitMQ reais |
+| `tools/export_openapi.py --check` | Aprovado |
+| `scripts/performance_smoke.py` (10 consultas, 100 amostras cada) | Maior p95: **21,53 ms**; meta do RNF-07: 500 ms |
+| `npm test` (web) | **19 aprovados**, 0 falhas |
+| Fluxos `demo_f1.py`, `demo_f2.py` e `demo_f3.py` contra `uvicorn` local | Saída `0` nos três (execução de 29/10/2026 na mesma base de código) |
+| CI do commit | Consultar o PR #79; o job registra Docker, PostgreSQL, RabbitMQ e E2E |
+
+Em relação ao fechamento técnico abaixo, entraram 4 testes da informação operacional (`tests/test_insights_operacionais.py`).
+
 ## Fechamento técnico em 29/10/2026 (PR #79)
 
 Commit `ceff8f6`, branch `fix/etapa2-sem-supabase-e-correcoes`. Python 3.12 no Windows 11, SQLite em `tmp/test-archcorp.db`, `PYTHONPATH=src`.
