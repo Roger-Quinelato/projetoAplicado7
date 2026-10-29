@@ -22,7 +22,7 @@ from archcorp.errors import (
 )
 from archcorp.finance.service import FinanceService, count_invoices
 from archcorp.finance.routes import configure as configure_finance, router as finance_router
-from archcorp.infrastructure.db import engine, get_session, protect_public_demo_tables
+from archcorp.infrastructure.db import engine, get_session
 from archcorp.infrastructure.migrate import upgrade_to_head
 from archcorp.integration.service import EventDispatcher, broker_status
 from archcorp.integration.public import LegacyIdService
@@ -66,14 +66,13 @@ configure_integration(dispatcher)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    """Valida o segredo da demo pública, aplica as migrações e protege as tabelas antes de atender."""
+    """Valida o segredo da demo pública e aplica as migrações antes de atender."""
     if settings.public_demo and (not settings.demo_access_token or len(settings.demo_access_token) < 24 or settings.demo_access_token.startswith("demo-")):
         raise RuntimeError("PUBLIC_DEMO exige DEMO_ACCESS_TOKEN aleatório com pelo menos 24 caracteres")
     if settings.public_demo and settings.finance_allow_future_as_of:
         raise RuntimeError("FINANCE_ALLOW_FUTURE_AS_OF é simulação local e não pode ser usada com PUBLIC_DEMO")
     with engine.begin() as connection:
         upgrade_to_head(connection)
-        protect_public_demo_tables(connection)
     yield
 
 

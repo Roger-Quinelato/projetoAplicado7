@@ -13,6 +13,9 @@ LATENCY_SUM: dict[str, float] = defaultdict(float)
 
 
 class JsonFormatter(logging.Formatter):
+    # O sufixo Z do timestamp declara UTC; sem isto o horário sairia no fuso local.
+    converter = time.gmtime
+
     def format(self, record: logging.LogRecord) -> str:
         """Formata o registro de log como JSON com correlationId, operação e resultado."""
         return json.dumps({

@@ -1,5 +1,7 @@
 # Fontes do benchmark de bancos de dados
 
+> **Nota de 29/10/2026:** pesquisa histórica. O Supabase saiu do projeto e a demonstração oficial é local ([ADR-007](adr/ADR-007-demonstracao-local-sem-supabase.md)).
+
 Consulta em **30/09/2026**. Pesquisa documental em fontes oficiais; não é um teste de desempenho e não mede a carga deste projeto. Preços, cotas e ofertas podem mudar. Esta nota não aprova migração nem altera o ADR, AGENT.md ou CLAUDE.md.
 
 ## Microsoft Access

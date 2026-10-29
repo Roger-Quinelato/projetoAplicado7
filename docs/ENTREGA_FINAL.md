@@ -66,9 +66,9 @@ reconciliação e verificação de vencimentos exigem ação explícita.
 Faturamento e pagamentos são simulados. Integração real, frota completa,
 emissão fiscal, alta disponibilidade e escala horizontal são evoluções.
 
-O guia permite demonstração local e sistemas simulados. A publicação
-Render/Supabase é um compromisso adicional do plano do projeto e depende de
-aceite verificável; não é comprovada apenas pela existência de `render.yaml`.
+O guia permite demonstração local e sistemas simulados. A demonstração
+oficial é local; o Supabase saiu do projeto e a publicação pública passou a
+ser evolução ([ADR-007](adr/ADR-007-demonstracao-local-sem-supabase.md)).
 
 ## Conferência antes da submissão
 

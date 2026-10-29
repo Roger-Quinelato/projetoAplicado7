@@ -186,11 +186,11 @@ O workflow `Verify` roda em cada PR:
 
 Toda requisição aceita `X-Correlation-ID` (UUID). Sem ele, a API gera um. O valor aparece na resposta, nos logs, nos eventos e na auditoria. Uma falha num consumidor desfaz os efeitos parciais, registra a tentativa sem guardar dados da exceção e não bloqueia os demais eventos.
 
-## Publicação gratuita
+## Publicação futura
 
-O `render.yaml` prepara um serviço **Render Free** com PostgreSQL do **Supabase Free**. Configure `DATABASE_URL` e `DEMO_ACCESS_TOKEN` no painel do provedor, nunca no Git. Com PostgreSQL, a inicialização ativa RLS e revoga os privilégios de `anon` e `authenticated` nas tabelas do protótipo, pois o acesso passa somente pela API ([orientação de segurança do Supabase](https://supabase.com/docs/guides/database/postgres/row-level-security)).
+A demonstração oficial é local ([ADR-007](docs/adr/ADR-007-demonstracao-local-sem-supabase.md)). O Supabase saiu do projeto, e a publicação pública ficou como evolução.
 
-**A publicação ainda não foi verificada.** Antes de declará-la pronta, vincule as contas, forneça os segredos e confirme a URL HTTPS, `/health/ready`, a criação e a leitura de dados e a persistência após reinício. A camada gratuita pode suspender ou hibernar por inatividade; consulte [Render Free](https://render.com/docs/free) e [pausa de projetos do Supabase Free](https://supabase.com/docs/guides/platform/free-project-pausing).
+O `render.yaml` permanece como artefato opcional e **não verificado**. Se for usado, configure no painel do provedor, nunca no Git, o `DEMO_ACCESS_TOKEN` e uma `DATABASE_URL` de um PostgreSQL escolhido. Antes de declarar uma publicação pronta, confirme a URL HTTPS, `/health/ready`, a criação e a leitura de dados e a persistência após reinício.
 
 ## Documentação
 
@@ -211,6 +211,7 @@ Comece por estes documentos:
 | [ADR-004](docs/adr/ADR-004-estabilizacao-v1-e-convergencia.md) | Compatibilidade v1, privacidade e convergência T12/T15 | Aceito |
 | [ADR-005](docs/adr/ADR-005-fronteiras-http-e-integracao-publica.md) | Rotas e schemas por módulo; fachada pública de integração | Aceito |
 | [ADR-006](docs/adr/ADR-006-leitura-resiliente-do-crm.md) | Leitura resiliente do CRM no F1: retentativa limitada e `503` | Proposto |
+| [ADR-007](docs/adr/ADR-007-demonstracao-local-sem-supabase.md) | Demonstração oficial local; Supabase retirado; publicação como evolução | Aceito |
 
 ### Inventário de artefatos
 
@@ -286,4 +287,4 @@ A ordem segue a estrutura do `Guia.pdf`:
 - O RabbitMQ recebe cópias dos eventos, mas os consumidores do protótipo são chamados pelo despachante da API.
 - Não há OIDC/OAuth, contas individuais, tracing distribuído nem escala horizontal verificados.
 - O ADR-006 ainda aguarda aceite do responsável do projeto.
-- A URL pública, o PostgreSQL do Supabase e os arquivos finais só serão declarados entregues após conferência.
+- Não há publicação pública: a demonstração é local (ADR-007). Os arquivos finais só serão declarados entregues após conferência.
