@@ -21,7 +21,7 @@ A solução é uma SOA pragmática entregue como monólito modular ([ADR-001](do
 
 ## Regras para agentes
 
-Antes de trabalhar no repositório, leia [`AGENTS.md`](AGENTS.md). As regras **SEMPRE** são obrigatórias e as regras **NUNCA** são proibições permanentes. Agentes Claude Code também leem [`CLAUDE.md`](CLAUDE.md), que encaminha ao guia completo. A proposta de skills por papel (implementador e revisor) está em [`docs/agentes/LEVANTAMENTO_SKILLS.md`](docs/agentes/LEVANTAMENTO_SKILLS.md) e ainda aguarda aceite.
+Antes de trabalhar no repositório, leia [`AGENTS.md`](AGENTS.md). As regras **SEMPRE** são obrigatórias e as regras **NUNCA** são proibições permanentes. Agentes Claude Code também leem [`CLAUDE.md`](CLAUDE.md), que encaminha ao guia completo. No fechamento, cada PR passa pelo verificador `archcorp-qa`, e cada etapa de entrega pela revisão `archcorp-fde`. Os dois só leem e não alteram arquivos ([`docs/agentes/AGENTES_FDE_QA.md`](docs/agentes/AGENTES_FDE_QA.md)).
 
 Nunca descreva o protótipo como conectado a sistemas reais da Localiza.
 
