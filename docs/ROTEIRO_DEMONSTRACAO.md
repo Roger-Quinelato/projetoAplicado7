@@ -9,7 +9,25 @@ sequência](arquitetura/FLUXOS_INTEGRACAO.md) durante a apresentação.
 
 ## Preparar o ambiente
 
-1. Inicie os serviços em segundo plano:
+A demonstração oficial é local, sem Docker (ADR-007). O Docker Compose continua
+como alternativa, com PostgreSQL e RabbitMQ.
+
+1. Inicie a API.
+
+   **Modo local (oficial):** SQLite, interface compilada servida pela API, sem broker.
+
+   ```powershell
+   cd web; npm run build; cd ..
+   $env:PYTHONPATH = "src"
+   $env:DATABASE_URL = "sqlite:///./tmp/demo.db"
+   ./.venv/Scripts/python -m uvicorn archcorp.main:app --port 8000
+   ```
+
+   Em outro terminal, rode `./scripts/verificar_demo.ps1`. Ele confere o commit, a
+   prontidão, o token, a interface, os fluxos F1, F2 e F3 e gera o relatório
+   operacional em `output/insights/`. Só apresente com saída `0`.
+
+   **Alternativa com Docker Compose:**
 
    ```powershell
    docker compose up -d --build
@@ -453,8 +471,11 @@ pelo comando `overdue-check`.
 
 ## Demonstrar indisponibilidade e reconciliação
 
-O Docker Compose não expõe uma rota que altere a disponibilidade em tempo de
-execução. Use um contêiner temporário da API com a configuração documentada.
+Não há rota que altere a disponibilidade em tempo de execução. No **modo local**,
+pare o `uvicorn` (`Ctrl+C`), reinicie-o com `$env:CONTRACT_ADAPTER_AVAILABLE = "false"`,
+execute o passo 2 e, no passo 3, reinicie sem a variável
+(`Remove-Item Env:CONTRACT_ADAPTER_AVAILABLE`). O banco SQLite preserva os dados entre
+os reinícios. Com **Docker Compose**, use um contêiner temporário da API:
 
 1. Em outro terminal, pare somente a API e inicie a variante degradada:
 
@@ -667,6 +688,12 @@ após receber `409 IDEMPOTENCY_CONFLICT`. Quando a API indica
    descrição enviada no chamado.
 
 ## Registrar as evidências
+
+Ao final do ensaio, gere o relatório operacional (se o `verificar_demo.ps1` não o
+gerou) com `scripts/relatorio_operacional.py`. Ele resume o funil F1→F2→F3, o
+cumprimento de SLA, o atraso de despacho, falhas, duplicidades evitadas, p95 e
+erros por código, com uma decisão sugerida para cada indicador. As métricas
+valem desde o último reinício da API.
 
 Ao encerrar a apresentação, registre:
 

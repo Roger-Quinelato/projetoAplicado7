@@ -70,6 +70,25 @@ A aplicação executa as migrações Alembic (`upgrade head`) ao iniciar, e os d
 
 Para acesso pela rede, use `PUBLIC_DEMO=true` com `DEMO_ACCESS_TOKEN`. Nunca abra as portas com os tokens locais ativos.
 
+### Modo local sem Docker (demonstração oficial)
+
+A demonstração oficial roda no notebook, sem Docker ([ADR-007](docs/adr/ADR-007-demonstracao-local-sem-supabase.md)). A API serve a interface compilada e usa SQLite. A cópia dos eventos no RabbitMQ é opcional e fica desligada.
+
+```powershell
+cd web; npm ci; npm run build; cd ..
+$env:PYTHONPATH = "src"
+$env:DATABASE_URL = "sqlite:///./tmp/demo.db"
+./.venv/Scripts/python -m uvicorn archcorp.main:app --port 8000
+```
+
+Em outro terminal, antes de apresentar:
+
+```powershell
+./scripts/verificar_demo.ps1
+```
+
+O script confere o commit, `/health/ready`, o token, a interface, os fluxos F1, F2 e F3 e gera o relatório operacional. Ele sai com `0` só se tudo passar.
+
 ## Demonstração dos fluxos
 
 Com a stack no ar, rode a demonstração completa:
