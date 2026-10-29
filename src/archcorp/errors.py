@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.exc import IntegrityError
 
 from archcorp.exceptions import DomainError
-from archcorp.observability import correlation_id_var, logger
+from archcorp.observability import correlation_id_var, logger, record_problem
 from archcorp.schemas import EXAMPLE_CONTRACT_ID, EXAMPLE_CORRELATION_ID
 
 
@@ -95,6 +95,7 @@ def problem_response(
 ) -> JSONResponse:
     """Devolve uma resposta application/problem+json com o correlationId da requisição."""
     body = problem_body(status, detail, request.url.path, correlation_id_var.get(), code)
+    record_problem(status, body["code"])
     if errors is not None:
         body["errors"] = errors
     return JSONResponse(

@@ -74,7 +74,8 @@ uma com data e ADR próprio. Em 14/10/2026: `0004_finance_lifecycle`, ver
   o teste de divergência impede que modelo e migração se afastem.
 - Negativas: nova dependência (`alembic`) e um passo extra ao alterar modelos.
 - Riscos abertos: a execução no PostgreSQL do Supabase/Render ainda não foi
-  verificada. Os schemas por contexto previstos no antigo `001_initial.sql` não
+  verificada. (Nota de 29/10/2026: o Supabase saiu do projeto e a demonstração
+  oficial é local; ver ADR-007.) Os schemas por contexto previstos no antigo `001_initial.sql` não
   foram adotados; as tabelas continuam com prefixo por contexto no schema padrão.
 
 ## Alternativas consideradas

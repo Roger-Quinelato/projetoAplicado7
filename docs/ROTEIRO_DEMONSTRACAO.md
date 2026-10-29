@@ -9,7 +9,25 @@ sequência](arquitetura/FLUXOS_INTEGRACAO.md) durante a apresentação.
 
 ## Preparar o ambiente
 
-1. Inicie os serviços em segundo plano:
+A demonstração oficial é local, sem Docker (ADR-007). O Docker Compose continua
+como alternativa, com PostgreSQL e RabbitMQ.
+
+1. Inicie a API.
+
+   **Modo local (oficial):** SQLite, interface compilada servida pela API, sem broker.
+
+   ```powershell
+   cd web; npm run build; cd ..
+   $env:PYTHONPATH = "src"
+   $env:DATABASE_URL = "sqlite:///./tmp/demo.db"
+   ./.venv/Scripts/python -m uvicorn archcorp.main:app --port 8000
+   ```
+
+   Em outro terminal, rode `./scripts/verificar_demo.ps1`. Ele confere o commit, a
+   prontidão, o token, a interface, os fluxos F1, F2 e F3 e gera o relatório
+   operacional em `output/insights/`. Só apresente com saída `0`.
+
+   **Alternativa com Docker Compose:**
 
    ```powershell
    docker compose up -d --build
@@ -220,8 +238,8 @@ python scripts/demo_f3.py   # elegibilidade/SLA, chamado, processo de resoluçã
 
 Em 17/10/2026, contra `uvicorn` local em Windows 11 com SQLite, os três roteiros
 aprovaram 20/20 (F1), 14/14 (F2) e 15/15 (F3) checagens. O `demo_f3.py` mostra o prazo
-do chamado e o do processo lado a lado; eles só passam a coincidir com a correção do
-PR #42. Falha permanente e indisponibilidade de Contracts continuam nas seções
+do chamado e o do processo lado a lado; desde a correção do PR #42 (verificada em
+16/10/2026), os dois prazos coincidem. Falha permanente e indisponibilidade de Contracts continuam nas seções
 manuais abaixo, porque exigem reiniciar a API com outra configuração.
 
 ## F2: ativar, cobrar e iniciar preparação de retirada
@@ -431,25 +449,33 @@ pelo comando `overdue-check`.
        -Headers $headers -ContentType "application/json" `
        -Body (@{ owner = $owner } | ConvertTo-Json)
    }
+   # A repetição só é recuperada com a mesma chave; sem chave, a segunda resolução devolve 409.
+   $headers["Idempotency-Key"] = "resolve-$([guid]::NewGuid())"
    $resolved = Invoke-WebRequest -Method Post `
      -Uri "$baseUrl/api/v1/support/tickets/$ticketId/resolve" -Headers $headers
    $resolvedAgain = Invoke-WebRequest -Method Post `
      -Uri "$baseUrl/api/v1/support/tickets/$ticketId/resolve" -Headers $headers
+   $headers.Remove("Idempotency-Key")
    ($resolved.Content | ConvertFrom-Json).slaStatus
    $resolvedAgain.Headers["Idempotency-Replayed"]
    Invoke-RestMethod -Uri "$baseUrl/api/v1/support/tickets/$ticketId/history" -Headers $headers
    ```
 
-   A primeira resolução mostra `slaStatus: MET`; a segunda devolve
-   `Idempotency-Replayed: true` sem novo `TicketResolved.v1`. O histórico lista
+   A primeira resolução mostra `slaStatus: MET`; a segunda, com a mesma chave,
+   devolve `Idempotency-Replayed: true` sem novo `TicketResolved.v1`. Sem a chave,
+   a segunda resolução devolveria `409 CONFLICT` (contrato v1, ADR-004), e o
+   `Invoke-WebRequest` lançaria exceção. O histórico lista
    `OPENED`, `ASSIGNED`, `REASSIGNED` (com `previousOwner`) e `RESOLVED`, cada um com
    `actorRole` e `correlationId`. Um novo despacho processa um evento e conclui o
    processo de resolução em Workflow.
 
 ## Demonstrar indisponibilidade e reconciliação
 
-O Docker Compose não expõe uma rota que altere a disponibilidade em tempo de
-execução. Use um contêiner temporário da API com a configuração documentada.
+Não há rota que altere a disponibilidade em tempo de execução. No **modo local**,
+pare o `uvicorn` (`Ctrl+C`), reinicie-o com `$env:CONTRACT_ADAPTER_AVAILABLE = "false"`,
+execute o passo 2 e, no passo 3, reinicie sem a variável
+(`Remove-Item Env:CONTRACT_ADAPTER_AVAILABLE`). O banco SQLite preserva os dados entre
+os reinícios. Com **Docker Compose**, use um contêiner temporário da API:
 
 1. Em outro terminal, pare somente a API e inicie a variante degradada:
 
@@ -499,6 +525,8 @@ execução. Use um contêiner temporário da API com a configuração documentad
 4. Reconcilie o chamado capturado:
 
    ```powershell
+   # Chave própria da reconciliação; não reutilize a chave da abertura do chamado.
+   $headers["Idempotency-Key"] = "reconcile-$([guid]::NewGuid())"
    $reconciled = Invoke-RestMethod -Method Post `
      -Uri "$baseUrl/api/v1/support/tickets/$pendingTicketId/reconcile" `
      -Headers $headers
@@ -507,7 +535,7 @@ execução. Use um contêiner temporário da API com a configuração documentad
 
    O chamado deve mudar para `OPEN`, receber `slaHours: 8` e `dueAt` igual a
    `openedAt` + 8 h (o tempo de indisponibilidade não estende o SLA). Repetir o
-   comando devolve o mesmo corpo com `Idempotency-Replayed: true`. Se Contracts
+   comando com a mesma chave devolve o mesmo corpo com `Idempotency-Replayed: true`. Se Contracts
    ainda estiver fora, a resposta é `503 SERVICE_UNAVAILABLE` e o chamado continua
    pendente. Após um novo despacho, Workflow ajusta o prazo do processo de
    resolução para o `dueAt` reconciliado (ou cancela o processo, se a elegibilidade
@@ -603,10 +631,12 @@ Financeiro, Atendimento e Workflow; cada aviso de sucesso ou erro exibe o
    no cartão "Trilha por correlação".
 
 Os comandos com repetição segura (reserva, rascunhos, ativação, encerramento,
-abertura de chamado e pagamento simulado) enviam `Idempotency-Key`. A interface só reaproveita a chave
-quando a nova tentativa da mesma ação envia exatamente o mesmo corpo (por exemplo,
-após uma falha de rede ambígua); se o usuário corrigir algum campo, uma chave nova
-é gerada, evitando `409 IDEMPOTENCY_CONFLICT`. A chave é descartada após sucesso e
+abertura de chamado, pagamento simulado, resolução e reconciliação de chamado) enviam
+`Idempotency-Key`. Depois de uma falha ambígua (rede ou 5xx, exceto `503`), a
+interface avisa que a operação pode ter sido registrada, preserva corpo, chave e
+correlação e oferece consultar os registros, repetir o pedido original com a mesma
+chave ou descartá-lo. Enquanto houver pedido pendente, um envio com dados diferentes
+é recusado no navegador (`web/src/intents.ts`). A chave é descartada após sucesso e
 após receber `409 IDEMPOTENCY_CONFLICT`. Quando a API indica
 `Idempotency-Replayed: true`, o aviso informa a repetição idempotente.
 
@@ -658,6 +688,12 @@ após receber `409 IDEMPOTENCY_CONFLICT`. Quando a API indica
    descrição enviada no chamado.
 
 ## Registrar as evidências
+
+Ao final do ensaio, gere o relatório operacional (se o `verificar_demo.ps1` não o
+gerou) com `scripts/relatorio_operacional.py`. Ele resume o funil F1→F2→F3, o
+cumprimento de SLA, o atraso de despacho, falhas, duplicidades evitadas, p95 e
+erros por código, com uma decisão sugerida para cada indicador. As métricas
+valem desde o último reinício da API.
 
 Ao encerrar a apresentação, registre:
 

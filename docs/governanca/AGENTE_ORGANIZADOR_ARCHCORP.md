@@ -1,5 +1,7 @@
 # Organizador da frente ArchCorp
 
+> **Registro histórico (27–30/09/2026).** Preservado como contexto da organização inicial. O estado vigente está em [ESTADO_IMPLEMENTACAO.md](../ESTADO_IMPLEMENTACAO.md) e o fechamento em [ENTREGA_FINAL.md](../ENTREGA_FINAL.md).
+
 Adaptação para o Projeto Aplicado 7 do `AGENTE-ORGANIZADOR.md` enviado por Roger. Atualizado em 27/09/2026.
 
 ## Responsabilidade

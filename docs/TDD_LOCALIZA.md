@@ -18,10 +18,10 @@ decisoes imediatas e eventos para efeitos assíncronos.
 | Contexto | Responsabilidade tecnica |
 |---|---|
 | CRM | API de cliente, elegibilidade e publicacao de alteracao cadastral. |
-| Contracts | Reserva/contrato de locacao, ativacao, grupo de veiculo, vigencia e SLA. |
+| Contracts | Reserva/contrato de locacao, ativacao, encerramento, vigencia e SLA; grupo de veiculo registrado apenas na reserva. |
 | Finance | Consumidores de `ContractActivated.v1` (primeira fatura) e `ContractClosed.v1` (fatura final); pagamento simulado e inadimplência por vencimento. |
 | Support | Abertura de chamado, calculo de prioridade e reconciliacao de elegibilidade. |
-| Workflow | Processos de retirada, atendimento, devolucao e tarefas operacionais. |
+| Workflow | Processos de preparacao de retirada (`ONBOARDING`) e de resolucao de chamado (`TICKET_RESOLUTION`), com tarefas operacionais; devolucao e vistoria sao evolucao. |
 | Integration | Correlacao, IDs legados, idempotencia, outbox, inbox, auditoria e falhas. |
 
 ## Decisoes Tecnicas

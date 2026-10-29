@@ -16,7 +16,7 @@ Estado em 17/10/2026, atualizado em 20/10/2026. Os roteiros exercitam a interfac
 | `web/e2e/indicadores.spec.ts` | #73: com 205 contratos a mais, a listagem devolve 200 e a Visão geral mostra o total do resumo do servidor; os indicadores de faturas, chamados e processos acompanham os resumos | Sim |
 | `web/e2e/a11y.spec.ts` | Varredura axe (WCAG 2 A/AA) de cada contexto | Sim, desde 20/10/2026 (#62); antes informativo |
 
-A execução da main `f1669d7` passou em 25/10/2026 ([run 40199072801](https://github.com/Roger-Quinelato/projetoAplicado7/actions/runs/40199072801)). Esse resultado é remoto e não representa nova execução local em 28/10. O job `e2e` passou no GitHub Actions no PR #54 (run 39067995117, 17/10/2026). Em 20/10/2026, os nove roteiros bloqueantes e a varredura axe passaram localmente (Linux, Chromium 1194 pré-instalado indicado por `executablePath`); o resultado no GitHub Actions depende do PR correspondente. Ele só vira condição de merge se for configurado como check obrigatório na proteção da branch (não versionado aqui).
+A execução da main `f1669d7` passou em 25/10/2026 ([run 40199072801](https://github.com/Roger-Quinelato/projetoAplicado7/actions/runs/40199072801)). Esse resultado é remoto e não representa nova execução local em 28/10. O job `e2e` passou no GitHub Actions no PR #54 (run 39067995117, 17/10/2026). Em 20/10/2026, os nove arquivos de roteiro (25 testes na CI de 25/10/2026, contando os casos parametrizados) e a varredura axe passaram localmente (Linux, Chromium 1194 pré-instalado indicado por `executablePath`); o resultado no GitHub Actions depende do PR correspondente. Ele só vira condição de merge se for configurado como check obrigatório na proteção da branch (não versionado aqui).
 
 Fora do escopo desta versão: cancelamento de reserva (`window.confirm`) e encerramento de contrato pela UI.
 
@@ -49,7 +49,7 @@ Os tokens `demo-*` são públicos e locais; não coloque credenciais reais no `.
 
 ## Limites conhecidos
 
-- A prova de que a interface funciona vale para o ambiente de teste (SQLite local, sem broker). Não comprova a URL HTTPS pública, o PostgreSQL de produção, o RabbitMQ nem a persistência após reinício.
-- O teste axe não tem asserção: ele anexa o resumo (`axe-resumo.json`) ao relatório e só falha por erro de execução. A última execução local reportou 0 violações A/AA, sem arquivo versionado desse resultado.
+- A prova de que a interface funciona vale para o ambiente de teste (SQLite local, sem broker). Não comprova o PostgreSQL, o RabbitMQ nem a persistência após reinício; não há URL pública (ADR-007).
+- O teste axe é bloqueante desde 20/10/2026 (#62): `web/e2e/a11y.spec.ts` afirma a ausência de violações WCAG 2 A/AA e anexa o resumo (`axe-resumo.json`) ao relatório.
 - A varredura axe cobre as telas no estado inicial (banco vazio, sem diálogos nem erros); não substitui auditoria formal de acessibilidade nem teste com leitor de tela.
 - A UI não tem `data-testid`; os roteiros dependem de roles, labels e textos em português. Mudar um rótulo exige atualizar o roteiro.

@@ -76,7 +76,7 @@ A gratuidade dos serviços usados não significa custo zero. Os três custos sã
 
 | Custo | O que inclui | Situação |
 |---|---|---|
-| Serviços (licenças e hospedagem) | PostgreSQL e RabbitMQ executados localmente por Docker Compose (software livre, sem licença); GitHub para repositório e CI; Render Free e Supabase Free previstos para a publicação (`render.yaml`) | Sem cobrança na configuração atual do protótipo. As condições e os limites dos planos gratuitos não foram reconferidos nesta revisão e devem ser verificados na publicação (#64) |
+| Serviços (licenças e hospedagem) | PostgreSQL e RabbitMQ executados localmente por Docker Compose (software livre, sem licença); GitHub para repositório e CI; demonstração local, sem hospedagem paga (ADR-007) | Sem cobrança na configuração atual do protótipo. Uma publicação futura exigirá avaliar custos e limites do provedor escolhido |
 | Implementação | Esforço humano de análise, código, testes, documentação e revisão | Não medido. As estimativas do plano de conclusão (#58–#66) são previsões, não registro de horas |
 | Operação | Manter a demonstração publicada: segredos, migrações, backup, monitoramento, resposta a falhas e acompanhamento dos limites de plano gratuito | Não medido. Fora dos limites gratuitos, ou com disponibilidade e retenção exigidas pela organização, passa a ter custo de serviço. A operação continua exigindo esforço humano mesmo dentro deles |
 

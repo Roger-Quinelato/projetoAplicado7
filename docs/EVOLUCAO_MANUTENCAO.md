@@ -22,7 +22,7 @@ porta ou eventos documentados, sem importar modelos internos ou consultar suas
 tabelas. O módulo entra no monólito enquanto essa implantação atender às metas.
 
 Antes da inclusão, a equipe registra proprietário dos dados, requisitos,
-reservas e contratos, falhas esperadas, observabilidade e testes. Uma nova decisão
+contratos de integração, falhas esperadas, observabilidade e testes. Uma nova decisão
 estrutural recebe ADR próprio.
 
 ## 2. Como integrar novos sistemas
@@ -83,7 +83,7 @@ explícito.
 
 A equipe executa a atualização em etapas:
 
-1. Publica reservas e contratos compatíveis e estruturas de persistência aditivas.
+1. Publica contratos de integração compatíveis e estruturas de persistência aditivas.
 2. Implanta produtores capazes de manter o formato anterior.
 3. Atualiza consumidores e acompanha erros, latência, fila e divergências.
 4. Ativa o novo comportamento por feature flag ou troca controlada de
@@ -130,3 +130,15 @@ distribuído são evoluções; o protótipo não os comprova. Desacoplar os serv
 de aplicação de SQLAlchemy é evolução de desenho, não condição já atendida.
 O fechamento funcional e documental ocorre até 09/11/2026; de 10 a 22/11,
 priorizar feedback docente e ensaios antes da apresentação de 23/11.
+
+### Evoluções avaliadas na pesquisa de agentes (29/10/2026)
+
+Estas opções foram avaliadas e ficaram fora da entrega. A decisão está em [agentes/AGENTES_FDE_QA.md](agentes/AGENTES_FDE_QA.md).
+
+| Evolução | Quando passa a fazer sentido | Primeiro passo |
+|---|---|---|
+| Publicação pública | Quando houver demanda de acesso remoto (ADR-007) | Escolher o PostgreSQL gerenciado, avaliar a exposição direta das tabelas pelo provedor e registrar novo ADR |
+| Criptografia de dados em repouso além do disco (KMS com envelope, Vault Transit) | Com dados reais ou implantação em nuvem | Criptografia de disco nos hosts; segredos fora do Git; campos sensíveis cifrados pela aplicação |
+| Assistente de atendimento com RAG sobre contratos e SLA | Se a central precisar responder perguntas de clientes com base nos contratos | Serviço próprio, isolado da API, com controle de acesso por cliente e avaliação de respostas (Ragas, Giskard, garak) antes de qualquer uso |
+| Tracing distribuído (OpenTelemetry) | Quando um contexto for extraído do monólito | Propagar o `correlationId` atual como atributo dos spans |
+| Métricas persistentes (Prometheus e Grafana) | Quando houver operação contínua | Coletar o `/metrics` existente, que já tem rótulos de baixa cardinalidade |

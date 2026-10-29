@@ -15,7 +15,10 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from archcorp.contracts.models import Contract, Reservation
-from archcorp.contracts.service import ContractService, ReservationService
+from archcorp.contracts.service import ContractService, ReservationService, utc_now
+
+# Relógio da validação de reserva: data civil UTC, como o encerramento (#60); substituível nos testes.
+reservation_clock = utc_now
 from archcorp.schemas import EXAMPLE_CONTRACT_DRAFT_RESPONSE, EXAMPLE_CONTRACT_ID, EXAMPLE_CUSTOMER_ID, IDEMPOTENCY_KEY_MAX_LENGTH
 
 
@@ -97,7 +100,7 @@ class ReservationInput(BaseModel):
         """Rejeita período com fim antes do início ou início no passado."""
         if self.endsOn < self.startsOn:
             raise ValueError("Fim da reserva anterior ao início")
-        if self.startsOn < date.today():
+        if self.startsOn < reservation_clock().date():
             raise ValueError("Início da reserva no passado")
         return self
 

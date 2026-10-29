@@ -15,11 +15,17 @@ const workspaceDir = (process.env.ARCHCORP_ROOT ?? path.resolve(path.dirname(fil
 const SKILL_DIR = process.env.PRESENTATIONS_SKILL_DIR ?? "C:/Users/roger/.codex/plugins/cache/openai-primary-runtime/presentations/26.1025.11240/skills/presentations";
 const IMG_DIR = path.join(workspaceDir, "docs/arquitetura/img");
 // Preencha antes da submissão, na mesma ordem do relatório (tools/build_report.py, EQUIPE).
-const EQUIPE = ["Roger Quinelato — backend, produto e negócio", "Raquel — frontend e levantamento de requisitos"];
-const DATA_RELATORIO = "28/10/2026";
+const EQUIPE = ["Roger Quinelato — backend, produto e negócio", "Raquel Pereira — frontend e levantamento de requisitos"];
+const DATA_RELATORIO = "29/10/2026";
 const ENTREGA_PRONTA = "09/11/2026";
 const APRESENTACAO = "23/11/2026";
-const VERSAO_BASE = "f1669d7";
+// Números de verificação lidos de output/evidencias/evidencias.json (tools/consolidar_evidencias.py), nunca transcritos.
+const EVID = JSON.parse(readFileSync(path.join(workspaceDir, "output/evidencias/evidencias.json"), "utf-8"));
+const VERSAO_BASE = EVID.commitCurto;
+const PYTEST = EVID.verificacoes.pytest;
+const P95 = `${EVID.verificacoes.desempenho.maiorP95Ms.toFixed(2).replace(".", ",")} ms`;
+const WEB = (EVID.verificacoes.web?.resumo ?? []).find(item => item.startsWith("pass "))?.split(" ")[1] ?? "—";
+const DATA_EVIDENCIA = EVID.geradoEm.slice(0, 10).split("-").reverse().join("/");
 const TMP_DIR = path.join(workspaceDir, "tmp/presentation-build");
 const FINAL_PPTX = path.join(workspaceDir, "output/Apresentacao_Cenario_4.pptx");
 const VALIDATED_PPTX = path.join(TMP_DIR, "Apresentacao_Cenario_4_validada.pptx");
@@ -83,8 +89,8 @@ function notes(slide, text) {
   textbox(slide, "Arquitetura de Integração\npara Empresa de Serviços", { left: 90, top: 170, width: 900, height: 190 }, 54, C.white, true);
   textbox(slide, "Projeto Aplicado  |  Cenário 4", { left: 94, top: 390, width: 600, height: 50 }, 27, "#C8DFE2");
   const accent = slide.shapes.add({ geometry: "rect", position: { left: 95, top: 130, width: 180, height: 10 }, fill: C.rust, line: { fill: "none", width: 0 } });
-  textbox(slide, `${EQUIPE.length ? EQUIPE.join("\n") : "Nomes e contribuições individuais ainda não informados"}\nVersão ${DATA_RELATORIO}  ·  Base main ${VERSAO_BASE}\nEntrega pronta ${ENTREGA_PRONTA}  ·  Apresentação ${APRESENTACAO} (previstas)`, { left: 94, top: 545, width: 1100, height: 110 }, 20, C.white);
-  notes(slide, "Fonte principal: Guia.pdf, enunciado acadêmico ArchCorp, 2026, 13 páginas. Cenário 4 aplicado a uma locadora fictícia inspirada na Localiza, com dados sintéticos. Referência técnica: main f1669d78f01e2d279b3de60a999ed778e6c9916e, PR #75 de 25/10/2026, https://github.com/Roger-Quinelato/projetoAplicado7/pull/75, commit consultado localmente. Marcos previstos conforme orientação da entrega. Autoria: Roger Quinelato — backend, produto e negócio; Raquel — frontend e levantamento de requisitos. Não há declaração de aceite docente.");
+  textbox(slide, `${EQUIPE.length ? EQUIPE.join("\n") : "Nomes e contribuições individuais ainda não informados"}\nVersão ${DATA_RELATORIO}  ·  Versão do código ${VERSAO_BASE}\nEntrega pronta ${ENTREGA_PRONTA}  ·  Apresentação ${APRESENTACAO} (previstas)`, { left: 94, top: 545, width: 1100, height: 110 }, 20, C.white);
+  notes(slide, "Fonte principal: Guia.pdf, enunciado acadêmico ArchCorp, 2026, 13 páginas. Cenário 4 aplicado a uma locadora fictícia inspirada na Localiza, com dados sintéticos. Referência técnica: versão " + EVID.commit + ", que parte da integração do PR #75 (https://github.com/Roger-Quinelato/projetoAplicado7/pull/75) e inclui as correções do PR #78. Marcos previstos conforme orientação da entrega. Autoria: Roger Quinelato — backend, produto e negócio; Raquel Pereira — frontend e levantamento de requisitos. Não há declaração de aceite docente.");
 }
 
 // 2
@@ -252,12 +258,12 @@ function notes(slide, text) {
     ["Confiabilidade", "Cobrança dupla", "Outbox, inbox e idempotência", "Um efeito por fato"],
     ["Disponibilidade", "Chamado perdido", "Estado pendente", "Reconciliação"],
     ["Manutenibilidade", "Acoplamento", "Portas e teste de fronteira", "Mudança local"],
-    ["Desempenho", "Latência", "API sem estado", "p95 45,1 ms (20/10)"],
+    ["Desempenho", "Latência", "API sem estado", `p95 máximo ${P95}`],
   ];
   const xs = [70, 360, 640, 960], ws = [280, 270, 310, 260];
   head.forEach((h, j) => textbox(slide, h, { left: xs[j], top: 125, width: ws[j], height: 40 }, 22, C.teal, true));
   rows.forEach((row, i) => row.forEach((cell, j) => textbox(slide, cell, { left: xs[j], top: 180 + i * 82, width: ws[j], height: 70 }, 20, j ? C.ink : C.navy, j === 0)));
-  notes(slide, "Fonte: docs/ATRIBUTOS_QUALIDADE.md (nove atributos com necessidade, risco, estratégia, resultado e evidência) e relatório, seção 4.8. Desempenho histórico de 20/10, local, PostgreSQL 16, 60 clientes e 100 amostras por consulta em 10 consultas de negócio. Não representa hospedagem pública nem medição na main f1669d7.");
+  notes(slide, "Fonte: docs/ATRIBUTOS_QUALIDADE.md (nove atributos com necessidade, risco, estratégia, resultado e evidência) e relatório, seção 4.8. Desempenho: " + DATA_EVIDENCIA + ", SQLite local, 60 clientes e 100 amostras por consulta em 10 consultas de negócio, versão " + VERSAO_BASE + ". Demonstração local; sem publicação pública (ADR-007).");
 }
 
 // 12
@@ -288,13 +294,13 @@ function notes(slide, text) {
 
 // 14
 {
-  const slide = base("Evidências e versão de referência");
-  textbox(slide, "Histórico de 20/10/2026", { left: 85, top: 140, width: 540, height: 50 }, 30, C.teal, true);
-  bullets(slide, ["246 testes com PostgreSQL e RabbitMQ", "232 aprovados e 14 ignorados em SQLite", "22 roteiros de navegador aprovados", "p95 máximo de 45,1 ms em consultas locais"], { left: 80, top: 215, width: 545, height: 305 }, 24);
-  textbox(slide, `CI da main ${VERSAO_BASE} em 25/10`, { left: 680, top: 140, width: 540, height: 50 }, 29, C.teal, true);
-  bullets(slide, ["application: 252 aprovados, 14 ignorados", "postgresql: 262 aprovados, 4 ignorados", "rabbitmq: 22 aprovados", "e2e: 25 aprovados; axe: 1 aprovado"], { left: 675, top: 215, width: 530, height: 305 }, 24);
-  textbox(slide, "CI 40199072801 com quatro jobs concluídos com sucesso.\nAs suítes se sobrepõem. Não somar as contagens. p95 histórico de 20/10.", { left: 100, top: 555, width: 1100, height: 80 }, 23, C.rust, true);
-  notes(slide, "Fontes: docs/EVIDENCIAS_VALIDACAO.md, seções históricas de 20/10/2026; registro local do commit f1669d78f01e2d279b3de60a999ed778e6c9916e, PR #75, 25/10/2026, https://github.com/Roger-Quinelato/projetoAplicado7/pull/75; logs da CI Verify 40199072801, https://github.com/Roger-Quinelato/projetoAplicado7/actions/runs/40199072801, executada em 25/10 sobre essa main, consultados no GitHub Actions em 28/10/2026. Quatro jobs success: application 252 passed/14 skipped; postgresql 262 passed/4 skipped; rabbitmq 22 passed; e2e 25 passed e axe separado 1 passed. Suítes sobrepostas, sem total agregado. Histórico de 20/10: PostgreSQL 16/RabbitMQ 3.12 locais, contêiner Linux, Python 3.13, 60 clientes, 100 amostras por consulta em 10 consultas de negócio, p95 máximo de 45,1 ms, 22 roteiros de navegador, F1 20/20, F2 14/14 e F3 15/15. O p95 não foi medido novamente na main f1669d7. Verificação local após correções em 28/10: Python 264 aprovados e 14 ignorados, frontend 19 aprovados, TypeScript e OpenAPI check aprovados. Hospedagem pública e PostgreSQL gerenciado sem comprovação.");
+  const slide = base("Evidências e informação operacional");
+  textbox(slide, `Verificação da versão ${VERSAO_BASE}`, { left: 85, top: 140, width: 540, height: 50 }, 29, C.teal, true);
+  bullets(slide, [`${PYTEST.aprovados} testes Python aprovados (${PYTEST.ignorados} ignorados)`, `${WEB} testes da interface aprovados`, "F1, F2 e F3 concluídos sem falha", `p95 máximo de ${P95} (meta 500 ms)`], { left: 80, top: 215, width: 545, height: 305 }, 24);
+  textbox(slide, "Dos logs à decisão", { left: 680, top: 140, width: 540, height: 50 }, 29, C.teal, true);
+  bullets(slide, ["Funil F1→F2→F3 e SLA cumprido", "Atraso de despacho por consumidor", "Falhas, retentativas e duplicidades evitadas", "p95 e erros por código, uso por módulo"], { left: 675, top: 215, width: 530, height: 305 }, 24);
+  textbox(slide, "Números gerados das execuções, sem transcrição manual.\nCI com PostgreSQL 16, RabbitMQ e navegador a cada PR.", { left: 100, top: 555, width: 1100, height: 80 }, 23, C.rust, true);
+  notes(slide, "Fontes: output/evidencias/evidencias.json (tools/consolidar_evidencias.py), gerado em " + DATA_EVIDENCIA + " sobre a versão " + VERSAO_BASE + "; docs/EVIDENCIAS_VALIDACAO.md. O relatório operacional (scripts/relatorio_operacional.py) lê GET /api/v1/integration/insights, /metrics e os resumos e propõe uma decisão por indicador. No ensaio, o funil mostrou zero faturas pagas porque os roteiros não exercitam pagamento: a leitura orienta o que demonstrar. Agentes de revisão FDE (cliente e Guia) e QA (portão e código) trabalham somente leitura; a decisão fica com testes, CI e responsável. Demonstração local, sem publicação pública (ADR-007).");
 }
 
 // 15
@@ -303,9 +309,9 @@ function notes(slide, text) {
   textbox(slide, "Conclusões", { left: 90, top: 145, width: 430, height: 48 }, 29, C.teal, true);
   bullets(slide, ["Os três fluxos têm evidências no protótipo acadêmico", "Contratos e fronteiras permitem evolução incremental", "Regressões cobrem recuperação e estados finais"], { left: 85, top: 215, width: 520, height: 270 }, 24);
   textbox(slide, "Limites e evolução", { left: 700, top: 145, width: 430, height: 48 }, 29, C.teal, true);
-  bullets(slide, ["F3 aguarda a abertura e permite reprocessamento", "Processo respeita o agregado das tarefas", "Fatura vencida não aceita cancelamento", "Roger Quinelato e Raquel: autoria preenchida"], { left: 695, top: 205, width: 500, height: 310 }, 23);
+  bullets(slide, ["F3 aguarda a abertura e permite reprocessamento", "Processo respeita o agregado das tarefas", "Fatura vencida não aceita cancelamento", "Roger Quinelato e Raquel Pereira: autoria preenchida"], { left: 695, top: 205, width: 500, height: 310 }, 23);
   textbox(slide, `Entrega pronta prevista para ${ENTREGA_PRONTA}\nApresentação prevista para ${APRESENTACAO}`, { left: 165, top: 540, width: 950, height: 82 }, 27, C.rust, true);
-  notes(slide, "Correções de fechamento: F3 não confirma resolução/reconciliação sem processo; eventos mantêm retentativa e reprocessamento explícito. Encerramento do contrato cancela tarefas pendentes e deriva o estado agregado, preservando tarefas finais. Cancelamento financeiro usa a data UTC e o estado efetivo da consulta; vencida recebe 409. As correções não alteram registros antigos já consumidos. Autoria declarada: Roger Quinelato — backend, produto e negócio; Raquel — frontend e levantamento de requisitos. Permanecem ensaio, aceite docente e comprovação da hospedagem prevista no plano. OIDC, tracing distribuído e consumo pelo broker são evoluções.");
+  notes(slide, "Correções de fechamento: F3 não confirma resolução/reconciliação sem processo; eventos mantêm retentativa e reprocessamento explícito. Encerramento do contrato cancela tarefas pendentes e deriva o estado agregado, preservando tarefas finais. Cancelamento financeiro usa a data UTC e o estado efetivo da consulta; vencida recebe 409. As correções não alteram registros antigos já consumidos. Autoria declarada: Roger Quinelato — backend, produto e negócio; Raquel Pereira — frontend e levantamento de requisitos. Permanecem ensaio e aceite docente; a demonstração é local e a publicação pública é evolução (ADR-007). OIDC, tracing distribuído e consumo pelo broker são evoluções.");
 }
 
 for (let i = 0; i < deck.slides.items.length; i++) {

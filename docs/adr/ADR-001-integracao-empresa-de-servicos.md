@@ -125,3 +125,14 @@ Nesses casos, extrair primeiro o módulo que apresenta a necessidade, preservand
 A decisão será considerada adequada quando os três fluxos funcionarem ponta a ponta; reentregas não duplicarem efeitos; falhas puderem ser rastreadas por `correlationId`; contratos OpenAPI/AsyncAPI forem validados automaticamente; e outra equipe conseguir executar a solução a partir da documentação.
 
 As evidências estão ligadas aos requisitos em `docs/MATRIZ_RASTREABILIDADE.md`. A suíte automatizada verifica os três fluxos, repetição, degradação, autorização, contratos técnicos e fronteiras entre módulos. A equipe deve reabrir esta decisão se a validação das premissas revelar integrações, restrições regulatórias ou volumes incompatíveis com os direcionadores registrados.
+
+## Situação na implementação (nota de 29/10/2026)
+
+Esta seção registra como o protótipo realiza a decisão, sem alterá-la:
+
+- O despachante da API entrega os eventos da outbox aos consumidores internos. O RabbitMQ recebe uma cópia confirmada, mas não entrega aos consumidores.
+- Falha permanente é o estado `FAILED` da outbox, com reprocessamento explícito e auditável pela API. Não há fila de erro no broker.
+- Retentativa da outbox: até `RETRY_LIMIT` tentativas por despacho explícito, sem atraso exponencial automático. A leitura do CRM no F1 usa retentativa com atraso exponencial e jitter (ADR-006).
+- A demonstração oficial é local (ADR-007).
+
+Estado verificado de cada área: `docs/ESTADO_IMPLEMENTACAO.md`.
