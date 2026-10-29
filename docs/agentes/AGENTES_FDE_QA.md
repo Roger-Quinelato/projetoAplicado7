@@ -55,3 +55,7 @@ Nessa versão, as capacidades opcionais são `vision`, `pdf` e `devtools`, e nen
 ## Relação com o levantamento de 16/10
 
 Este registro aceita, de forma parcial, a separação entre implementador e revisor proposta em [LEVANTAMENTO_SKILLS.md](LEVANTAMENTO_SKILLS.md). O revisor passa a ser o `archcorp-qa`, no Claude Code. A parte do levantamento que trata do Codex continua como proposta.
+
+## Agentes retirados (29/10/2026)
+
+Os agentes `cavecrew-builder`, `cavecrew-investigator` e `cavecrew-reviewer` e as skills `cavecrew`, `caveman` e `caveman-commit` (com o `skills-lock.json`) saíram do repositório. Eles se ativavam com pedidos genéricos ("review this PR", "be brief") e podiam ocupar o lugar do `archcorp-qa` ou comprimir documentação e mensagens de commit em português, o que o [levantamento de 16/10](LEVANTAMENTO_SKILLS.md) já desaconselhava. Quem quiser usá-los pode instalá-los na pasta pessoal (`~/.claude`), fora do projeto.

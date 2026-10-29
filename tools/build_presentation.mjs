@@ -205,9 +205,9 @@ function notes(slide, text) {
   slide.shapes.connect(crm, api, { fromSide: "right", toSide: "left", kind: "straight", line: { style: "solid", fill: C.teal, width: 3 }, tail: { type: "arrow", width: "med", length: "med" } });
   slide.shapes.connect(api, ct, { fromSide: "right", toSide: "left", kind: "straight", line: { style: "solid", fill: C.teal, width: 3 }, tail: { type: "arrow", width: "med", length: "med" } });
   textbox(slide, "Idempotency Key devolve o mesmo contractId em uma repetição", { left: 220, top: 420, width: 830, height: 55 }, 26, C.rust, true);
-  textbox(slide, "CRM fora do ar: retentativa limitada com jitter e 503 sem efeito", { left: 220, top: 490, width: 830, height: 55 }, 24, C.ink);
+  textbox(slide, "Mesmo customerId do CRM: sem recadastro nem cliente duplicado", { left: 220, top: 490, width: 830, height: 55 }, 24, C.ink);
   textbox(slide, "F1 histórico: 20/20 checagens (20/10)", { left: 350, top: 570, width: 720, height: 50 }, 24, C.green, true);
-  notes(slide, "Fonte: docs/INTEGRACOES.md, scripts/demo_f1.py e evidência histórica consolidada em docs/EVIDENCIAS_VALIDACAO.md (20/10/2026). Não reexecutado em 28/10. ADR-006 permanece Proposto, aguardando aceite do responsável. A chamada no mesmo processo não tem interrupção por timeout de rede.");
+  notes(slide, "Fonte: docs/INTEGRACOES.md, scripts/demo_f1.py e evidência histórica consolidada em docs/EVIDENCIAS_VALIDACAO.md (20/10/2026). Não reexecutado em 28/10. ADR-006 não adotado: evolução para quando o CRM for externo. A chamada no mesmo processo não tem interrupção por timeout de rede.");
 }
 
 // 9

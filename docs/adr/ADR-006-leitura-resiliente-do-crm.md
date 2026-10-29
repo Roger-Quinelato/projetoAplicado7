@@ -1,6 +1,6 @@
 # ADR-006 — Leitura resiliente do CRM no F1: retentativa limitada e 503
 
-- Status: Proposto; aguarda aceite do responsável do projeto
+- Status: Não adotado (decisão do responsável em 2026-10-29); mantido como evolução
 - Data: 2026-10-17
 - Relaciona-se com ADR-001 e ADR-005
 
@@ -8,7 +8,7 @@
 
 O critério do F1 no plano pede "timeout/retry limitado" na consulta ao CRM. Até
 aqui, uma falha do `CustomerReader` virava `500 INTERNAL_ERROR` sem efeito
-parcial (pendência T11 registrada no cronograma em 14/10/2026). O `AGENT.md`
+parcial (pendência T11 registrada no cronograma em 14/10/2026). O `AGENTS.md`
 exige timeout em chamadas externas e retentativa só para erro transitório, com
 atraso exponencial e jitter. O CRM ainda roda no mesmo processo; não há
 conector de rede.
@@ -63,3 +63,17 @@ recusar o chamado do cliente; ali o estado pendente é requisito.
   transitórios. Testes HTTP cobrem `503` sem efeito, a falha transitória
   absorvida, o erro não transitório sem retentativa e a repetição após o
   retorno do CRM.
+
+## Decisão do responsável (29/10/2026)
+
+O ADR não foi adotado como decisão do projeto. A demonstração é local
+(ADR-007) e o CRM roda no mesmo processo da API: não há rede para falhar, e o
+prazo total não interrompe uma leitura em andamento. A retentativa e o `503`
+só são exercitados por simuladores nos testes.
+
+- O código (`ResilientCustomerReader`) e seus testes permanecem, porque são
+  pequenos, cobertos e não alteram os fluxos.
+- O mecanismo não é apresentado como resultado da entrega; a apresentação foca
+  nos três fluxos integrados e na informação operacional.
+- A decisão deve ser retomada quando o CRM for um sistema externo acessado por
+  rede: aí o prazo passa a cortar a chamada e a retentativa ganha sentido.

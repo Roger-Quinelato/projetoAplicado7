@@ -40,7 +40,7 @@ Cada contexto é dono dos próprios dados e expõe uma interface pública. Nenhu
 
 Os três fluxos integrados do plano são:
 
-- **F1. Cliente → reserva → contrato:** o contrato nasce da reserva com o cliente oficial do CRM, sem recadastro. A leitura do CRM é resiliente: repete apenas falhas transitórias, com atraso exponencial e jitter, e devolve `503` sem gravar nada quando o CRM não responde ([ADR-006](docs/adr/ADR-006-leitura-resiliente-do-crm.md), proposto).
+- **F1. Cliente → reserva → contrato:** o contrato nasce da reserva com o cliente oficial do CRM, sem recadastro.
 - **F2. Ativação → faturamento e preparação de retirada:** `ContractActivated.v1` gera uma única fatura `INITIAL` e um processo `ONBOARDING`, mesmo com despacho repetido.
 - **F3. Chamado → processo de resolução → resolução:** o chamado herda o SLA do contrato. O processo `TICKET_RESOLUTION` copia o `dueAt` publicado pelo atendimento, então atraso ou reentrega do despacho não estendem o prazo.
 
@@ -232,7 +232,7 @@ Comece por estes documentos:
 | [ADR-003](docs/adr/ADR-003-financeiro-fatura-final-e-excecao-aditiva.md) | Fatura final, vencimento por evento e exceção à regra aditiva | Aceito |
 | [ADR-004](docs/adr/ADR-004-estabilizacao-v1-e-convergencia.md) | Compatibilidade v1, privacidade e convergência T12/T15 | Aceito |
 | [ADR-005](docs/adr/ADR-005-fronteiras-http-e-integracao-publica.md) | Rotas e schemas por módulo; fachada pública de integração | Aceito |
-| [ADR-006](docs/adr/ADR-006-leitura-resiliente-do-crm.md) | Leitura resiliente do CRM no F1: retentativa limitada e `503` | Proposto |
+| [ADR-006](docs/adr/ADR-006-leitura-resiliente-do-crm.md) | Leitura resiliente do CRM no F1: retentativa limitada e `503` | Não adotado; evolução para CRM externo |
 | [ADR-007](docs/adr/ADR-007-demonstracao-local-sem-supabase.md) | Demonstração oficial local; Supabase retirado; publicação como evolução | Aceito |
 
 ### Inventário de artefatos
@@ -308,5 +308,5 @@ A ordem segue a estrutura do `Guia.pdf`:
 - O enunciado não informa os produtos dos cinco sistemas existentes. O AS-IS é uma hipótese a validar, e a demonstração usa módulos e simulações internas.
 - O RabbitMQ recebe cópias dos eventos, mas os consumidores do protótipo são chamados pelo despachante da API.
 - Não há OIDC/OAuth, contas individuais, tracing distribuído nem escala horizontal verificados.
-- O ADR-006 ainda aguarda aceite do responsável do projeto.
+- O ADR-006 não foi adotado: o adaptador de leitura resiliente do CRM continua no código, mas só faz sentido com um CRM externo.
 - Não há publicação pública: a demonstração é local (ADR-007). Os arquivos finais só serão declarados entregues após conferência.

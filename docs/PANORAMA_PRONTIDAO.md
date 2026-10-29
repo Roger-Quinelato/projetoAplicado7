@@ -22,7 +22,7 @@ está em EVIDENCIAS_VALIDACAO.md. Permanecem ensaio, ambiente e aceite docente.
 | Frente | Situação observada | O que falta para aceite |
 |---|---|---|
 | Cenário, requisitos, AS-IS e TO-BE | Documentos e diagramas existentes | Conferência docente das premissas; cenário é acadêmico |
-| Padrões, integrações e APIs | ADRs, OpenAPI, AsyncAPI e exemplos existentes | Manter coerência com o commit demonstrado; ADR-006 ainda proposto |
+| Padrões, integrações e APIs | ADRs, OpenAPI, AsyncAPI e exemplos existentes | Manter coerência com o commit demonstrado; ADR-006 não adotado (evolução) |
 | Três fluxos integrados | Código, interface e roteiros F1/F2/F3 existentes | Ensaio integral no notebook e ambiente da apresentação |
 | Qualidade e evolução | Nove atributos e estratégias documentados | Distinguir resultados medidos de metas futuras |
 | CI da versão-base | Run `40199072801`: 252 testes aprovados/14 ignorados no SQLite; 262/4 no PostgreSQL; 25 E2E e axe aprovado | Suítes sobrepostas; não equivale a aprovação docente ou teste de hospedagem |
