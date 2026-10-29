@@ -328,3 +328,22 @@ interrompendo o lote.
 Verificação: `pika` simulado nos testes padrão (ordem das chamadas, limites e falha
 em cada etapa) e RabbitMQ 3.13 real no job `rabbitmq` da CI
 (`tests/test_rabbitmq_real.py`: publicação confirmada na fila e nack com fila cheia).
+
+## Correções verificadas de fechamento
+
+- F3: resolução e reconciliação sem processo existente falham de forma
+  recuperável; a inbox não é confirmada. Após recuperar a abertura, repetir o
+  despacho conclui a operação. Se a retentativa atingir o limite, reprocessar
+  explicitamente os eventos em `FAILED` após resolver a dependência.
+- Financeiro: cancelamento usa a data UTC e o estado efetivo da consulta.
+  Fatura vencida recebe `409 INVALID_STATE`, mesmo antes da verificação
+  explícita de inadimplência. No próprio dia do vencimento, ainda pode ser
+  cancelada se estiver aberta e sem pagamento.
+- Workflow: o fim do contrato cancela tarefas ainda abertas e calcula o
+  agregado: todas `DONE` → `COMPLETED`; alguma `CANCELLED` e todas finais →
+  `CANCELLED`. Reentrega preserva estados e responsáveis finais. O evento de
+  encerramento também aguarda o processo de preparação, sem confirmação vazia.
+
+As correções não alteram retroativamente registros já consumidos em versões
+anteriores. A persistência de inconsistências antigas exige análise e reparação
+específicas, sem apagar dados ou reescrever eventos automaticamente.

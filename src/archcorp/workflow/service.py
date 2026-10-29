@@ -3,10 +3,10 @@ from datetime import datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from archcorp.exceptions import NotFoundError
+from archcorp.exceptions import BusinessRuleError, NotFoundError
 from archcorp.infrastructure.db import count_rows
 from archcorp.integration.public import audit
-from archcorp.workflow.domain import FINAL_PROCESS_STATES, aggregate_process_state, ensure_process_open, parse_utc, preparation_due, task_change_needed
+from archcorp.workflow.domain import FINAL_PROCESS_STATES, FINAL_TASK_STATES, aggregate_process_state, ensure_process_open, parse_utc, preparation_due, task_change_needed
 from archcorp.workflow.models import ProcessInstance, ProcessTask
 
 
@@ -63,6 +63,8 @@ def handle_ticket_entitlement_reconciled(session: Session, envelope: dict) -> No
     payload = envelope["payload"]
     process = _find_process(session, "TICKET_RESOLUTION", payload["ticketId"])
     if not process:
+        raise BusinessRuleError("Reconciliação aguarda a abertura do processo do chamado")
+    if process.state in FINAL_PROCESS_STATES:
         return
     if payload["status"] == "OPEN":
         process.due_at = parse_utc(payload["dueAt"])
@@ -80,10 +82,16 @@ def handle_ticket_resolved(session: Session, envelope: dict) -> None:
     """Consumidor de TicketResolved.v1: conclui o processo e suas tarefas."""
     process = _find_process(session, "TICKET_RESOLUTION", envelope["payload"]["ticketId"])
     if not process:
+        # Não confirmar a inbox antes de existir a abertura: a outbox mantém a
+        # tentativa recuperável, inclusive quando a abertura já foi para FAILED.
+        raise BusinessRuleError("Resolução aguarda a abertura do processo do chamado")
+    if process.state in FINAL_PROCESS_STATES:
         return
-    process.state = "COMPLETED"
-    for task in _tasks(session, process):
-        task.state = "DONE"
+    tasks = _tasks(session, process)
+    for task in tasks:
+        if task.state not in FINAL_TASK_STATES:
+            task.state = "DONE"
+    process.state = aggregate_process_state(process.state, [task.state for task in tasks])
     audit(session, envelope["correlationId"], "workflow", "complete_ticket_resolution", "success", process.process_id)
 
 
@@ -101,12 +109,15 @@ def process_summary(session: Session) -> dict:
 def handle_contract_closed(session: Session, envelope: dict) -> None:
     """Encerra a preparação de retirada do contrato; o processo não fica pendente após o fim da locação."""
     process = _find_process(session, "ONBOARDING", envelope["payload"]["contractId"])
-    if not process or process.state in {"COMPLETED", "CANCELLED"}:
+    if not process:
+        raise BusinessRuleError("Encerramento aguarda a preparação do contrato")
+    if process.state in FINAL_PROCESS_STATES:
         return
-    process.state = "COMPLETED"
-    for task in _tasks(session, process):
-        if task.state not in {"DONE", "CANCELLED"}:
+    tasks = _tasks(session, process)
+    for task in tasks:
+        if task.state not in FINAL_TASK_STATES:
             task.state = "CANCELLED"
+    process.state = aggregate_process_state(process.state, [task.state for task in tasks])
     audit(session, envelope["correlationId"], "workflow", "complete_onboarding_on_close", "success", process.process_id)
 
 

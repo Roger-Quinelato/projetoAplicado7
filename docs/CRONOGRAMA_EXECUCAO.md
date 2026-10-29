@@ -23,7 +23,7 @@ operacionais ou as issues. Na consulta de 28/10, #15–#22 continuam abertas.
 
 | Demanda de fechamento | Situação | Critério de conclusão |
 |---|---|---|
-| T19 / #22 / #65 — documentação | Revisão final | Artefatos coerentes, autoria e referências completas, relatório renderizado com 15–20 páginas |
+| T19 / #22 / #65 — documentação | Revisão final | Autoria preenchida; conferir artefatos, referências e relatório renderizado com 15–20 páginas |
 | T20 / #23 / #64 — publicação | Aceite externo não comprovado | HTTPS, health, operações autenticadas, migrações, proteção e persistência após reinício |
 | T21 / #24 — vínculos oficiais | Estado externo não reconferido | Arquivos e links oficiais conferidos; não é exigência adicional de arquitetura do guia |
 | T22 / #25 / #66 — entrega | Pendente | Aceite docente, autoria, ensaio e submissão |

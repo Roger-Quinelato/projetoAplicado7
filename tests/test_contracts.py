@@ -115,7 +115,10 @@ def test_encerramento_idempotente_publica_evento_e_conclui_workflow(client, admi
         assert session.query(OutboxEvent).filter_by(event_type="ContractClosed.v1").count() == 1
         assert session.query(AuditLog).filter_by(operation="close_contract").count() == 1
     process = next(p for p in client.get("/api/v1/workflow/processes", headers=admin_headers).json() if p["referenceId"] == contract_id)
-    assert process["state"] == "COMPLETED"
+    assert process["state"] == "CANCELLED"  # preparação não executada é cancelada no encerramento
+    tasks = client.get("/api/v1/workflow/tasks", headers=admin_headers,
+                       params={"processId": process["processId"]}).json()
+    assert tasks and all(task["state"] == "CANCELLED" for task in tasks)
 
 
 def test_encerramento_valida_estado_e_data(client, admin_headers, customer, active_contract):

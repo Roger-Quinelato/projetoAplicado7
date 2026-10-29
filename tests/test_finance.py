@@ -178,7 +178,8 @@ def test_encerramento_sem_valor_restante_e_idempotente_por_event_id_fora_da_inbo
 
 
 def test_primeira_fatura_cancelada_nao_e_recobrada_no_encerramento():
-    service = FinanceService()
+    # Cancelamento anterior ao vencimento; o teste não depende da data da máquina.
+    service = FinanceService(clock=fixed("2026-10-20T12:00:00+00:00"))
     with SessionLocal() as session:
         service.handle_contract_activated(session, envelope("ContractActivated.v1", {"status": "ACTIVE"}))
         session.commit()

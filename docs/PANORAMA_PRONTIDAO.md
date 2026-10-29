@@ -6,28 +6,18 @@ apresentação avaliada. Restam 12 e 26 dias corridos, respectivamente.
 
 ## Diagnóstico
 
-O núcleo funcional está implementado. O maior trabalho restante é fechar e
-comprovar a entrega: autoria, consistência dos artefatos, execução reproduzível,
+O núcleo funcional está implementado. O maior trabalho restante é comprovar a entrega: consistência dos artefatos, execução reproduzível,
 ambiente de apresentação e aceite do professor. Não há base para um percentual
 único: quantidade de arquivos, tarefas fechadas e testes aprovados não mede a
 prontidão acadêmica.
 
-### Lacunas técnicas reproduzidas nesta revisão
+### Correções e autoria de fechamento
 
-1. **Prioridade alta — recuperação do F3:** quando `TicketOpened.v1` falha e
-   `TicketResolved.v1` é confirmado antes da recuperação, o processo criado
-   depois pode permanecer `STARTED` mesmo com chamado `RESOLVED` e sem eventos
-   pendentes. Corrigir e cobrir a inversão de processamento antes de 09/11.
-2. **Cancelamento financeiro:** leitura pode mostrar `OVERDUE` enquanto o estado
-   persistido ainda é `OPEN`; nesse intervalo, o comando aceita cancelamento.
-   Definir a política e alinhar comando e exibição.
-3. **Encerramento de contrato:** pode resultar em processo `COMPLETED` com tarefa
-   `CANCELLED`, divergindo da regra geral do agregado. Definir a exceção ou
-   corrigir o comportamento e a documentação em conjunto.
-
-Esses achados foram reproduzidos apesar da suíte aprovada. Os caminhos de
-sucesso F1/F2/F3 existem, mas a prontidão exige resolver ou aceitar explicitamente
-os limites; os resultados dos testes não significam ausência de defeitos.
+Os três defeitos reproduzidos foram corrigidos com testes de regressão: F3
+fora de ordem, cancelamento financeiro vencido e agregado do processo após
+encerramento. A autoria foi preenchida: Roger Quinelato (backend, produto e
+negócio); Raquel (frontend e levantamento de requisitos). A evidência detalhada
+está em EVIDENCIAS_VALIDACAO.md. Permanecem ensaio, ambiente e aceite docente.
 
 | Frente | Situação observada | O que falta para aceite |
 |---|---|---|
@@ -36,7 +26,7 @@ os limites; os resultados dos testes não significam ausência de defeitos.
 | Três fluxos integrados | Código, interface e roteiros F1/F2/F3 existentes | Ensaio integral no notebook e ambiente da apresentação |
 | Qualidade e evolução | Nove atributos e estratégias documentados | Distinguir resultados medidos de metas futuras |
 | CI da versão-base | Run `40199072801`: 252 testes aprovados/14 ignorados no SQLite; 262/4 no PostgreSQL; 25 E2E e axe aprovado | Suítes sobrepostas; não equivale a aprovação docente ou teste de hospedagem |
-| Relatório e slides | Artefatos existentes em revisão final | Nomes/contribuições e conferência da versão renderizada |
+| Relatório e slides | Artefatos existentes em revisão final | Autoria preenchida; conferir versão renderizada |
 | Operação pública | Configuração prevista no repositório | HTTPS, health, escrita/leitura, migrações e persistência após reinício não comprovados |
 | Entrega e apresentação | Datas definidas | Pacote fechado, cópia de contingência, revisão do professor e ensaios |
 
@@ -48,8 +38,8 @@ Evidências locais e históricas: [validação](EVIDENCIAS_VALIDACAO.md).
 
 | Prazo interno | Entrega | Critério de término |
 |---|---|---|
-| 28–30/10 | Documentação alinhada e autoria | Índice do guia completo; nomes/contribuições corretos |
-| 29/10–02/11 | Correções e decisões técnicas | Recuperação do F3 corrigida; cancelamento financeiro e regra do agregado definidos e verificados |
+| 28–30/10 | Documentação alinhada e autoria | Índice do guia completo; autoria preenchida e conferida |
+| 29/10–02/11 | Correções e decisões técnicas | Concluído em 28/10: três correções, 12 regressões e suíte local 264/14 |
 | 31/10–02/11 | Ambiente de demonstração | Instalação documentada, banco sintético, F1/F2/F3 completos e contingência local |
 | 03–04/11 | Publicação prevista ou decisão docente | Evidência de HTTPS/persistência, ou aceite explícito da demonstração local |
 | 05–06/11 | Relatório e slides conferidos | Artigo de 15–20 páginas renderizado; figuras e referências conferidas; slides coerentes |
@@ -79,6 +69,6 @@ consultados. Nenhum ticket externo foi encerrado por inferência.
 ## Condição para declarar pronto
 
 A declaração exige os três fluxos executados no ambiente escolhido, documentação
-da versão final, relatório dentro do limite do guia, autoria preenchida,
+da versão final, relatório dentro do limite do guia, autoria já preenchida,
 artefatos revisados e aceite do professor sobre as premissas e o ambiente.
 CI aprovado sustenta o código; não resolve sozinho as pendências de entrega.
