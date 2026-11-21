@@ -1,8 +1,8 @@
-import { useReducer, useState } from 'react'
+import { useEffect, useReducer, useState } from 'react'
 import type { ApiResult, BillingCycle, Contract } from '../api'
 import {
   ActionForm, Card, CustomerPicker, Field, FeedbackBanner, Id, PageIntro, PendingIntents, ResourceView, SelectField, Status, Table, date,
-  isoDate, money, text, useActions, useIdempotencyKeys, useResource, useSession,
+  isoDate, money, revealElement, text, useActions, useIdempotencyKeys, useResource, useSession,
 } from '../ui'
 
 const CYCLES = [
@@ -22,6 +22,14 @@ export default function Contracts({ params }: { params: URLSearchParams }) {
   const [version, refresh] = useReducer((x: number) => x + 1, 0)
   const [closing, setClosing] = useState<Contract | null>(null)
   const preselected = params.get('customer') ?? ''
+
+  // O formulário de encerramento abre no topo; leva a tela até ele e foca o primeiro campo.
+  useEffect(() => {
+    if (!closing) return
+    const card = document.getElementById('encerrar-contrato')
+    revealElement(card)
+    card?.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true })
+  }, [closing])
 
   const customers = useResource(a => a.listCustomers({ active: true }), [version])
   const reservations = useResource(a => a.listReservations(), [version])
@@ -69,7 +77,7 @@ export default function Contracts({ params }: { params: URLSearchParams }) {
         </ActionForm>
       </Card>
 
-      {closing ? <Card title={`Encerrar contrato ${closing.contractId.slice(0, 8)}`} roles="contracts, admin">
+      {closing ? <Card id="encerrar-contrato" title={`Encerrar contrato ${closing.contractId.slice(0, 8)}`} roles="contracts, admin">
         <p>O encerramento publica <code>ContractClosed.v1</code> e conclui a preparação de retirada em Workflow após o despacho.</p>
         <ActionForm key={closing.contractId} submit="Confirmar encerramento" busy={busy} label="Encerrar contrato" onSubmit={async f => {
           const ok = await idempotent(`close:${closing.contractId}`, 'Encerramento de contrato',
