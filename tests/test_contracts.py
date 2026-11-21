@@ -93,6 +93,52 @@ def test_reserva_compara_inicio_com_a_data_utc(client, admin_headers, customer, 
     assert client.post(path, headers={**admin_headers, "Idempotency-Key": "utc-ontem"}, json=yesterday).status_code == 422
 
 
+def edit_body(**overrides) -> dict:
+    body = reservation_body("ignorado", **overrides)
+    del body["customerId"]
+    return body
+
+
+def test_edicao_de_reserva_solicitada_altera_dados_audita_e_repetir_nao_tem_efeito(client, admin_headers, customer):
+    reservation = client.post("/api/v1/contracts/reservations", headers=admin_headers, json=reservation_body(customer["customerId"])).json()
+    path = f"/api/v1/contracts/reservations/{reservation['reservationId']}"
+    body = edit_body(startsOn=future(10), endsOn=future(15), amount=980.5, protectionCode="COMPLETA")
+
+    edited = client.patch(path, headers=admin_headers, json=body)
+    assert edited.status_code == 200, edited.text
+    data = edited.json()
+    assert (data["startsOn"], data["endsOn"], data["amount"], data["protectionCode"]) == (future(10), future(15), 980.5, "COMPLETA")
+    assert data["status"] == "REQUESTED" and data["customerId"] == customer["customerId"] and data["contractId"] is None
+    assert client.get(path, headers=admin_headers).json() == data
+
+    def audits() -> int:
+        with SessionLocal() as session:
+            return session.query(AuditLog).filter_by(operation="update_reservation", entity_id=reservation["reservationId"]).count()
+
+    assert audits() == 1
+    assert client.patch(path, headers=admin_headers, json=body).json() == data
+    assert audits() == 1  # mesmos dados: sem nova auditoria
+
+
+def test_edicao_de_reserva_valida_periodo_estado_e_permissao(client, admin_headers, customer):
+    reservation = client.post("/api/v1/contracts/reservations", headers=admin_headers, json=reservation_body(customer["customerId"])).json()
+    path = f"/api/v1/contracts/reservations/{reservation['reservationId']}"
+
+    assert client.patch(path, headers=admin_headers, json=edit_body(startsOn=future(9), endsOn=future(8))).status_code == 422
+    assert client.patch(path, headers=admin_headers, json=edit_body(startsOn=future(-2), endsOn=future(2))).status_code == 422
+    assert client.patch(f"/api/v1/contracts/reservations/{MISSING_ID}", headers=admin_headers, json=edit_body()).status_code == 404
+    assert client.patch(path, json=edit_body()).status_code == 401
+    assert client.patch(path, headers={"Authorization": "Bearer demo-support"}, json=edit_body()).status_code == 403
+    assert client.get(path, headers=admin_headers).json()["startsOn"] == reservation["startsOn"]  # recusas não alteram a reserva
+
+    client.post(f"{path}/draft", headers={**admin_headers, "Idempotency-Key": "edit-draft"})
+    drafted = client.patch(path, headers=admin_headers, json=edit_body(amount=1))
+    assert (drafted.status_code, drafted.json()["code"]) == (409, "CONFLICT")
+    client.post(f"{path}/cancel", headers=admin_headers)
+    cancelled = client.patch(path, headers=admin_headers, json=edit_body(amount=1))
+    assert (cancelled.status_code, cancelled.json()["code"]) == (409, "CONFLICT")
+
+
 def test_cancelamento_de_reserva_cancela_rascunho(client, admin_headers, customer):
     reservation = client.post("/api/v1/contracts/reservations", headers=admin_headers, json=reservation_body(customer["customerId"])).json()
     drafted = client.post(f"/api/v1/contracts/reservations/{reservation['reservationId']}/draft", headers={**admin_headers, "Idempotency-Key": "cancel-draft"}).json()

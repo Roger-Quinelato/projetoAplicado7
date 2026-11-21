@@ -599,7 +599,7 @@ O roteiro equivalente é automatizado em
 
 ## Executar os fluxos pela interface
 
-A interface em `http://localhost:8000/` cobre F1, F2 e F3 sem terminal. Informe
+A interface em `http://localhost:8000/` cobre F1, F2 e F3 sem terminal. A edição de reserva usa `PATCH /api/v1/contracts/reservations/{id}` (só reserva solicitada; o cliente não muda). Informe
 `demo-admin` na tela de acesso (no modo público, a credencial configurada no
 provedor). A navegação lateral leva a Visão geral, CRM, Reservas e contratos,
 Financeiro, Atendimento e Workflow; cada aviso de sucesso ou erro exibe o
@@ -607,9 +607,13 @@ Financeiro, Atendimento e Workflow; cada aviso de sucesso ou erro exibe o
 
 1. **F1.** Em CRM, cadastre um cliente fictício. Na linha do cliente, use
    **Nova reserva**: a tela Reservas e contratos abre com o mesmo cliente
-   selecionado. Registre a reserva e, na tabela Reservas, use **Gerar rascunho**.
-   O contrato aparece como "Rascunho" para o mesmo cliente, sem recadastro.
-2. **F2.** Em Contratos, use **Ativar**. Em Financeiro (ou Visão geral/Workflow),
+   selecionado. Registre a reserva: ela fica "Solicitada". Enquanto está
+   solicitada, **Editar…** abre o formulário preenchido (datas, valor, grupo de
+   veículo, proteção, ciclo, SLA) e **Cancelar** a cancela. A interface não expõe o
+   rascunho: **Ativar** gera o contrato a partir da reserva (mesmo cliente, sem
+   recadastro) e o ativa em seguida, e a reserva passa a "Ativa".
+2. **F2.** Ao ativar a reserva (ou **Ativar** em Contratos, para um contrato
+   aguardando ativação criado pela API), o evento fica na outbox. Em Financeiro (ou Visão geral/Workflow),
    use **Despachar eventos pendentes**: surge a fatura "Em aberto" e, em Workflow,
    a "Preparação de retirada". Selecione a fatura e registre um pagamento simulado
    parcial: a fatura passa a "Parcialmente paga". No cartão **Verificar vencimento

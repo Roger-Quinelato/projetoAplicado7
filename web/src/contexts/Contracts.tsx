@@ -1,5 +1,5 @@
 import { useReducer, useState } from 'react'
-import type { ApiResult, BillingCycle, Contract } from '../api'
+import type { ApiResult, BillingCycle, Contract, Reservation, ReservationUpdate } from '../api'
 import {
   ActionForm, Card, CustomerPicker, Field, FeedbackBanner, Id, PageIntro, PendingIntents, ResourceView, SelectField, Status, Table, date,
   isoDate, money, text, useActions, useIdempotencyKeys, useResource, useSession,
@@ -15,12 +15,58 @@ const GROUPS = [
 ]
 const PROTECTIONS = [{ value: 'BASICA', label: 'Básica' }, { value: 'COMPLETA', label: 'Completa' }]
 
+// A tela trata só a reserva: "com rascunho" é um passo interno da ativação e aparece como solicitada.
+const RESERVATION_STATE: Record<string, [string, 'good' | 'bad' | 'warn' | 'neutral']> = {
+  REQUESTED: ['Solicitada', 'warn'], DRAFTED: ['Solicitada', 'warn'],
+  ACTIVE: ['Ativa', 'good'], CLOSED: ['Encerrada', 'neutral'], CANCELLED: ['Cancelada', 'bad'],
+}
+function ReservationState({ value }: { value: string }) {
+  const [label, tone] = RESERVATION_STATE[value] ?? [value, 'neutral']
+  return <span className={`status ${tone}`} title={value}>{label}</span>
+}
+const isOpen = (r: Reservation) => r.status === 'REQUESTED' || r.status === 'DRAFTED'
+
+/** Mantém na lista o valor atual da reserva mesmo quando ele não é uma das opções padrão. */
+const withCurrent = (options: { value: string, label: string }[], current?: string) =>
+  current && !options.some(o => o.value === current) ? [...options, { value: current, label: current }] : options
+
+/** Campos compartilhados pelo registro e pela edição da reserva. */
+function ReservationFields({ initial }: { initial?: Reservation }) {
+  return <>
+    <div className="form-grid">
+      <SelectField name="vehicleGroup" label="Grupo de veículo" options={withCurrent(GROUPS, initial?.vehicleGroup)} defaultValue={initial?.vehicleGroup ?? 'ECONOMICO'} />
+      <SelectField name="protectionCode" label="Proteção" options={withCurrent(PROTECTIONS, initial?.protectionCode)} defaultValue={initial?.protectionCode ?? 'BASICA'} />
+    </div>
+    <div className="form-grid">
+      <Field name="startsOn" label="Início" type="date" defaultValue={initial?.startsOn ?? isoDate(1)} />
+      <Field name="endsOn" label="Fim" type="date" defaultValue={initial?.endsOn ?? isoDate(8)} />
+    </div>
+    <div className="form-grid">
+      <Field name="amount" label="Valor (R$)" type="number" min="0.01" step="0.01" defaultValue={initial ? initial.amount.toFixed(2) : '1200.00'} />
+      <SelectField name="billingCycle" label="Ciclo de cobrança" options={CYCLES} defaultValue={initial?.billingCycle ?? 'ONCE'} />
+    </div>
+    <div className="form-grid">
+      <Field name="serviceCode" label="Código do serviço" defaultValue={initial?.serviceCode ?? 'RENTAL-FLEX'} />
+      <Field name="slaHours" label="SLA (horas)" type="number" min="1" step="1" defaultValue={String(initial?.slaHours ?? 8)} />
+    </div>
+  </>
+}
+
+function reservationBody(f: FormData): ReservationUpdate {
+  return {
+    vehicleGroup: text(f, 'vehicleGroup'), protectionCode: text(f, 'protectionCode'), serviceCode: text(f, 'serviceCode'),
+    startsOn: text(f, 'startsOn'), endsOn: text(f, 'endsOn'), amount: Number(text(f, 'amount')), currency: 'BRL',
+    billingCycle: text(f, 'billingCycle') as BillingCycle, slaHours: Number(text(f, 'slaHours')),
+  }
+}
+
 export default function Contracts({ params }: { params: URLSearchParams }) {
   const { api, navigate } = useSession()
   const { feedback, busy, run, clear } = useActions()
   const keys = useIdempotencyKeys()
   const [version, refresh] = useReducer((x: number) => x + 1, 0)
   const [closing, setClosing] = useState<Contract | null>(null)
+  const [editing, setEditing] = useState<Reservation | null>(null)
   const preselected = params.get('customer') ?? ''
 
   const customers = useResource(a => a.listCustomers({ active: true }), [version])
@@ -36,36 +82,31 @@ export default function Contracts({ params }: { params: URLSearchParams }) {
     return result !== null
   }
 
+  /** Ativar a reserva gera o contrato e o ativa; se o segundo passo falhar, repetir Ativar continua de onde parou. */
+  async function activateReservation(r: Reservation) {
+    const label = 'Ativação da reserva'
+    const done = await run(label, async () => {
+      const draft = await keys.send(`draft:${r.reservationId}`, null, key => api.draftFromReservation(r.reservationId, key), label)
+      const contractId = draft.data.contract.contractId
+      return keys.send(`activate:${contractId}`, null, key => api.activateContract(contractId, key), label)
+    }, () => 'A cobrança e a preparação da retirada começam depois que os eventos forem despachados.')
+    if (done) refresh()
+  }
+
+  const editingNow = editing ? reservations.data?.find(r => r.reservationId === editing.reservationId) ?? editing : null
+
   return <>
-    <PageIntro>Reserva, contrato de locação, vigência, proteções e SLA pertencem a Contracts. O rascunho nasce da reserva usando o cliente oficial do CRM, sem recadastro. Ativar publica <code>ContractActivated.v1</code> para faturamento e preparação de retirada.</PageIntro>
+    <PageIntro>Aqui você registra a reserva de um veículo para um cliente já cadastrado. Enquanto estiver solicitada, a reserva pode ser editada ou cancelada; ao ativá-la, o contrato passa a valer e a cobrança e a preparação da retirada começam.</PageIntro>
     <FeedbackBanner feedback={feedback} onClose={clear} />
     <PendingIntents keys={keys} busy={busy} run={run} onCheck={refresh} />
 
     <div className="grid two">
       <Card title="Nova reserva" roles="commercial, contracts, admin">
-        <ActionForm key={preselected} submit="Registrar reserva" busy={busy} label="Nova reserva" onSubmit={f => idempotent('reservation', 'Registro de reserva', {
-            customerId: text(f, 'customerId'), vehicleGroup: text(f, 'vehicleGroup'), protectionCode: text(f, 'protectionCode'),
-            serviceCode: text(f, 'serviceCode'), startsOn: text(f, 'startsOn'), endsOn: text(f, 'endsOn'),
-            amount: Number(text(f, 'amount')), currency: 'BRL', billingCycle: text(f, 'billingCycle') as BillingCycle,
-            slaHours: Number(text(f, 'slaHours')),
-          }, api.createReservation, r => `Reserva ${r.reservationId.slice(0, 8)} solicitada; gere o rascunho na tabela abaixo.`)}>
+        <ActionForm key={preselected} submit="Registrar reserva" busy={busy} label="Nova reserva" onSubmit={f => idempotent('reservation', 'Registro de reserva',
+          { customerId: text(f, 'customerId'), ...reservationBody(f) }, api.createReservation,
+          r => `Reserva ${r.reservationId.slice(0, 8)} solicitada. Use Ativar, Editar ou Cancelar na tabela abaixo.`)}>
           <CustomerPicker label="Cliente (CRM)" defaultValue={preselected} />
-          <div className="form-grid">
-            <SelectField name="vehicleGroup" label="Grupo de veículo" options={GROUPS} defaultValue="ECONOMICO" />
-            <SelectField name="protectionCode" label="Proteção" options={PROTECTIONS} defaultValue="BASICA" />
-          </div>
-          <div className="form-grid">
-            <Field name="startsOn" label="Início" type="date" defaultValue={isoDate(1)} />
-            <Field name="endsOn" label="Fim" type="date" defaultValue={isoDate(8)} />
-          </div>
-          <div className="form-grid">
-            <Field name="amount" label="Valor (R$)" type="number" min="0.01" step="0.01" defaultValue="1200.00" />
-            <SelectField name="billingCycle" label="Ciclo de cobrança" options={CYCLES} defaultValue="ONCE" />
-          </div>
-          <div className="form-grid">
-            <Field name="serviceCode" label="Código do serviço" defaultValue="RENTAL-FLEX" />
-            <Field name="slaHours" label="SLA (horas)" type="number" min="1" step="1" defaultValue="8" />
-          </div>
+          <ReservationFields />
         </ActionForm>
       </Card>
 
@@ -81,24 +122,25 @@ export default function Contracts({ params }: { params: URLSearchParams }) {
           <Field name="reason" label="Motivo" required={false} defaultValue="Devolução do veículo" />
         </ActionForm>
         <button type="button" className="secondary small spaced" onClick={() => setClosing(null)}>Voltar</button>
-      </Card> : <Card title="Rascunho direto (sem reserva)" roles="commercial, contracts, admin">
-        <p>Alternativa do F1 documentada no roteiro: cria o rascunho a partir do cliente do CRM, sem passar pela reserva.</p>
-        <ActionForm submit="Criar rascunho" busy={busy} label="Rascunho direto" onSubmit={f => idempotent('draft', 'Criação de rascunho', {
-            customerId: text(f, 'customerId'), serviceCode: text(f, 'serviceCode'), startsOn: text(f, 'startsOn'),
-            billing: { amount: Number(text(f, 'amount')), currency: 'BRL', cycle: text(f, 'cycle') as BillingCycle },
-            slaHours: Number(text(f, 'slaHours')),
-          }, api.createDraft, c => `Contrato ${c.contractId.slice(0, 8)} em rascunho.`)}>
-          <CustomerPicker label="Cliente (CRM)" />
-          <div className="form-grid">
-            <Field name="serviceCode" label="Código do serviço" defaultValue="RENTAL-FLEX" />
-            <Field name="startsOn" label="Início" type="date" defaultValue={isoDate(1)} />
-          </div>
-          <div className="form-grid">
-            <Field name="amount" label="Valor (R$)" type="number" min="0.01" step="0.01" defaultValue="2500.00" />
-            <SelectField name="cycle" label="Ciclo" options={CYCLES} defaultValue="MONTHLY" />
-          </div>
-          <Field name="slaHours" label="SLA (horas)" type="number" min="1" step="1" defaultValue="8" />
-        </ActionForm>
+      </Card> : editingNow ? <Card title={`Editar reserva ${editingNow.reservationId.slice(0, 8)}`} roles="commercial, contracts, admin">
+        {editingNow.status !== 'REQUESTED' ? <p role="status">Esta reserva já não está solicitada e não pode mais ser editada.</p> : <>
+          <p>Cliente: <strong>{customerName(editingNow.customerId)}</strong>. Para trocar o cliente, cancele esta reserva e registre outra.</p>
+          <ActionForm key={editingNow.reservationId} submit="Salvar alterações" busy={busy} label="Editar reserva" onSubmit={async f => {
+            const result = await run('Edição da reserva', () => api.updateReservation(editingNow.reservationId, reservationBody(f)), () => 'Dados atualizados.')
+            if (result) setEditing(null)
+            refresh()
+            return result !== null
+          }}>
+            <ReservationFields initial={editingNow} />
+          </ActionForm>
+        </>}
+        <button type="button" className="secondary small spaced" onClick={() => setEditing(null)}>Voltar</button>
+      </Card> : <Card title="Como funciona" roles="commercial, contracts, admin">
+        <ol className="steps">
+          <li>Registre a reserva do cliente: ela fica <strong>Solicitada</strong>.</li>
+          <li>Enquanto estiver solicitada, use <strong>Editar</strong> (por exemplo, se o cliente mudou a data) ou <strong>Cancelar</strong>.</li>
+          <li>Use <strong>Ativar</strong> para o contrato passar a valer; a cobrança e a preparação da retirada começam em seguida.</li>
+        </ol>
       </Card>}
     </div>
 
@@ -110,22 +152,21 @@ export default function Contracts({ params }: { params: URLSearchParams }) {
           { key: 'group', label: 'Grupo / proteção', render: r => `${GROUPS.find(g => g.value === r.vehicleGroup)?.label ?? r.vehicleGroup} · ${PROTECTIONS.find(g => g.value === r.protectionCode)?.label ?? r.protectionCode}` },
           { key: 'period', label: 'Período', render: r => `${date(r.startsOn)} a ${date(r.endsOn)}` },
           { key: 'amount', label: 'Valor', render: r => money(r.amount, r.currency) },
-          { key: 'status', label: 'Estado', render: r => <Status value={r.status} /> },
+          { key: 'status', label: 'Estado', render: r => <ReservationState value={r.status} /> },
           { key: 'contract', label: 'Contrato', render: r => <Id value={r.contractId} /> },
-          { key: 'actions', label: 'Ações', render: r => <div className="row-actions">
-            {r.status === 'REQUESTED' && <button type="button" className="inline" disabled={busy} onClick={() => void idempotent(`draft:${r.reservationId}`, 'Geração de rascunho',
-              null, (_body, key) => api.draftFromReservation(r.reservationId, key), d => `Contrato ${d.contract.contractId.slice(0, 8)} em rascunho para o mesmo cliente.`)}>Gerar rascunho</button>}
-            {(r.status === 'REQUESTED' || r.status === 'DRAFTED') && <button type="button" className="inline quiet" disabled={busy} onClick={() => {
-              if (window.confirm('Cancelar esta reserva? O rascunho vinculado também é cancelado.')) void run('Cancelamento de reserva', () => api.cancelReservation(r.reservationId)).then(x => { if (x) refresh() })
-            }}>Cancelar</button>}
-            {!['REQUESTED', 'DRAFTED'].includes(r.status) && '—'}
-          </div> },
+          { key: 'actions', label: 'Ações', render: r => isOpen(r) ? <div className="row-actions">
+            <button type="button" className="inline" disabled={busy} onClick={() => void activateReservation(r)}>Ativar</button>
+            {r.status === 'REQUESTED' && <button type="button" className="inline quiet" disabled={busy} onClick={() => { setEditing(r); setClosing(null); clear() }}>Editar…</button>}
+            <button type="button" className="inline quiet" disabled={busy} onClick={() => {
+              if (window.confirm('Cancelar esta reserva?')) void run('Cancelamento de reserva', () => api.cancelReservation(r.reservationId)).then(x => { if (x) refresh() })
+            }}>Cancelar</button>
+          </div> : '—' },
         ]} />}
       </ResourceView>
     </Card>
 
     <Card title="Contratos" roles="leitura: commercial, contracts, finance, support, admin · ativar/encerrar: contracts, admin">
-      <ResourceView resource={contracts} label="contratos" empty="Nenhum contrato. Gere um rascunho a partir de uma reserva.">
+      <ResourceView resource={contracts} label="contratos" empty="Nenhum contrato ainda. Ative uma reserva.">
         {rows => <Table caption="Contratos" rows={rows} rowKey={r => r.contractId} columns={[
           { key: 'id', label: 'Contrato', render: r => <Id value={r.contractId} /> },
           { key: 'customer', label: 'Cliente', render: r => customerName(r.customerId) },
@@ -139,7 +180,7 @@ export default function Contracts({ params }: { params: URLSearchParams }) {
               null, (_body, key) => api.activateContract(r.contractId, key), c => `Evento ${c.eventId?.slice(0, 8) ?? ''} na outbox; despache em Visão geral, Financeiro ou Workflow.`)}>Ativar</button>
             : r.status === 'ACTIVE'
               ? <div className="row-actions">
-                <button type="button" className="inline quiet" disabled={busy} onClick={() => { setClosing(r); clear() }}>Encerrar…</button>
+                <button type="button" className="inline quiet" disabled={busy} onClick={() => { setClosing(r); setEditing(null); clear() }}>Encerrar…</button>
                 <button type="button" className="inline" onClick={() => navigate(`/atendimento?contract=${r.contractId}`)}>Abrir chamado</button>
               </div>
               : '—' },

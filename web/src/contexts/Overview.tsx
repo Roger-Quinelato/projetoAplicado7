@@ -11,8 +11,8 @@ import {
 
 /** Passos de cada fluxo e a tela onde são feitos; sem rota, o passo é feito na barra de eventos. */
 const FLOWS: { title: string, steps: [string, string | null][] }[] = [
-  { title: 'F1 · Contrato sem recadastro', steps: [['Cadastre um cliente fictício', '/crm'], ['Registre a reserva com esse cliente', '/reservas'], ['Gere o rascunho a partir da reserva', '/reservas']] },
-  { title: 'F2 · Ativação, cobrança e retirada', steps: [['Ative o contrato em rascunho', '/reservas'], ['Despache os eventos', null], ['Confira a fatura e registre o pagamento', '/financeiro'], ['Confira a preparação de retirada', '/workflow']] },
+  { title: 'F1 · Contrato sem recadastro', steps: [['Cadastre um cliente fictício', '/crm'], ['Registre a reserva com esse cliente', '/reservas'], ['Ative a reserva: o contrato nasce para o mesmo cliente', '/reservas']] },
+  { title: 'F2 · Ativação, cobrança e retirada', steps: [['Ative a reserva (ou o contrato aguardando ativação)', '/reservas'], ['Despache os eventos', null], ['Confira a fatura e registre o pagamento', '/financeiro'], ['Confira a preparação de retirada', '/workflow']] },
   { title: 'F3 · Atendimento com SLA', steps: [['Consulte a elegibilidade e abra o chamado', '/atendimento'], ['Despache os eventos', null], ['Atribua e resolva o chamado', '/atendimento'], ['Despache e confira o processo concluído', '/workflow']] },
 ]
 const DESTINATIONS: Record<string, string> = {

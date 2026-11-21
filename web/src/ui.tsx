@@ -54,7 +54,7 @@ export function text(form: FormData, name: string): string {
 
 const STATUS_LABELS: Record<string, [string, 'good' | 'bad' | 'warn' | 'neutral']> = {
   OPEN: ['Em aberto', 'warn'], WON: ['Ganha', 'good'], LOST: ['Perdida', 'bad'],
-  REQUESTED: ['Solicitada', 'warn'], DRAFTED: ['Com rascunho', 'neutral'], DRAFT: ['Rascunho', 'neutral'],
+  REQUESTED: ['Solicitada', 'warn'], DRAFTED: ['Com rascunho', 'neutral'], DRAFT: ['Aguardando ativação', 'neutral'],
   ACTIVE: ['Ativo', 'good'], CLOSED: ['Encerrado', 'neutral'], CANCELLED: ['Cancelado', 'bad'],
   PAID: ['Paga', 'good'], OVERDUE: ['Vencida', 'bad'], PARTIALLY_PAID: ['Parcialmente paga', 'warn'],
   PENDING_ENTITLEMENT: ['Elegibilidade pendente', 'warn'], REJECTED_ENTITLEMENT: ['Sem elegibilidade', 'bad'],
@@ -205,22 +205,25 @@ export function PendingIntents({ keys, busy, run, onCheck }: {
   </div>
 }
 
+/** Dados para rastrear a operação (código HTTP, correlação), recolhidos para não poluir o aviso. */
+function TechnicalDetails({ children }: { children: ReactNode }) {
+  return <details className="tech"><summary>Detalhes técnicos</summary><p className="meta">{children}</p></details>
+}
+
 export function FeedbackBanner({ feedback, onClose }: { feedback: Feedback | null, onClose: () => void }) {
   return <div className="feedback-region" aria-live="polite">
     {feedback?.kind === 'success' && <div className="notice success" role="status">
       <div>
         <strong>{feedback.message}</strong>
-        <p className="meta">
-          {feedback.replayed === true && <span className="tag">Repetição idempotente: resposta original reaproveitada</span>}
-          Correlação: <code>{feedback.correlationId}</code>
-        </p>
+        {feedback.replayed === true && <p className="meta"><span className="tag">Repetição idempotente: resposta original reaproveitada</span></p>}
+        <TechnicalDetails>Correlação: <code>{feedback.correlationId}</code></TechnicalDetails>
       </div>
       <button type="button" className="close" aria-label="Fechar aviso" onClick={onClose}>×</button>
     </div>}
     {feedback?.kind === 'warning' && <div className="notice warn" role="alert">
       <div>
         <strong>{feedback.message}</strong>
-        <p className="meta">Correlação: <code>{feedback.correlationId}</code></p>
+        <TechnicalDetails>Correlação: <code>{feedback.correlationId}</code></TechnicalDetails>
       </div>
       <button type="button" className="close" aria-label="Fechar aviso" onClick={onClose}>×</button>
     </div>}
@@ -237,10 +240,10 @@ export function ErrorPanel({ error, context, onRetry, onClose }: { error: ApiErr
       <strong>{errorHeadline(error)}</strong>
       {detail && <p>{detail}</p>}
       {error.issues.length > 0 && <ul className="issues">{error.issues.map((issue, i) => <li key={i}>{describeIssue(issue)}</li>)}</ul>}
-      <p className="meta">
+      <TechnicalDetails>
         {error.kind === 'network' ? 'Sem resposta do servidor' : error.status === 0 ? <>Verificação no navegador · código <code>{error.code}</code></> : <>HTTP {error.status} · código <code>{error.code}</code></>}
         {error.correlationId && <> · Correlação: <code>{error.correlationId}</code></>}
-      </p>
+      </TechnicalDetails>
       <div className="notice-actions">
         {error.status === 401 && <button type="button" className="secondary small" onClick={signOut}>Trocar credencial</button>}
         {onRetry && <button type="button" className="secondary small" onClick={onRetry}>Tentar novamente</button>}

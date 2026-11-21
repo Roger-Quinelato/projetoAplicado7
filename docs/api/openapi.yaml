@@ -2543,6 +2543,114 @@ paths:
                 correlationId: 11111111-1111-4111-8111-111111111111
                 errors:
                 - *id001
+    patch:
+      tags:
+      - Reservas e contratos
+      summary: Update Reservation
+      description: Altera período, valor, grupo, proteção, ciclo e SLA de uma reserva
+        solicitada; repetir os mesmos dados não tem efeito.
+      operationId: updateReservation
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: reservation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Reservation Id
+      - name: X-Correlation-ID
+        in: header
+        required: false
+        description: UUID de correlação. A API gera um UUID quando o cabeçalho é omitido.
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationResponse'
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:unauthorized
+                title: Não autenticado
+                status: 401
+                detail: Token ausente ou inválido
+                instance: /api/v1/contracts/reservations/{reservation_id}
+                code: UNAUTHORIZED
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '403':
+          description: Papel sem permissão para a operação.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:forbidden
+                title: Acesso negado
+                status: 403
+                detail: Papel sem permissão para esta operação
+                instance: /api/v1/contracts/reservations/{reservation_id}
+                code: FORBIDDEN
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '404':
+          description: Reserva não encontrada.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:not-found
+                title: Recurso não encontrado
+                status: 404
+                detail: Reserva não encontrada
+                instance: /api/v1/contracts/reservations/{reservation_id}
+                code: NOT_FOUND
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '409':
+          description: Somente reserva solicitada pode ser editada.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:conflict
+                title: Conflito
+                status: 409
+                detail: Somente reserva solicitada pode ser editada
+                instance: /api/v1/contracts/reservations/{reservation_id}
+                code: CONFLICT
+                correlationId: 11111111-1111-4111-8111-111111111111
+        '422':
+          description: Período ou valores inválidos.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: urn:archcorp:problem:validation-error
+                title: Entrada inválida
+                status: 422
+                detail: Período ou valores inválidos
+                instance: /api/v1/contracts/reservations/{reservation_id}
+                code: VALIDATION_ERROR
+                correlationId: 11111111-1111-4111-8111-111111111111
   /api/v1/contracts/reservations/{reservation_id}/draft:
     post:
       tags:
@@ -7622,6 +7730,69 @@ components:
         startsOn: '2027-01-04'
         status: REQUESTED
         vehicleGroup: SUV-COMPACTO
+    ReservationUpdate:
+      properties:
+        vehicleGroup:
+          type: string
+          maxLength: 50
+          minLength: 1
+          title: Vehiclegroup
+        protectionCode:
+          type: string
+          maxLength: 50
+          minLength: 1
+          title: Protectioncode
+        serviceCode:
+          type: string
+          maxLength: 80
+          minLength: 1
+          title: Servicecode
+        startsOn:
+          type: string
+          format: date
+          title: Startson
+        endsOn:
+          type: string
+          format: date
+          title: Endson
+        amount:
+          anyOf:
+          - type: number
+            exclusiveMinimum: 0.0
+          - type: string
+            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d{0,2}0*$
+          title: Amount
+        currency:
+          type: string
+          pattern: ^[A-Z]{3}$
+          title: Currency
+          default: BRL
+        billingCycle:
+          type: string
+          enum:
+          - ONCE
+          - MONTHLY
+          - QUARTERLY
+          - YEARLY
+          title: Billingcycle
+          default: MONTHLY
+        slaHours:
+          type: integer
+          maximum: 720.0
+          minimum: 1.0
+          title: Slahours
+          default: 8
+      type: object
+      required:
+      - vehicleGroup
+      - protectionCode
+      - serviceCode
+      - startsOn
+      - endsOn
+      - amount
+      title: ReservationUpdate
+      description: 'Dados editáveis de uma reserva solicitada. O cliente não muda:
+        para outro cliente, cancele e registre nova reserva.'
     TaskChange:
       properties:
         state:
