@@ -27,7 +27,7 @@ export default function EventsBar() {
   if (summary.status === 'error' && summary.error.status === 403) return null
 
   async function dispatch() {
-    const result = await run('Despacho dos eventos', () => api.dispatchOutbox())
+    const result = await run('Atualização dos processos', () => api.dispatchOutbox())
     if (result) { setLast({ result: result.data, at: new Date() }); clear(); dispatched() }
   }
 
@@ -41,11 +41,11 @@ export default function EventsBar() {
 
   const pending = summary.data?.pending
   const failed = summary.data?.failed ?? 0
-  const title = summary.status === 'error' ? 'Não foi possível consultar os eventos pendentes'
-    : pending === undefined ? 'Consultando eventos pendentes…' : pendingLabel(pending)
-  const detail = last ? dispatchSummary(last.result, last.at) : 'O despacho é manual nesta demonstração: os outros contextos só reagem aos eventos depois dele.'
+  const title = summary.status === 'error' ? 'Não foi possível consultar as pendências'
+    : pending === undefined ? 'Consultando pendências…' : pendingLabel(pending)
+  const detail = last ? dispatchSummary(last.result, last.at) : 'Depois de ativar uma reserva ou abrir um chamado, clique em Atualizar processos. Isso cria a fatura e as tarefas.'
 
-  return <section className="events-bar" aria-label="Eventos de integração">
+  return <section className="events-bar" aria-label="Pendências para processar">
     <div className="events-row">
       <span className={`events-dot ${pending ? 'pending' : ''}`} aria-hidden="true" />
       <div className="events-text" aria-live="polite">
@@ -55,7 +55,7 @@ export default function EventsBar() {
       <a href={`#/?focus=${FAILURES_CARD}`} className="events-failures" onClick={showFailures}>Falhas ({failed})</a>
       {summary.status === 'error'
         ? <button type="button" className="secondary" onClick={() => void summary.reload()}>Tentar novamente</button>
-        : <button type="button" disabled={busy} onClick={() => void dispatch()}>{busy ? 'Despachando…' : 'Despachar eventos'}</button>}
+        : <button type="button" disabled={busy} onClick={() => void dispatch()}>{busy ? 'Atualizando…' : 'Atualizar processos'}</button>}
     </div>
     {feedback?.kind === 'error' && <ErrorPanel error={feedback.error} context={feedback.message} onClose={clear} />}
   </section>

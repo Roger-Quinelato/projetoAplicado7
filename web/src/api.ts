@@ -141,8 +141,8 @@ export interface TicketCreate { customerId: Uuid, contractId: Uuid, serviceCode:
 
 export interface Process { processId: Uuid, processType: string, referenceId: Uuid, customerId: Uuid, state: string, owner: string, dueAt: string | null }
 export type TaskState = 'OPEN' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED'
-export interface Task { taskId: Uuid, processId: Uuid, title: string, state: TaskState, owner: string, dueAt: string | null }
-export interface TaskInput { processId: Uuid, title: string, owner?: string }
+export interface Task { taskId: Uuid, processId: Uuid, taskType: string | null, title: string, state: TaskState, owner: string, dueAt: string | null }
+export interface TaskInput { processId: Uuid, title: string, owner?: string, taskType?: string }
 export interface TaskChange { state: TaskState, owner?: string | null }
 
 export interface DemoState { customers: number, contracts: number, invoices: number, tickets: number, processes: number, legacyMappings: number }
@@ -403,18 +403,53 @@ export function createApi(token: string, fetcher: typeof fetch = (...args) => fe
 
 export type Api = ReturnType<typeof createApi>
 
-/** Mensagem principal, em português, para um erro da API. */
-export function errorHeadline(error: ApiError): string {
-  if (error.kind === 'network') return 'Não foi possível contatar a API.'
+/** Regras de negócio conhecidas, com a frase que a pessoa entende e o que fazer. */
+const BUSINESS_MESSAGES: [RegExp, string][] = [
+  [/Cliente inexistente ou inelegível|Cliente inelegível ou sem consentimento/i, 'Este cliente não pode contratar. Confira no CRM se ele está ativo, elegível e com consentimento.'],
+  [/Cliente não encontrado/i, 'Não encontramos este cliente. Atualize a lista e escolha outro.'],
+  [/Já existe o contrato/i, 'Já existe um contrato para este cliente, serviço e data de início.'],
+  [/encerramento anterior ao início|Data de encerramento anterior/i, 'A data de encerramento não pode ser antes do início do contrato. Escolha outra data.'],
+  [/Somente reserva solicitada/i, 'Esta reserva já foi ativada ou cancelada e não pode mais ser alterada.'],
+  [/E-mail já cadastrado/i, 'Já existe um cliente com este e-mail. Use outro e-mail ou edite o cliente existente.'],
+  [/Contato com este e-mail/i, 'Este cliente já tem um contato com este e-mail.'],
+  [/Identificador legado/i, 'Este código antigo já está em uso. Use outro código.'],
+  [/Fatura já quitada/i, 'Esta fatura já está paga.'],
+  [/Pagamento excede saldo/i, 'O valor é maior que o saldo da fatura. Informe um valor igual ou menor que o saldo.'],
+  [/Valor do pagamento deve ser positivo/i, 'Informe um valor maior que zero.'],
+  [/Referência de pagamento já usada/i, 'Esta referência já foi usada em outro pagamento. Use outra referência.'],
+  [/Fatura não encontrada/i, 'Não encontramos esta fatura. Atualize a lista.'],
+  [/aguarda a primeira fatura|Encerramento aguarda a preparação/i, 'O contrato ainda está sendo preparado. Clique em Atualizar processos e tente de novo.'],
+  [/Moeda/i, 'A moeda informada é diferente da moeda da fatura.'],
+  [/Data de referência futura/i, 'Escolha uma data de referência que não seja futura.'],
+  [/sem elegibilidade/i, 'Este contrato não dá direito a atendimento para este serviço.'],
+  [/Chamado não pode ser atribuído/i, 'Este chamado já foi resolvido ou encerrado e não aceita responsável. A lista foi atualizada.'],
+  [/Somente chamado aberto/i, 'Este chamado não está aberto e não pode ser resolvido.'],
+  [/Chamado não encontrado/i, 'Não encontramos este chamado. Atualize a lista.'],
+  [/Processo encerrado/i, 'Este processo já foi concluído e não aceita novas tarefas.'],
+  [/Reconciliação aguarda|Resolução aguarda/i, 'O processo deste chamado ainda não começou. Clique em Atualizar processos e tente de novo.'],
+  [/Processo não encontrado|Tarefa não encontrada/i, 'Não encontramos este item. Atualize a lista.'],
+]
+
+/** Frase curta e sem termos técnicos que diz o que houve e o que fazer. */
+export function errorMessage(error: ApiError): string {
+  if (error.kind === 'network') return 'Não foi possível falar com o sistema. Confira sua conexão e tente de novo.'
+  if (error.code === 'PENDING_INTENT') return 'Há um pedido anterior sem confirmação. Resolva o aviso acima antes de enviar dados diferentes.'
+  if (error.issues.length > 0) return 'Corrija os campos abaixo e tente de novo.'
+  const known = BUSINESS_MESSAGES.find(([pattern]) => pattern.test(error.detail))
+  if (known && [404, 409, 422].includes(error.status)) return known[1]
   switch (error.status) {
-    case 400: return 'Requisição inválida.'
-    case 401: return 'Credencial ausente ou inválida. Entre novamente com a credencial de demonstração.'
-    case 403: return 'Seu papel não tem permissão para esta operação.'
-    case 404: return 'Recurso não encontrado.'
-    case 409: return 'A operação conflita com o estado atual do registro.'
-    case 422: return 'Os dados enviados não foram aceitos.'
-    default: return error.status >= 500 ? 'Erro interno no servidor. Tente novamente em instantes.' : error.title
+    case 400: case 422: return 'Confira os dados informados e tente de novo.'
+    case 401: return 'Sua sessão terminou. Entre novamente.'
+    case 403: return 'Seu perfil não pode fazer esta ação.'
+    case 404: return 'Não encontramos este item. Atualize a página e tente de novo.'
+    case 409: return 'Este item mudou e a ação não vale mais. Atualize a lista e tente de novo.'
+    default: return 'Não foi possível concluir agora. Tente de novo em instantes.'
   }
+}
+
+/** O código para o suporte só aparece em falhas que a pessoa não consegue corrigir sozinha. */
+export function needsSupportCode(error: ApiError): boolean {
+  return error.code !== 'PENDING_INTENT' && (error.kind === 'network' || error.status === 0 || error.status >= 500)
 }
 
 /** Normaliza qualquer exceção lançada durante uma operação. */

@@ -131,3 +131,18 @@ def test_politica_de_alteracao_de_tarefa():
             domain.task_change_needed("DONE", "operations", target, owner)
     with pytest.raises(ConflictError):
         domain.ensure_process_open("COMPLETED")
+
+
+def test_tipo_da_tarefa_herda_o_do_processo_e_aceita_devolucao(client, admin_headers, onboarding):
+    process, first, second = onboarding
+    assert first["taskType"] == process["processType"] == "ONBOARDING"
+    assert second["taskType"] == "ONBOARDING"
+    devolucao = client.post("/api/v1/workflow/tasks", headers=admin_headers,
+                            json={"processId": process["processId"], "title": "Receber o veículo", "taskType": "RETURN"})
+    assert devolucao.status_code == 201, devolucao.text
+    assert devolucao.json()["taskType"] == "RETURN"
+    tipos = {t["title"]: t["taskType"] for t in client.get("/api/v1/workflow/tasks", headers=admin_headers, params={"processId": process["processId"]}).json()}
+    assert tipos["Receber o veículo"] == "RETURN"
+    invalido = client.post("/api/v1/workflow/tasks", headers=admin_headers,
+                           json={"processId": process["processId"], "title": "Outra tarefa", "taskType": "OUTRO"})
+    assert invalido.status_code == 422

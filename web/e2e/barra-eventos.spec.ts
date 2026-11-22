@@ -7,8 +7,8 @@ const ADMIN = { Authorization: 'Bearer demo-admin' }
 test('evento criado fora da aba aparece quando a janela volta a ficar visível e pode ser despachado', async ({ page }) => {
   expect((await page.request.post('/api/v1/integration/outbox/dispatch', { headers: ADMIN })).ok()).toBe(true)
   await entrar(page, 'demo-admin')
-  const barra = page.getByRole('region', { name: 'Eventos de integração' })
-  await expect(barra).toContainText('Nenhum evento aguardando despacho')
+  const barra = page.getByRole('region', { name: 'Pendências para processar' })
+  await expect(barra).toContainText('Nenhuma pendência para processar')
 
   // Outro cliente da API (outra aba, /docs ou script) ativa um contrato: o evento fica pendente na outbox.
   const { nome, email } = dadosUnicos('barra')
@@ -21,15 +21,15 @@ test('evento criado fora da aba aparece quando a janela volta a ficar visível e
   expect((await page.request.post(`/api/v1/contracts/${contrato.contractId}/activate`, { headers: { ...ADMIN, 'Idempotency-Key': `barra-act-${contrato.contractId}` } })).ok()).toBe(true)
 
   await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
-  await expect(barra).toContainText('1 evento aguardando despacho')
-  await barra.getByRole('button', { name: 'Despachar eventos' }).click()
-  await expect(barra).toContainText('1 evento entregue, nenhuma falha.')
-  await expect(barra).toContainText('Nenhum evento aguardando despacho')
+  await expect(barra).toContainText('1 pendência para processar')
+  await barra.getByRole('button', { name: 'Atualizar processos' }).click()
+  await expect(barra).toContainText('1 item processado, nenhum problema.')
+  await expect(barra).toContainText('Nenhuma pendência para processar')
 })
 
 test('link "Falhas" leva o foco ao cartão de falhas, de outra tela e da própria Visão geral', async ({ page }) => {
   await entrar(page, 'demo-admin')
-  const barra = page.getByRole('region', { name: 'Eventos de integração' })
+  const barra = page.getByRole('region', { name: 'Pendências para processar' })
   const cartao = page.getByRole('region', { name: 'Falhas de integração' })
 
   await irPara(page, 'CRM')

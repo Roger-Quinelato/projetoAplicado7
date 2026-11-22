@@ -29,7 +29,7 @@ def _start(session: Session, envelope: dict, process_type: str, reference_field:
     process = ProcessInstance(process_type=process_type, reference_id=reference_id, customer_id=payload["customerId"], due_at=due_at)
     session.add(process)
     session.flush()
-    session.add(ProcessTask(process_id=process.process_id, title="Executar " + process_type.lower().replace("_", " "), due_at=process.due_at))
+    session.add(ProcessTask(process_id=process.process_id, task_type=process_type, title="Executar " + process_type.lower().replace("_", " "), due_at=process.due_at))
     audit(session, envelope["correlationId"], "workflow", f"start_{process_type.lower()}", "success", process.process_id, referenceId=reference_id)
 
 
@@ -126,16 +126,19 @@ def _locked_process(session: Session, process_id: str) -> ProcessInstance | None
     return session.get(ProcessInstance, process_id, with_for_update=True, populate_existing=True)
 
 
-def create_task(session: Session, process_id: str, title: str, owner: str, correlation_id: str) -> ProcessTask:
-    """Cria tarefa em processo não encerrado, com o prazo do processo, e registra auditoria."""
+def create_task(session: Session, process_id: str, title: str, owner: str, correlation_id: str, task_type: str | None = None) -> ProcessTask:
+    """Cria tarefa em processo não encerrado, com o prazo do processo, e registra auditoria.
+
+    Sem `task_type`, a tarefa herda o tipo do processo.
+    """
     process = _locked_process(session, process_id)
     if not process:
         raise NotFoundError("Processo não encontrado")
     ensure_process_open(process.state)
-    task = ProcessTask(process_id=process.process_id, title=title, owner=owner, due_at=process.due_at)
+    task = ProcessTask(process_id=process.process_id, task_type=task_type or process.process_type, title=title, owner=owner, due_at=process.due_at)
     session.add(task)
     session.flush()
-    audit(session, correlation_id, "workflow", "create_task", "success", task.task_id, processId=process.process_id)
+    audit(session, correlation_id, "workflow", "create_task", "success", task.task_id, processId=process.process_id, taskType=task.task_type)
     session.commit()
     return task
 

@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('navega pelos cinco contextos e apresenta coleções vazias', async ({ page }) => {
-  for (const name of ['CRM', 'Reservas e contratos', 'Financeiro', 'Atendimento', 'Workflow']) {
+  for (const name of ['CRM', 'Reservas e contratos', 'Financeiro', 'Atendimento', 'Operações']) {
     await page.getByRole('button', { name, exact: true }).click()
     await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()
     await expect(page.getByText('Sem registros ainda.').first()).toBeVisible()

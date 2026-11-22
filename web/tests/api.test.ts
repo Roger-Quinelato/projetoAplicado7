@@ -3,7 +3,36 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { describeIssue } from '../src/api.ts'
+import { ApiError, describeIssue, errorMessage, needsSupportCode } from '../src/api.ts'
+
+const apiError = (status: number, detail = '', kind: 'http' | 'network' = 'http', code = 'X', issues: { type: string }[] = []) =>
+  new ApiError({ kind, status, title: '', detail, code, correlationId: 'c-1', issues })
+
+test('mensagens de erro não expõem código HTTP nem texto interno', () => {
+  const cases: [ApiError, string][] = [
+    [apiError(422, 'Data de encerramento anterior ao início do contrato'), 'A data de encerramento não pode ser antes do início do contrato. Escolha outra data.'],
+    [apiError(409, 'Chamado não pode ser atribuído neste estado'), 'Este chamado já foi resolvido ou encerrado e não aceita responsável. A lista foi atualizada.'],
+    [apiError(409, 'Pagamento excede saldo da fatura'), 'O valor é maior que o saldo da fatura. Informe um valor igual ou menor que o saldo.'],
+    [apiError(409, 'algo novo no servidor'), 'Este item mudou e a ação não vale mais. Atualize a lista e tente de novo.'],
+    [apiError(403), 'Seu perfil não pode fazer esta ação.'],
+    [apiError(401), 'Sua sessão terminou. Entre novamente.'],
+    [apiError(500), 'Não foi possível concluir agora. Tente de novo em instantes.'],
+    [apiError(0, '', 'network'), 'Não foi possível falar com o sistema. Confira sua conexão e tente de novo.'],
+    [apiError(422, 'Entrada inválida', 'http', 'VALIDATION_ERROR', [{ type: 'missing' }]), 'Corrija os campos abaixo e tente de novo.'],
+  ]
+  for (const [error, expected] of cases) {
+    const message = errorMessage(error)
+    assert.equal(message, expected)
+    assert.doesNotMatch(message, /HTTP|\d{3}|CONFLICT|endpoint/)
+  }
+})
+
+test('o código para o suporte só vale para falhas que a pessoa não corrige', () => {
+  assert.equal(needsSupportCode(apiError(500)), true)
+  assert.equal(needsSupportCode(apiError(0, '', 'network')), true)
+  assert.equal(needsSupportCode(apiError(409)), false)
+  assert.equal(needsSupportCode(apiError(0, '', 'http', 'PENDING_INTENT')), false)
+})
 
 // Formato devolvido pela API v1: sem `ctx`/`input` e com `msg` minimizada.
 const v1 = (type: string, field: string) => ({ type, loc: ['body', field], msg: 'Entrada inválida' })

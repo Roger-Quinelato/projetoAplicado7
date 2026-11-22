@@ -30,6 +30,7 @@ EXAMPLE_PROCESS = {
 EXAMPLE_TASK = {
     "taskId": "14141414-1414-4141-8141-141414141414",
     "processId": EXAMPLE_PROCESS["processId"],
+    "taskType": "ONBOARDING",
     "title": "Executar onboarding",
     "state": "OPEN",
     "owner": "operations",
@@ -40,12 +41,16 @@ PROCESS_CLOSED = {409: {"description": "Processo concluído ou cancelado (`CONFL
 TASK_FINAL = {409: {"description": "Processo concluído ou cancelado (`CONFLICT`) ou tarefa concluída ou cancelada (`INVALID_STATE`)."}}
 
 
+TaskType = Literal["ONBOARDING", "TICKET_RESOLUTION", "RETURN"]
+
+
 class TaskInput(BaseModel):
     model_config = ConfigDict(json_schema_extra={"examples": [{"processId": EXAMPLE_PROCESS["processId"], "title": "Conferir documentos da retirada", "owner": "operations"}]})
 
     processId: UUID
     title: str = Field(min_length=3, max_length=150)
     owner: str = Field(default="operations", min_length=2, max_length=80)
+    taskType: TaskType | None = Field(default=None, description="Tipo da tarefa; sem valor, herda o tipo do processo. `RETURN` é a devolução do veículo.")
 
 
 class TaskChange(BaseModel):
@@ -72,6 +77,7 @@ class TaskResponse(BaseModel):
 
     taskId: UUID
     processId: UUID
+    taskType: str | None = None
     title: str
     state: Literal["OPEN", "IN_PROGRESS", "DONE", "CANCELLED"]
     owner: str
@@ -88,7 +94,7 @@ def process_data(item: ProcessInstance) -> dict:
 
 def task_data(item: ProcessTask) -> dict:
     """Serializa a tarefa no formato da API."""
-    return {"taskId": item.task_id, "processId": item.process_id,
+    return {"taskId": item.task_id, "processId": item.process_id, "taskType": item.task_type,
             "title": item.title, "state": item.state, "owner": item.owner,
             "dueAt": item.due_at.isoformat() if item.due_at else None}
 
@@ -133,7 +139,7 @@ def list_tasks(processId: UUID | None = None, session: Session = Depends(get_ses
 @router.post("/tasks", status_code=201, response_model=TaskResponse, responses={404: {"description": "Processo não encontrado."}, **PROCESS_CLOSED}, dependencies=[Depends(require_roles("operations", "admin"))])
 def create_task(body: TaskInput, session: Session = Depends(get_session)) -> dict:
     """Cria tarefa em processo não encerrado, com o prazo do processo; a criação é auditada."""
-    return task_data(service.create_task(session, str(body.processId), body.title, body.owner, correlation_id_var.get()))
+    return task_data(service.create_task(session, str(body.processId), body.title, body.owner, correlation_id_var.get(), body.taskType))
 
 
 @router.patch("/tasks/{task_id}", response_model=TaskResponse, responses={404: {"description": "Tarefa não encontrada."}, **PROCESS_CLOSED, **TASK_FINAL}, dependencies=[Depends(require_roles("operations", "admin"))])

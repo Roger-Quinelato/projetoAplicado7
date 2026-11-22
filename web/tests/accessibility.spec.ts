@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Visão geral', exact: true })).toBeVisible()
 })
 
-for (const name of ['Visão geral', 'CRM', 'Reservas e contratos', 'Financeiro', 'Atendimento', 'Workflow']) {
+for (const name of ['Visão geral', 'CRM', 'Reservas e contratos', 'Financeiro', 'Atendimento', 'Operações']) {
   test(`acessibilidade automática: ${name}`, async ({ page }) => {
     await page.getByRole('button', { name, exact: true }).click()
     await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()

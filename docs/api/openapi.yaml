@@ -7834,6 +7834,17 @@ components:
           minLength: 2
           title: Owner
           default: operations
+        taskType:
+          anyOf:
+          - type: string
+            enum:
+            - ONBOARDING
+            - TICKET_RESOLUTION
+            - RETURN
+          - type: 'null'
+          title: Tasktype
+          description: Tipo da tarefa; sem valor, herda o tipo do processo. `RETURN`
+            é a devolução do veículo.
       type: object
       required:
       - processId
@@ -7853,6 +7864,11 @@ components:
           type: string
           format: uuid
           title: Processid
+        taskType:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Tasktype
         title:
           type: string
           title: Title
@@ -7888,6 +7904,7 @@ components:
         processId: 13131313-1313-4131-8131-131313131313
         state: OPEN
         taskId: 14141414-1414-4141-8141-141414141414
+        taskType: ONBOARDING
         title: Executar onboarding
     TicketCreate:
       properties:
