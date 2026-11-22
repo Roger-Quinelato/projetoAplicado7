@@ -16,9 +16,9 @@ export async function informarCredencial(page: Page, token: string) {
 /** Entra com um token local `demo-*` e espera a navegação dos contextos. */
 export async function entrar(page: Page, token: string) {
   await informarCredencial(page, token)
-  await expect(page.getByRole('navigation', { name: 'CONTEXTOS' })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'MENU' })).toBeVisible()
 }
 
 export function irPara(page: Page, rotulo: string) {
-  return page.getByRole('navigation', { name: 'CONTEXTOS' }).getByRole('link', { name: rotulo, exact: true }).click()
+  return page.getByRole('navigation', { name: 'MENU' }).getByRole('link', { name: rotulo, exact: true }).click()
 }

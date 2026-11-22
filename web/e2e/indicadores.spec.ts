@@ -24,7 +24,7 @@ test('Visão geral mostra o total de contratos acima do limite da listagem', asy
   expect(resumo.total).toBeGreaterThanOrEqual(ACIMA_DO_LIMITE)
 
   await entrar(page, 'demo-admin')
-  const situacao = page.getByRole('region', { name: 'Situação da demonstração' })
+  const situacao = page.getByRole('region', { name: 'Situação atual' })
   await expect(situacao).toContainText(`de ${resumo.total} contratos`)
   await expect(situacao).not.toContainText('de 200 contratos')
 })
@@ -33,7 +33,7 @@ test('indicadores acompanham os resumos de faturas, chamados e processos', async
   await entrar(page, 'demo-admin')
   const [faturas, chamados, processos] = await Promise.all(['/api/v1/finance/invoices/summary', '/api/v1/support/tickets/summary', '/api/v1/workflow/processes/summary']
     .map(async caminho => (await page.request.get(caminho, { headers: ADMIN })).json()))
-  const situacao = page.getByRole('region', { name: 'Situação da demonstração' })
+  const situacao = page.getByRole('region', { name: 'Situação atual' })
   await expect(situacao).toContainText(faturas.receivable ? 'a receber' : 'nada a receber')
   await expect(situacao).toContainText(chamados.open ? `de ${chamados.open} em aberto` : 'nenhum chamado em aberto')
   await expect(situacao).toContainText(`de ${processos.total} processo`)

@@ -24,6 +24,8 @@ class ProcessTask(Base):
     task_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     process_id: Mapped[str] = mapped_column(String(36), index=True)
     title: Mapped[str] = mapped_column(String(150))
+    # Nulo nas tarefas anteriores à 0006: a leitura assume o tipo do processo.
+    task_type: Mapped[str | None] = mapped_column(String(30), nullable=True)
     state: Mapped[str] = mapped_column(String(30), default="OPEN")
     owner: Mapped[str] = mapped_column(String(80), default="operations")
     due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

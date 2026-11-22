@@ -51,12 +51,12 @@ def test_upgrade_de_cada_frente_preserva_dados_e_converge(migration_engine, star
         assert connection.execute(text("SELECT description FROM support_tickets")).scalar_one() == "Chamado sintético legado"
         assert connection.execute(text("SELECT kind FROM finance_invoices")).scalar_one() == "INITIAL"
         assert compare_metadata(MigrationContext.configure(connection), load_models().metadata) == []
-        assert MigrationContext.configure(connection).get_current_heads() == ("0005_merge_finance_support",)
+        assert MigrationContext.configure(connection).get_current_heads() == ("0006_task_type",)
 
 
 def test_head_unica_e_downgrade_final_preserva_esquema_e_dados(migration_engine):
     engine = migration_engine
-    assert ScriptDirectory.from_config(alembic_config()).get_heads() == ["0005_merge_finance_support"]
+    assert ScriptDirectory.from_config(alembic_config()).get_heads() == ["0006_task_type"]
     with engine.begin() as connection:
         command.upgrade(alembic_config(connection), "head")
         connection.execute(text("INSERT INTO finance_invoices (invoice_id, contract_id, customer_id, amount, currency, due_date, status, kind) "
@@ -68,7 +68,7 @@ def test_head_unica_e_downgrade_final_preserva_esquema_e_dados(migration_engine)
     with engine.connect() as connection:
         assert inspect(connection).get_table_names() == before
         assert connection.execute(text("SELECT kind FROM finance_invoices")).scalar_one() == "FINAL"
-        assert MigrationContext.configure(connection).get_current_heads() == ("0005_merge_finance_support",)
+        assert MigrationContext.configure(connection).get_current_heads() == ("0006_task_type",)
 
 
 def test_banco_vazio_converge_para_head_unica_sem_divergencia(migration_engine):
@@ -76,4 +76,4 @@ def test_banco_vazio_converge_para_head_unica_sem_divergencia(migration_engine):
         command.upgrade(alembic_config(connection), "head")
     with migration_engine.connect() as connection:
         assert compare_metadata(MigrationContext.configure(connection), load_models().metadata) == []
-        assert MigrationContext.configure(connection).get_current_heads() == ("0005_merge_finance_support",)
+        assert MigrationContext.configure(connection).get_current_heads() == ("0006_task_type",)

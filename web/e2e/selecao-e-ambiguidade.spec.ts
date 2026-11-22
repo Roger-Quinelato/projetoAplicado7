@@ -42,7 +42,7 @@ test('reserva: cliente além dos 200 primeiros e resposta perdida geram um únic
   await entrar(page, 'demo-admin')
   await irPara(page, 'Reservas e contratos')
   const form = page.getByRole('form', { name: 'Nova reserva' })
-  const cliente = form.getByLabel('Cliente (CRM)', { exact: true })
+  const cliente = form.getByLabel('Cliente', { exact: true })
 
   await test.step('pagina o seletor até o cliente', async () => {
     const opcao = cliente.locator(`option[value="${customerId}"]`)
@@ -59,7 +59,7 @@ test('reserva: cliente além dos 200 primeiros e resposta perdida geram um únic
   const chaves = await perderPrimeiraResposta(page, '/api/v1/contracts/reservations')
   await test.step('resposta perdida deixa o pedido pendente', async () => {
     await form.getByRole('button', { name: 'Registrar reserva' }).click()
-    await expect(page.getByRole('alert')).toContainText('Registro de reserva: não foi possível confirmar; a operação pode ter sido registrada.')
+    await expect(page.getByRole('alert')).toContainText('Registro de reserva: não conseguimos confirmar se foi feito.')
     await expect(page.getByRole('status', { name: 'Pedido sem confirmação: Registro de reserva' })).toBeVisible()
     await expect(cliente).toHaveValue(customerId)
   })
@@ -72,8 +72,8 @@ test('reserva: cliente além dos 200 primeiros e resposta perdida geram um únic
   })
 
   await test.step('repetir o pedido original reaproveita a resposta gravada', async () => {
-    await page.getByRole('button', { name: 'Repetir pedido original' }).click()
-    await expect(page.getByRole('status').filter({ hasText: 'Repetição idempotente' })).toBeVisible()
+    await page.getByRole('button', { name: 'Tentar de novo' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'O pedido foi feito' })).toBeVisible()
     await expect(page.getByRole('status', { name: 'Pedido sem confirmação: Registro de reserva' })).toHaveCount(0)
     expect(chaves).toHaveLength(2)
     expect(chaves[1]).toBe(chaves[0])
@@ -107,9 +107,9 @@ test('chamado: contrato da URL de cliente além dos 200 primeiros e resposta per
 
   const chaves = await perderPrimeiraResposta(page, '/api/v1/support/tickets')
   await form.getByRole('button', { name: 'Abrir chamado' }).click()
-  await expect(page.getByRole('alert')).toContainText('Abertura de chamado: não foi possível confirmar')
-  await page.getByRole('button', { name: 'Repetir pedido original' }).click()
-  await expect(page.getByRole('status').filter({ hasText: 'Repetição idempotente' })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('Abertura do chamado: não conseguimos confirmar se foi feito.')
+  await page.getByRole('button', { name: 'Tentar de novo' }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'O pedido foi feito' })).toBeVisible()
   expect(chaves).toEqual([chaves[0], chaves[0]])
 
   const chamados = (await (await page.request.get('/api/v1/support/tickets', { headers: ADMIN })).json() as { contractId: string }[])

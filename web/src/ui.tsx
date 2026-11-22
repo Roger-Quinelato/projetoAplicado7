@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useId, useReducer, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { ApiError, asApiError, describeIssue, errorHeadline, type Api, type ApiResult, type Customer } from './api'
+import { ApiError, asApiError, describeIssue, errorMessage, needsSupportCode, type Api, type ApiResult, type Customer } from './api'
 import { IdempotentIntents, isAmbiguous } from './intents'
 
 // ---------- Sessão compartilhada ----------
@@ -59,7 +59,7 @@ const STATUS_LABELS: Record<string, [string, 'good' | 'bad' | 'warn' | 'neutral'
   PAID: ['Paga', 'good'], OVERDUE: ['Vencida', 'bad'], PARTIALLY_PAID: ['Parcialmente paga', 'warn'],
   PENDING_ENTITLEMENT: ['Elegibilidade pendente', 'warn'], REJECTED_ENTITLEMENT: ['Sem elegibilidade', 'bad'],
   RESOLVED: ['Resolvido', 'good'], IN_PROGRESS: ['Em andamento', 'warn'], DONE: ['Concluída', 'good'],
-  STARTED: ['Iniciado', 'warn'], COMPLETED: ['Concluído', 'good'], HIGH: ['Alta', 'bad'], NORMAL: ['Normal', 'neutral'],
+  STARTED: ['Aberto', 'warn'], COMPLETED: ['Concluído', 'good'], HIGH: ['Alta', 'bad'], NORMAL: ['Normal', 'neutral'],
   PENDING: ['Pendente', 'warn'], PUBLISHED: ['Publicado', 'good'], FAILED: ['Falhou', 'bad'],
 }
 export function Status({ value }: { value: string | null | undefined }) {
@@ -112,7 +112,7 @@ export function ResourceView<T>({ resource, label, isEmpty, empty, children }: {
   children: (data: T) => ReactNode
 }) {
   if (resource.status === 'error') {
-    return <ErrorPanel error={resource.error} context={`Falha ao carregar ${label}.`} onRetry={() => void resource.reload()} />
+    return <ErrorPanel error={resource.error} context={`Não foi possível carregar ${label}.`} onRetry={() => void resource.reload()} />
   }
   if (resource.data === undefined) {
     return <p className="loading" role="status" aria-live="polite"><span className="spinner" aria-hidden="true" />Carregando {label}…</p>
@@ -127,9 +127,9 @@ export function ResourceView<T>({ resource, label, isEmpty, empty, children }: {
 // ---------- Ações (comandos) ----------
 
 export type Feedback =
-  | { kind: 'success', message: string, correlationId: string, replayed: boolean | null }
-  /** HTTP 2xx cujo corpo relata falha parcial (ex.: despacho com `failed > 0`): nunca exibido como sucesso integral. */
-  | { kind: 'warning', message: string, correlationId: string }
+  | { kind: 'success', message: string }
+  /** Resposta de sucesso cujo corpo relata falha parcial (ex.: processamento com falhas): nunca exibida como sucesso integral. */
+  | { kind: 'warning', message: string }
   | { kind: 'error', message: string, error: ApiError }
 
 /**
@@ -147,13 +147,12 @@ export function useActions() {
     setFeedback(null)
     try {
       const result = await action()
-      const suffix = describe ? ` ${describe(result.data)}` : ''
-      if (partial?.(result.data)) setFeedback({ kind: 'warning', message: `${label}: concluído com falhas.${suffix}`, correlationId: result.correlationId })
-      else setFeedback({ kind: 'success', message: `${label}: concluído.${suffix}`, correlationId: result.correlationId, replayed: result.replayed })
+      const message = describe?.(result.data) || 'Pronto.'
+      setFeedback({ kind: partial?.(result.data) ? 'warning' : 'success', message })
       commandDone()
       return result
     } catch (error) {
-      const message = isAmbiguous(error) ? `${label}: não foi possível confirmar; a operação pode ter sido registrada.` : `${label}: não concluído.`
+      const message = isAmbiguous(error) ? `${label}: não conseguimos confirmar se foi feito. Confira a lista antes de repetir.` : `${label}: não foi concluído.`
       setFeedback({ kind: 'error', message, error: asApiError(error) })
       return null
     } finally {
@@ -182,7 +181,7 @@ export function useIdempotencyKeys() {
 export function PendingIntents({ keys, busy, run, onCheck }: {
   keys: IdempotentIntents
   busy: boolean
-  run: <T>(label: string, action: () => Promise<ApiResult<T>>) => Promise<ApiResult<T> | null>
+  run: <T>(label: string, action: () => Promise<ApiResult<T>>, describe?: (data: T) => string) => Promise<ApiResult<T> | null>
   onCheck: () => void
 }) {
   const pending = keys.pending()
@@ -190,24 +189,18 @@ export function PendingIntents({ keys, busy, run, onCheck }: {
   return <div className="pending-region">
     {pending.map(p => <div key={p.intent} className="notice warn" role="status" aria-label={`Pedido sem confirmação: ${p.label}`}>
       <div>
-        <strong>{p.label}: não foi possível confirmar; a operação pode ter sido registrada.</strong>
-        <p>O pedido original está preservado com os mesmos dados e a mesma chave de idempotência. Consulte os registros antes de decidir: repetir o pedido original não duplica o registro; dados diferentes só podem ser enviados depois de descartar este pedido.</p>
-        <p className="meta">Chave: <code title={p.key}>{p.key.slice(0, 8)}</code>{p.correlationId && <> · Correlação: <code>{p.correlationId}</code></>}</p>
+        <strong>{p.label}: não conseguimos confirmar se foi feito.</strong>
+        <p>Confira a lista. Se o item já aparece, não precisa fazer mais nada. Se não aparece, tente de novo. Repetir não cria o item duas vezes.</p>
         <div className="notice-actions">
-          <button type="button" className="secondary small" disabled={busy} onClick={onCheck}>Consultar registros</button>
-          <button type="button" className="secondary small" disabled={busy} onClick={() => void run(p.label, () => keys.retry(p.intent)).then(r => { if (r) onCheck() })}>Repetir pedido original</button>
+          <button type="button" className="secondary small" disabled={busy} onClick={onCheck}>Conferir a lista</button>
+          <button type="button" className="secondary small" disabled={busy} onClick={() => void run(p.label, () => keys.retry(p.intent), () => 'Pronto. O pedido foi feito.').then(r => { if (r) onCheck() })}>Tentar de novo</button>
           <button type="button" className="secondary small" disabled={busy} onClick={() => {
-            if (window.confirm('Descarte somente depois de confirmar nos registros que o pedido não foi gravado. Um novo envio usará outra chave e pode duplicar o registro se o original tiver sido gravado.')) keys.discard(p.intent)
-          }}>Descartar pedido</button>
+            if (window.confirm('Descarte só se a lista mostrar que o item não foi criado. Se ele foi criado, um novo envio pode duplicá-lo.')) keys.discard(p.intent)
+          }}>Descartar</button>
         </div>
       </div>
     </div>)}
   </div>
-}
-
-/** Dados para rastrear a operação (código HTTP, correlação), recolhidos para não poluir o aviso. */
-function TechnicalDetails({ children }: { children: ReactNode }) {
-  return <details className="tech"><summary>Detalhes técnicos</summary><p className="meta">{children}</p></details>
 }
 
 /** Leva à vista um elemento acionado longe dele (ex.: botão no fim de uma tabela longa). */
@@ -225,15 +218,12 @@ export function FeedbackBanner({ feedback, onClose }: { feedback: Feedback | nul
     {feedback?.kind === 'success' && <div className="notice success" role="status">
       <div>
         <strong>{feedback.message}</strong>
-        {feedback.replayed === true && <p className="meta"><span className="tag">Repetição idempotente: resposta original reaproveitada</span></p>}
-        <TechnicalDetails>Correlação: <code>{feedback.correlationId}</code></TechnicalDetails>
       </div>
       <button type="button" className="close" aria-label="Fechar aviso" onClick={onClose}>×</button>
     </div>}
     {feedback?.kind === 'warning' && <div className="notice warn" role="alert">
       <div>
         <strong>{feedback.message}</strong>
-        <TechnicalDetails>Correlação: <code>{feedback.correlationId}</code></TechnicalDetails>
       </div>
       <button type="button" className="close" aria-label="Fechar aviso" onClick={onClose}>×</button>
     </div>}
@@ -243,17 +233,12 @@ export function FeedbackBanner({ feedback, onClose }: { feedback: Feedback | nul
 
 export function ErrorPanel({ error, context, onRetry, onClose }: { error: ApiError, context?: string, onRetry?: () => void, onClose?: () => void }) {
   const { signOut } = useSession()
-  const detail = error.detail && error.issues.length === 0 ? error.detail : ''
   return <div className="notice error" role="alert">
     <div>
       {context && <strong>{context} </strong>}
-      <strong>{errorHeadline(error)}</strong>
-      {detail && <p>{detail}</p>}
+      <strong>{errorMessage(error)}</strong>
       {error.issues.length > 0 && <ul className="issues">{error.issues.map((issue, i) => <li key={i}>{describeIssue(issue)}</li>)}</ul>}
-      <TechnicalDetails>
-        {error.kind === 'network' ? 'Sem resposta do servidor' : error.status === 0 ? <>Verificação no navegador · código <code>{error.code}</code></> : <>HTTP {error.status} · código <code>{error.code}</code></>}
-        {error.correlationId && <> · Correlação: <code>{error.correlationId}</code></>}
-      </TechnicalDetails>
+      {needsSupportCode(error) && error.correlationId && <p className="meta">Se o problema continuar, informe ao suporte o código {error.correlationId}.</p>}
       <div className="notice-actions">
         {error.status === 401 && <button type="button" className="secondary small" onClick={signOut}>Trocar credencial</button>}
         {onRetry && <button type="button" className="secondary small" onClick={onRetry}>Tentar novamente</button>}
@@ -266,36 +251,38 @@ export function ErrorPanel({ error, context, onRetry, onClose }: { error: ApiErr
 // ---------- Layout e formulários ----------
 
 /** `id`, quando informado, torna o cartão um destino de link que pode receber o foco. */
-export function Card({ title, roles, children, aside, className, id }: { title: string, roles?: string, children: ReactNode, aside?: ReactNode, className?: string, id?: string }) {
+export function Card({ title, children, aside, className, id }: { title: string, children: ReactNode, aside?: ReactNode, className?: string, id?: string }) {
   const headingId = useId()
   return <section id={id} tabIndex={id ? -1 : undefined} className={`card ${className ?? ''}`} aria-labelledby={headingId}>
     <div className="card-head">
-      <div><h2 id={headingId}>{title}</h2>{roles && <p className="roles">Papéis: {roles}</p>}</div>
+      <div><h2 id={headingId}>{title}</h2></div>
       {aside}
     </div>
     {children}
   </section>
 }
 
-export function Field({ name, label, type = 'text', required = true, defaultValue, hint, onChange, ...rest }: {
+export function Field({ name, label, type = 'text', required = true, showOptional = false, defaultValue, hint, onChange, ...rest }: {
   name: string, label: string, type?: string, required?: boolean, defaultValue?: string, hint?: string,
-  min?: string, step?: string, placeholder?: string, autoComplete?: string,
+  /** Com `required={false}`, `true` acrescenta “(opcional)” ao rótulo; por padrão fica só o nome. */
+  showOptional?: boolean,
+  min?: string, step?: string, placeholder?: string, autoComplete?: string, pattern?: string, title?: string,
   /** Acompanha o que a pessoa digita, sem tornar o campo controlado. */
   onChange?: (value: string) => void,
 }) {
   const id = useId()
   return <div className="field">
-    <label htmlFor={id}>{label}{!required && <span className="optional"> (opcional)</span>}</label>
+    <label htmlFor={id}>{label}{!required && showOptional && <span className="optional"> (opcional)</span>}</label>
     <input id={id} name={name} type={type} required={required} defaultValue={defaultValue} aria-describedby={hint ? `${id}-hint` : undefined}
       onChange={onChange && (e => onChange(e.target.value))} {...rest} />
     {hint && <small id={`${id}-hint`}>{hint}</small>}
   </div>
 }
 
-export function TextArea({ name, label, required = true, defaultValue }: { name: string, label: string, required?: boolean, defaultValue?: string }) {
+export function TextArea({ name, label, required = true, showOptional = false, defaultValue }: { name: string, label: string, required?: boolean, showOptional?: boolean, defaultValue?: string }) {
   const id = useId()
   return <div className="field">
-    <label htmlFor={id}>{label}{!required && <span className="optional"> (opcional)</span>}</label>
+    <label htmlFor={id}>{label}{!required && showOptional && <span className="optional"> (opcional)</span>}</label>
     <textarea id={id} name={name} required={required} defaultValue={defaultValue} rows={3} />
   </div>
 }
@@ -309,7 +296,7 @@ export function SelectField({ name, label, options, required = true, placeholder
 }) {
   const id = useId()
   return <div className="field">
-    <label htmlFor={id}>{label}{!required && <span className="optional"> (opcional)</span>}</label>
+    <label htmlFor={id}>{label}</label>
     {/* Remonta quando as opções assíncronas chegam, para que o valor padrão (ex.: cliente pré-selecionado) seja aplicado. */}
     <select key={value === undefined ? `${defaultValue ?? ''}|${options.length > 0}` : 'controlled'} id={id} name={name} required={required}
       {...(value === undefined ? { defaultValue: defaultValue ?? '' } : { value })} onChange={e => onChange?.(e.target.value)} aria-describedby={hint ? `${id}-hint` : undefined}>
@@ -331,9 +318,11 @@ function customerLabel(c: Customer): string {
  * paginada, busca por e-mail exato e carrega pelo UUID o cliente já selecionado (ex.: vindo da URL),
  * que continua disponível ao mudar de página. Sem `value`, o próprio campo guarda a seleção.
  */
-export function CustomerPicker({ name = 'customerId', label, value, defaultValue = '', onChange, required = true, placeholder = 'Selecione', hint }: {
+export function CustomerPicker({ name = 'customerId', label, value, defaultValue = '', onChange, required = true, placeholder = 'Selecione', hint, tools = true }: {
   name?: string, label: string, value?: string, defaultValue?: string, onChange?: (value: string) => void,
   required?: boolean, placeholder?: string, hint?: string,
+  /** Mostra a linha de busca por e-mail exato e a paginação; sem ela, o campo lista só a primeira página. */
+  tools?: boolean,
 }) {
   const id = useId()
   const { api } = useSession()
@@ -389,22 +378,22 @@ export function CustomerPicker({ name = 'customerId', label, value, defaultValue
   const options = [...extra, ...rows]
   const first = rows.length && loaded ? loaded.offset + 1 : 0
   return <div className="field customer-picker">
-    <label htmlFor={id}>{label}{!required && <span className="optional"> (opcional)</span>}</label>
+    <label htmlFor={id}>{label}</label>
     <select ref={selectRef} id={id} name={name} required={required} value={selected} onChange={e => choose(e.target.value)} aria-describedby={`${id}-hint`}>
       <option value="">{customers.status === 'loading' && !customers.data ? 'Carregando…' : placeholder}</option>
       {selected && !options.some(c => c.customerId === selected) && <option value={selected}>{lookupError ? `Cliente ${selected.slice(0, 8)} não carregado` : `Carregando cliente ${selected.slice(0, 8)}…`}</option>}
       {options.map(c => <option key={c.customerId} value={c.customerId}>{customerLabel(c)}</option>)}
     </select>
-    <div className="picker-tools" role="group" aria-label="Paginação e busca de clientes">
+    {tools && <div className="picker-tools" role="group" aria-label="Paginação e busca de clientes">
       <input ref={emailRef} type="email" aria-label="Buscar por e-mail exato" placeholder="E-mail exato" autoComplete="off"
         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); search() } }} />
       <button type="button" className="secondary small" onClick={search}>Buscar</button>
       <button type="button" className="secondary small" disabled={loading || page.offset === 0} onClick={() => setPage(p => ({ ...p, offset: Math.max(0, p.offset - CUSTOMER_PAGE_SIZE) }))}>Anteriores</button>
       <button type="button" className="secondary small" disabled={loading || rows.length < CUSTOMER_PAGE_SIZE} onClick={() => setPage(p => ({ ...p, offset: p.offset + CUSTOMER_PAGE_SIZE }))}>Próximos</button>
-    </div>
+    </div>}
     <small id={`${id}-hint`} role="status">
-      {customers.status === 'error' ? <>Falha ao carregar clientes ({errorHeadline(customers.error)}) <button type="button" className="inline" onClick={() => void customers.reload()}>Tentar novamente</button></>
-        : lookupError ? `Não foi possível carregar o cliente selecionado: ${errorHeadline(lookupError)}`
+      {customers.status === 'error' ? <>Não foi possível carregar os clientes. <button type="button" className="inline" onClick={() => void customers.reload()}>Tentar novamente</button></>
+        : lookupError ? 'Não foi possível carregar o cliente escolhido. Escolha outro na lista.'
         // Durante o carregamento as opções ainda são da página anterior: a faixa só aparece com os dados novos.
         : loading ? 'Carregando clientes…'
         : rows.length && loaded ? `Clientes ativos ${first}–${loaded.offset + rows.length}${loaded.email ? ` com e-mail ${loaded.email}` : ''}.`

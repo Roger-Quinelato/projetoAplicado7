@@ -33,7 +33,7 @@ const PAPEIS = [
   { token: 'demo-contracts', contexto: 'Reservas e contratos', cartao: 'Reservas' },
   { token: 'demo-finance', contexto: 'Financeiro', cartao: 'Faturas' },
   { token: 'demo-support', contexto: 'Atendimento', cartao: 'Chamados' },
-  { token: 'demo-operations', contexto: 'Workflow', cartao: 'Processos' },
+  { token: 'demo-operations', contexto: 'Operações', cartao: 'Operações Abertas' },
 ]
 
 for (const { token, contexto, cartao } of PAPEIS) {
@@ -43,7 +43,7 @@ for (const { token, contexto, cartao } of PAPEIS) {
     await cartaoCarregado(page, cartao)
     await irPara(page, 'Visão geral')
     // Visão geral (#67): indicador proibido mostra o motivo no lugar do número, nunca um zero ou lista vazia.
-    await expect(page.getByRole('region', { name: 'Situação da demonstração' })).toContainText('sem permissão para este perfil')
+    await expect(page.getByRole('region', { name: 'Situação atual' })).toContainText('sem permissão para este perfil')
   })
 }
 
@@ -53,25 +53,25 @@ test('despacho com falhas não é anunciado como sucesso', async ({ page }) => {
   await page.route('**/api/v1/integration/outbox/dispatch', route => route.fulfill({ status: 200, json: { processed: 1, failed: 2 } }))
   await entrar(page, 'demo-admin')
   // Barra global de eventos (#67): o resultado do despacho fica na própria barra, com o caminho para as falhas.
-  const barra = page.getByRole('region', { name: 'Eventos de integração' })
-  await barra.getByRole('button', { name: 'Despachar eventos' }).click()
-  await expect(barra).toContainText('1 evento entregue, 2 tentativas com falha.')
+  const barra = page.getByRole('region', { name: 'Pendências para processar' })
+  await barra.getByRole('button', { name: 'Atualizar processos' }).click()
+  await expect(barra).toContainText('1 item processado, 2 itens com problema.')
   await expect(barra.getByRole('link', { name: /Falhas/ })).toBeVisible()
-  await expect(page.getByText('Despacho dos eventos: concluído.')).toHaveCount(0)
+  await expect(page.getByText('Pronto.')).toHaveCount(0)
 })
 
 test('indicador de conexão reflete a resposta observada da API, não a autenticação', async ({ page }) => {
   await entrar(page, 'demo-admin')
   const estado = page.locator('.link-status .link-text')
-  await expect(estado).toContainText('API respondeu às')
+  await expect(estado).toContainText('Sistema no ar às')
   await page.route('**/health/ready', route => route.abort('failed'))
   await page.locator('.link-status').getByRole('button', { name: 'Verificar' }).click()
-  await expect(estado).toContainText('Sem resposta da API às')
+  await expect(estado).toContainText('Sistema fora do ar às')
   await page.unroute('**/health/ready')
   await page.route('**/health/ready', route => route.fulfill({ status: 503, json: { detail: 'Banco indisponível' } }))
   await page.locator('.link-status').getByRole('button', { name: 'Verificar' }).click()
-  await expect(estado).toContainText('mas o banco está indisponível')
-  await expect(page.locator('.link-status').getByRole('status')).toHaveText('Conexão com a API: banco indisponível')
+  await expect(estado).toContainText('Sistema com problema nos dados às')
+  await expect(page.locator('.link-status').getByRole('status')).toHaveText('Conexão: problema nos dados')
 })
 
 test('contato é editado na tela do CRM', async ({ page }) => {
@@ -84,20 +84,20 @@ test('contato é editado na tela do CRM', async ({ page }) => {
   const linha = page.getByRole('region', { name: 'Tabela: Contatos' }).getByRole('row').filter({ hasText: contato })
   await linha.getByRole('button', { name: 'Editar' }).click()
   const form = page.getByRole('form', { name: 'Editar contato' })
-  await form.getByLabel('Telefone').fill('+5531988880000')
+  await form.getByLabel('Telefone').fill('(31) 98888-0000')
   await form.getByRole('button', { name: 'Salvar contato' }).click()
-  await expect(page.getByRole('status').filter({ hasText: 'Alteração de contato: concluído.' })).toBeVisible()
-  await expect(linha).toContainText('+5531988880000')
+  await expect(page.getByRole('status').filter({ hasText: 'Contato atualizado.' })).toBeVisible()
+  await expect(linha).toContainText('(31) 98888-0000')
 })
 
 test('fatura em aberto e sem pagamento é cancelada com motivo', async ({ page }) => {
   const { fatura } = await contratoFaturado(page.request, 'cancela')
   await entrar(page, 'demo-finance')
   await irPara(page, 'Financeiro')
-  const linha = page.getByRole('region', { name: 'Tabela: Faturas' }).getByRole('row').filter({ hasText: fatura.invoiceId.slice(0, 8) })
+  const linha = page.getByRole('region', { name: /^Tabela: (Faturas|Pagamentos|Histórico de faturas)$/ }).getByRole('row').filter({ hasText: fatura.contractId.slice(0, 8) })
   await linha.getByRole('button', { name: 'Cancelar…' }).click()
   await page.getByRole('form', { name: 'Cancelar fatura' }).getByRole('button', { name: 'Confirmar cancelamento' }).click()
-  await expect(page.getByRole('status').filter({ hasText: 'Cancelamento de fatura: concluído.' })).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: 'Fatura cancelada.' })).toBeVisible()
   await expect(linha).toContainText('Cancelado')
   await expect(linha.getByRole('button', { name: 'Cancelar…' })).toHaveCount(0)
 })

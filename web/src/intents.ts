@@ -72,7 +72,7 @@ export class IdempotentIntents {
       throw new ApiError({
         kind: 'http', status: 0, code: PENDING_INTENT, correlationId: entry.correlationId,
         title: 'Há um pedido anterior sem confirmação.',
-        detail: 'Consulte os registros e repita o pedido original, que usa a mesma chave e não duplica, ou descarte-o antes de enviar dados diferentes.',
+        detail: 'Confira a lista e tente de novo o pedido original, ou descarte-o antes de enviar dados diferentes.',
       })
     }
     if (!entry || entry.fingerprint !== print) {

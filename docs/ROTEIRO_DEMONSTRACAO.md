@@ -467,7 +467,7 @@ pelo comando `overdue-check`.
    `Invoke-WebRequest` lançaria exceção. O histórico lista
    `OPENED`, `ASSIGNED`, `REASSIGNED` (com `previousOwner`) e `RESOLVED`, cada um com
    `actorRole` e `correlationId`. Um novo despacho processa um evento e conclui o
-   processo de resolução em Workflow.
+   processo de resolução em Operações.
 
 ## Demonstrar indisponibilidade e reconciliação
 
@@ -512,7 +512,7 @@ os reinícios. Com **Docker Compose**, use um contêiner temporário da API:
    ```
 
    Verifique `status: PENDING_ENTITLEMENT`, `slaHours: null` e `dueAt: null`. O
-   despacho inicia a resolução em Workflow com o prazo provisório de 24 horas
+   despacho inicia a resolução em Operações com o prazo provisório de 24 horas
    contado da abertura do chamado (`openedAt`), não da hora do despacho.
 
 3. Interrompa o contêiner temporário com `Ctrl+C` e restaure a API normal:
@@ -537,7 +537,7 @@ os reinícios. Com **Docker Compose**, use um contêiner temporário da API:
    `openedAt` + 8 h (o tempo de indisponibilidade não estende o SLA). Repetir o
    comando com a mesma chave devolve o mesmo corpo com `Idempotency-Replayed: true`. Se Contracts
    ainda estiver fora, a resposta é `503 SERVICE_UNAVAILABLE` e o chamado continua
-   pendente. Após um novo despacho, Workflow ajusta o prazo do processo de
+   pendente. Após um novo despacho, Operações ajusta o prazo do processo de
    resolução para o `dueAt` reconciliado (ou cancela o processo, se a elegibilidade
    for rejeitada).
 
@@ -602,8 +602,11 @@ O roteiro equivalente é automatizado em
 A interface em `http://localhost:8000/` cobre F1, F2 e F3 sem terminal. A edição de reserva usa `PATCH /api/v1/contracts/reservations/{id}` (só reserva solicitada; o cliente não muda). Informe
 `demo-admin` na tela de acesso (no modo público, a credencial configurada no
 provedor). A navegação lateral leva a Visão geral, CRM, Reservas e contratos,
-Financeiro, Atendimento e Workflow; cada aviso de sucesso ou erro exibe o
-`correlationId` da requisição.
+Financeiro, Atendimento e Operações. Os avisos de sucesso e de erro usam frases
+curtas, sem código HTTP nem nomes internos. O `correlationId` só aparece em falhas
+que a pessoa não corrige sozinha (rede ou erro 5xx), como "código para o suporte".
+O botão **Atualizar processos** (barra do topo e cartões de apoio) é o despacho
+da outbox.
 
 1. **F1.** Em CRM, cadastre um cliente fictício. Na linha do cliente, use
    **Nova reserva**: a tela Reservas e contratos abre com o mesmo cliente
@@ -613,26 +616,30 @@ Financeiro, Atendimento e Workflow; cada aviso de sucesso ou erro exibe o
    rascunho: **Ativar** gera o contrato a partir da reserva (mesmo cliente, sem
    recadastro) e o ativa em seguida, e a reserva passa a "Ativa".
 2. **F2.** Ao ativar a reserva (ou **Ativar** em Contratos, para um contrato
-   aguardando ativação criado pela API), o evento fica na outbox. Em Financeiro (ou Visão geral/Workflow),
-   use **Despachar eventos pendentes**: surge a fatura "Em aberto" e, em Workflow,
+   aguardando ativação criado pela API), o evento fica na outbox. Em Financeiro (ou Visão geral/Operações),
+   use **Atualizar processos**: surge a fatura "Em aberto" e, em Operações,
    a "Preparação de retirada". Selecione a fatura e registre um pagamento simulado
    parcial: a fatura passa a "Parcialmente paga". No cartão **Verificar vencimento
    e registrar inadimplência**, informe uma data posterior ao vencimento (requer
    `FINANCE_ALLOW_FUTURE_AS_OF=true` na API) e verifique: a coluna Inadimplência
    mostra "Registrada em …". Pague o saldo restante: a fatura fica "Paga".
 3. **F3.** Em Contratos, use **Abrir chamado** no contrato ativo. Em Atendimento,
-   use **Consultar elegibilidade e SLA**, abra o chamado, despache os eventos,
+   use **Ver direito a atendimento e SLA**, abra o chamado (a lista mostra o
+   número do contrato), clique em **Atualizar processos**,
    atribua (e, se quiser, reatribua) um responsável e resolva. A coluna **SLA**
    mostra "No prazo", "Vencido", "Cumprido", "SLA pendente" ou "Sem SLA", e
-   **Histórico** lista abertura, atribuições, reconciliação e resolução. Um novo
-   despacho conclui o processo de resolução em Workflow. Chamados com elegibilidade
-   pendente podem ser reconciliados um a um ou por **Reconciliar pendentes**.
-4. **Erros legíveis.** Registre uma reserva com fim anterior ao início (`422`
-   com a regra violada) ou um contato com telefone fora do E.164 (`422` com o
-   campo). Saia e entre com `demo-support` para ver `403` ao cadastrar cliente.
-   Uma credencial inexistente mostra `401` na tela de acesso.
-5. **Trilha.** Copie o `correlationId` de um aviso e consulte-o em Visão geral,
-   no cartão "Trilha por correlação".
+   **Histórico** lista abertura, atribuições, confirmação e resolução. Um novo
+   **Atualizar processos** conclui o processo de resolução em Operações. Chamados com
+   contrato ainda não confirmado podem ser atualizados um a um ou por
+   **Atualizar chamados pendentes**.
+4. **Erros legíveis.** Registre uma reserva com fim anterior ao início (a tela diz
+   que os dados não foram aceitos e o que corrigir) ou um contato com telefone
+   fora do padrão (a tela aponta o campo). Saia e entre com `demo-support` para ver
+   "Seu perfil não pode fazer esta ação" ao cadastrar cliente. Uma credencial
+   inexistente mostra "Credencial não aceita" na tela de acesso.
+5. **Consultar uma operação.** O cartão da Visão geral aceita o código de uma
+   operação (o `correlationId`, que o suporte pode pedir) e lista a auditoria e
+   os eventos dela.
 
 Os comandos com repetição segura (reserva, rascunhos, ativação, encerramento,
 abertura de chamado, pagamento simulado, resolução e reconciliação de chamado) enviam

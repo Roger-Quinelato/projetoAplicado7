@@ -5,16 +5,16 @@ import {
   contractIndicator, dispatchSummary, failureIndicator, invoiceIndicator, pendingLabel, processIndicator, ticketIndicator,
 } from '../src/indicators.ts'
 
-test('título da barra de eventos concorda com a quantidade', () => {
-  assert.equal(pendingLabel(0), 'Nenhum evento aguardando despacho')
-  assert.equal(pendingLabel(1), '1 evento aguardando despacho')
-  assert.equal(pendingLabel(3), '3 eventos aguardando despacho')
+test('título da barra de pendências concorda com a quantidade', () => {
+  assert.equal(pendingLabel(0), 'Nenhuma pendência para processar')
+  assert.equal(pendingLabel(1), '1 pendência para processar')
+  assert.equal(pendingLabel(3), '3 pendências para processar')
 })
 
-test('resumo do despacho separa entregues de tentativas com falha', () => {
+test('resumo da atualização separa itens processados de itens com problema', () => {
   const at = new Date(2026, 9, 19, 18, 42)
-  assert.equal(dispatchSummary({ processed: 1, failed: 0 }, at), 'Último despacho às 18:42: 1 evento entregue, nenhuma falha.')
-  assert.equal(dispatchSummary({ processed: 0, failed: 2 }, at), 'Último despacho às 18:42: 0 eventos entregues, 2 tentativas com falha.')
+  assert.equal(dispatchSummary({ processed: 1, failed: 0 }, at), 'Última atualização às 18:42: 1 item processado, nenhum problema.')
+  assert.equal(dispatchSummary({ processed: 0, failed: 2 }, at), 'Última atualização às 18:42: 0 itens processados, 2 itens com problema.')
 })
 
 test('contratos ativos sobre o total', () => {
@@ -36,7 +36,7 @@ test('chamados no prazo entre os abertos', () => {
 })
 
 test('processos em andamento sobre o total', () => {
-  assert.deepEqual(processIndicator({ total: 3, running: 1 }), { label: 'Processos em andamento', value: '1', detail: 'de 3 processos' })
+  assert.deepEqual(processIndicator({ total: 3, running: 1 }), { label: 'Operações em andamento', value: '1', detail: 'de 3 operações' })
 })
 
 test('falhas de integração', () => {

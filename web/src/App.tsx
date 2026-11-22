@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { asApiError, createApi, errorHeadline, type ApiError } from './api'
+import { asApiError, createApi, errorMessage, type ApiError } from './api'
 import { SessionContext, type Session } from './ui'
 import EventsBar from './EventsBar'
 import Overview from './contexts/Overview'
@@ -12,12 +12,12 @@ import Workflow from './contexts/Workflow'
 const TOKEN_KEY = 'archcorp-demo-token'
 
 const ROUTES = [
-  { path: '/', label: 'Visão geral', eyebrow: 'INTEGRAÇÃO E OPERAÇÃO' },
-  { path: '/crm', label: 'CRM', eyebrow: 'CONTEXTO 1 · CLIENTES' },
-  { path: '/reservas', label: 'Reservas e contratos', eyebrow: 'CONTEXTO 2 · CONTRACTS' },
-  { path: '/financeiro', label: 'Financeiro', eyebrow: 'CONTEXTO 3 · FINANCE' },
-  { path: '/atendimento', label: 'Atendimento', eyebrow: 'CONTEXTO 4 · SUPPORT' },
-  { path: '/workflow', label: 'Workflow', eyebrow: 'CONTEXTO 5 · PROCESSOS' },
+  { path: '/', label: 'Visão geral' },
+  { path: '/crm', label: 'CRM' },
+  { path: '/reservas', label: 'Reservas e contratos' },
+  { path: '/atendimento', label: 'Atendimento' },
+  { path: '/workflow', label: 'Operações' },
+  { path: '/financeiro', label: 'Financeiro' },
 ] as const
 type RoutePath = typeof ROUTES[number]['path']
 
@@ -35,6 +35,14 @@ function storeToken(token: string) {
   try { if (token) sessionStorage.setItem(TOKEN_KEY, token); else sessionStorage.removeItem(TOKEN_KEY) } catch { /* armazenamento indisponível: a sessão vale só nesta aba */ }
 }
 
+const SIDEBAR_KEY = 'archcorp-sidebar-collapsed'
+function readCollapsed(): boolean {
+  try { return localStorage.getItem(SIDEBAR_KEY) === '1' } catch { return false }
+}
+function storeCollapsed(value: boolean) {
+  try { localStorage.setItem(SIDEBAR_KEY, value ? '1' : '0') } catch { /* preferência vale só nesta sessão */ }
+}
+
 type GateState = { status: 'idle' } | { status: 'checking' } | { status: 'error', error: ApiError, message?: string }
 
 /** Conectividade observada nas respostas da API; não é inferida da autenticação. */
@@ -45,16 +53,16 @@ function time(at: Date): string {
 }
 
 function LinkStatus({ link, onCheck }: { link: Link, onCheck: () => void }) {
-  const text = link.status === 'up' ? `API respondeu às ${time(link.at)}`
-    : link.status === 'down' ? `Sem resposta da API às ${time(link.at)}`
-    : link.status === 'degraded' ? `API respondeu às ${time(link.at)}, mas o banco está indisponível`
-    : 'Conexão com a API ainda não observada'
+  const text = link.status === 'up' ? `Sistema no ar às ${time(link.at)}`
+    : link.status === 'down' ? `Sistema fora do ar às ${time(link.at)}`
+    : link.status === 'degraded' ? `Sistema com problema nos dados às ${time(link.at)}`
+    : 'Conexão ainda não verificada'
   // O horário muda a cada resposta; o leitor de tela só é avisado quando o estado muda.
-  const announced = { unknown: 'não observada', up: 'respondendo', down: 'sem resposta', degraded: 'banco indisponível' }[link.status]
+  const announced = { unknown: 'ainda não verificada', up: 'sistema no ar', down: 'sistema fora do ar', degraded: 'problema nos dados' }[link.status]
   return <div className="link-status">
     <span className={`link-dot ${link.status}`} aria-hidden="true" />
     <span className="link-text">{text}</span>
-    <span className="sr-only" role="status">Conexão com a API: {announced}</span>
+    <span className="sr-only" role="status">Conexão: {announced}</span>
     <button type="button" onClick={onCheck}>Verificar</button>
   </div>
 }
@@ -65,6 +73,8 @@ export default function App() {
   const [route, setRoute] = useState(parseHash)
   const [link, setLink] = useState<Link>({ status: 'unknown' })
   const reach = useCallback((reachable: boolean) => setLink({ status: reachable ? 'up' : 'down', at: new Date() }), [])
+  const [collapsed, setCollapsed] = useState(readCollapsed)
+  const toggleSidebar = useCallback(() => setCollapsed(c => { storeCollapsed(!c); return !c }), [])
   const heading = useRef<HTMLHeadingElement>(null)
   const firstRender = useRef(true)
 
@@ -126,14 +136,18 @@ export default function App() {
 
   return <SessionContext.Provider value={session}>
     <a className="skip" href="#conteudo" onClick={e => { e.preventDefault(); heading.current?.focus() }}>Pular para o conteúdo</a>
-    <div className="shell">
+    <div className={`shell${collapsed ? ' collapsed' : ''}`}>
       <aside className="sidebar">
-        <div className="brand"><div className="mark" aria-hidden="true">A</div><div><strong>ArchCorp</strong><span>Integração aplicada</span></div></div>
-        <p className="sidebar-title" id="nav-title">CONTEXTOS</p>
-        <nav aria-labelledby="nav-title">
+        <div className="brand"><div className="mark" aria-hidden="true">A</div><div className="brand-text"><strong>ArchCorp</strong></div></div>
+        <button type="button" className="sidebar-toggle" aria-expanded={!collapsed} aria-controls="nav-principal"
+          aria-label={collapsed ? 'Abrir menu lateral' : 'Fechar menu lateral'} onClick={toggleSidebar}>
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+          <span id="nav-title">MENU</span>
+        </button>
+        <nav id="nav-principal" aria-labelledby="nav-title" hidden={collapsed}>
           {ROUTES.map(r => <a key={r.path} href={`#${r.path}`} aria-current={r.path === current.path ? 'page' : undefined}>{r.label}</a>)}
         </nav>
-        <div className="side-bottom">
+        <div className="side-bottom" hidden={collapsed}>
           <LinkStatus link={link} onCheck={() => void session.api.readiness().catch(error => {
             // Falha de rede já chegou pelo sinal de conectividade; 503 é API no ar com banco indisponível.
             if (asApiError(error).status === 503) setLink({ status: 'degraded', at: new Date() })
@@ -147,7 +161,6 @@ export default function App() {
       <main id="conteudo">
         <header className="topbar">
           <div>
-            <p className="eyebrow">{current.eyebrow}</p>
             <h1 ref={heading} tabIndex={-1}>{current.label}</h1>
           </div>
           <div className="top-actions">
@@ -164,7 +177,7 @@ export default function App() {
           {current.path === '/atendimento' && <Support params={route.params} />}
           {current.path === '/workflow' && <Workflow />}
         </div>
-        <footer>Demonstração acadêmica ArchCorp · Dados sintéticos · Integrações externas simuladas · Sem conexão com sistemas reais da Localiza</footer>
+        <footer>Demonstração acadêmica com dados fictícios. Não há conexão com sistemas reais da Localiza.</footer>
       </main>
     </div>
   </SessionContext.Provider>
@@ -182,7 +195,7 @@ function Gate({ state, onSubmit }: { state: GateState, onSubmit: (token: string)
       <div className="mark" aria-hidden="true">A</div>
       <p className="eyebrow">ARCHCORP · AMBIENTE ACADÊMICO</p>
       <h1>Operações integradas</h1>
-      <p>Entre com a credencial de demonstração para navegar pelos cinco contextos com dados sintéticos. No ambiente local, use um dos tokens de papel descritos no README; na demonstração pública, solicite a credencial ao responsável pelo projeto.</p>
+      <p>Digite sua credencial para entrar. Os dados são fictícios. Se você não tem uma credencial, peça ao responsável pelo projeto.</p>
       <form onSubmit={submit}>
         <div className="field">
           <label htmlFor="token">Credencial de acesso</label>
@@ -192,12 +205,10 @@ function Gate({ state, onSubmit }: { state: GateState, onSubmit: (token: string)
       </form>
       <div aria-live="polite">
         {state.status === 'error' && <div className="notice error" role="alert"><div>
-          <strong>{errorHeadline(state.error)}</strong>
-          {state.error.detail && <p>{state.error.detail}</p>}
-          <p className="meta">{state.error.kind === 'network' ? 'Sem resposta do servidor' : `HTTP ${state.error.status} · código ${state.error.code}`}{state.error.correlationId && <> · Correlação: <code>{state.error.correlationId}</code></>}</p>
+          <strong>{state.error.status === 401 ? 'Credencial não aceita. Confira o que digitou e tente de novo.' : errorMessage(state.error)}</strong>
         </div></div>}
       </div>
-      <small>Projeto conceitual; sem conexão com sistemas reais da Localiza. Use apenas dados fictícios.</small>
+      <small>Projeto acadêmico. Use apenas dados fictícios.</small>
     </main>
   </div>
 }

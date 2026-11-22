@@ -8,17 +8,17 @@ test('papel sem permissão recebe a negativa ao cadastrar cliente', async ({ pag
 
   await irPara(page, 'CRM')
   const form = page.getByRole('form', { name: 'Novo cliente' })
-  await form.getByLabel('Nome (fictício)').fill(nome)
-  await form.getByLabel('E-mail sintético').fill(email)
+  await form.getByLabel('Nome', { exact: true }).fill(nome)
+  await form.getByLabel('E-mail', { exact: true }).fill(email)
   await form.getByRole('button', { name: 'Cadastrar cliente' }).click()
   await expect(page.getByRole('alert').filter({ hasText: 'Cadastro de cliente' }))
-    .toContainText('Seu papel não tem permissão para esta operação.')
+    .toContainText('Seu perfil não pode fazer esta ação.')
 })
 
 test('credencial inválida é recusada na tela de acesso', async ({ page }) => {
   await informarCredencial(page, 'credencial-invalida')
-  await expect(page.getByRole('alert')).toContainText('Credencial ausente ou inválida')
-  await expect(page.getByRole('navigation', { name: 'CONTEXTOS' })).toHaveCount(0)
+  await expect(page.getByRole('alert')).toContainText('Credencial não aceita')
+  await expect(page.getByRole('navigation', { name: 'MENU' })).toHaveCount(0)
 })
 
 test('Sair encerra a sessão e limpa a credencial', async ({ page }) => {

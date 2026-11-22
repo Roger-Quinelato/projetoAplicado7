@@ -5,16 +5,16 @@ export interface Indicator { label: string, value: string, detail: string }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
-/** Título da barra de eventos para a quantidade de eventos pendentes na outbox. */
+/** Título da barra superior para a quantidade de pendências que aguardam a atualização dos processos. */
 export function pendingLabel(pending: number): string {
-  return pending === 0 ? 'Nenhum evento aguardando despacho' : `${plural(pending, 'evento', 'eventos')} aguardando despacho`
+  return pending === 0 ? 'Nenhuma pendência para processar' : `${plural(pending, 'pendência', 'pendências')} para processar`
 }
 
-/** Resumo do último despacho; `failed` são tentativas desta rodada, que ainda podem ser repetidas. */
+/** Resumo da última atualização; `failed` são itens que ainda podem ser tentados de novo. */
 export function dispatchSummary(result: DispatchResult, at: Date): string {
   const hour = at.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-  const failed = result.failed === 0 ? 'nenhuma falha' : `${plural(result.failed, 'tentativa', 'tentativas')} com falha`
-  return `Último despacho às ${hour}: ${plural(result.processed, 'evento entregue', 'eventos entregues')}, ${failed}.`
+  const failed = result.failed === 0 ? 'nenhum problema' : `${plural(result.failed, 'item', 'itens')} com problema`
+  return `Última atualização às ${hour}: ${plural(result.processed, 'item processado', 'itens processados')}, ${failed}.`
 }
 
 function currencyTotal(balances: InvoiceSummary['balances']): string {
@@ -38,7 +38,7 @@ export function ticketIndicator({ open, withinSla }: TicketSummary): Indicator {
 }
 
 export function processIndicator({ total, running }: ProcessSummary): Indicator {
-  return { label: 'Processos em andamento', value: String(running), detail: `de ${plural(total, 'processo', 'processos')}` }
+  return { label: 'Operações em andamento', value: String(running), detail: `de ${plural(total, 'operação', 'operações')}` }
 }
 
 export function failureIndicator(failures: unknown[]): Indicator {
