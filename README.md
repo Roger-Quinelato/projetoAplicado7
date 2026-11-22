@@ -74,8 +74,22 @@ Para acesso pela rede, use `PUBLIC_DEMO=true` com `DEMO_ACCESS_TOKEN`. Nunca abr
 
 A demonstração oficial roda no notebook, sem Docker ([ADR-007](docs/adr/ADR-007-demonstracao-local-sem-supabase.md)). A API serve a interface compilada e usa SQLite. A cópia dos eventos no RabbitMQ é opcional e fica desligada.
 
+**Pré-requisitos:** Git, Python 3.12 e Node.js 24 (o mesmo da imagem Docker e da CI). No Linux, instale também o módulo de ambientes virtuais do Python, por exemplo `sudo apt install python3-venv` no Debian e no Ubuntu.
+
+**Base local.** Não há banco para instalar: a base é um arquivo SQLite, `tmp/demo.db`. A API cria o arquivo e aplica as migrações Alembic sozinha na primeira inicialização, então basta a pasta `tmp` existir. Para recomeçar do zero, pare a API e apague `tmp/demo.db`.
+
+#### Windows (PowerShell)
+
 ```powershell
+git clone https://github.com/Roger-Quinelato/projetoAplicado7.git
+cd projetoAplicado7
+
+python -m venv .venv
+./.venv/Scripts/pip install -r requirements.txt
+
 cd web; npm ci; npm run build; cd ..
+
+New-Item -ItemType Directory -Force tmp | Out-Null
 $env:PYTHONPATH = "src"
 $env:DATABASE_URL = "sqlite:///./tmp/demo.db"
 ./.venv/Scripts/python -m uvicorn archcorp.main:app --port 8000
@@ -88,6 +102,34 @@ Em outro terminal, antes de apresentar:
 ```
 
 O script confere o commit, `/health/ready`, o token, a interface, os fluxos F1, F2 e F3 e gera o relatório operacional. Ele sai com `0` só se tudo passar.
+
+#### Linux (bash)
+
+```bash
+git clone https://github.com/Roger-Quinelato/projetoAplicado7.git
+cd projetoAplicado7
+
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+
+(cd web && npm ci && npm run build)
+
+mkdir -p tmp
+export PYTHONPATH=src
+export DATABASE_URL=sqlite:///./tmp/demo.db
+.venv/bin/python -m uvicorn archcorp.main:app --port 8000
+```
+
+Os scripts `.ps1` são só para Windows. No Linux, use os roteiros em Python, em outro terminal e com as mesmas variáveis de ambiente:
+
+```bash
+export PYTHONPATH=src
+.venv/bin/python scripts/demo_f1.py   # F1
+.venv/bin/python scripts/demo_f2.py   # F2
+.venv/bin/python scripts/demo_f3.py   # F3
+```
+
+Nos dois sistemas, abra `http://localhost:8000` e entre com o token `demo-admin`. Para carregar dados sintéticos, rode `scripts/seed_sintetico.py --base-url http://localhost:8000 --token demo-admin` com o Python do `.venv`. Depois de alterar o código da interface, rode `npm run build` de novo e reinicie a API.
 
 ## Demonstração dos fluxos
 
