@@ -21,6 +21,13 @@ def money(value) -> str:
     return str(Decimal(str(value)).quantize(Decimal("0.01")))
 
 
+def _normalize(value) -> str:
+    """Forma comparável de um campo da reserva (valor monetário com 2 casas, data ISO ou texto)."""
+    if isinstance(value, (Decimal, float, int)) and not isinstance(value, bool):
+        return money(value)
+    return value.isoformat() if isinstance(value, date) else str(value)
+
+
 def utc_now() -> datetime:
     """Relógio padrão: instante atual em UTC."""
     return datetime.now(timezone.utc)
@@ -245,6 +252,24 @@ class ReservationService:
         audit(session, correlation_id, "contracts", "draft_from_reservation", "success", reservation.reservation_id, contractId=contract["contractId"])
         session.commit()
         return {"reservationId": reservation.reservation_id, "contract": contract}, replay
+
+    def update(self, session: Session, reservation_id: str, data: dict, correlation_id: str) -> dict:
+        """Edita os dados de uma reserva solicitada (ex.: o cliente mudou a data); o cliente não muda."""
+        reservation = self.require(session, reservation_id)
+        if reservation.status != ReservationStatus.REQUESTED or reservation.contract_id:
+            raise ConflictError("Somente reserva solicitada pode ser editada")
+        changes = {"vehicle_group": data["vehicleGroup"], "protection_code": data["protectionCode"], "service_code": data["serviceCode"],
+                   "starts_on": data["startsOn"], "ends_on": data["endsOn"], "amount": data["amount"], "currency": data["currency"],
+                   "billing_cycle": data["billingCycle"], "sla_hours": data["slaHours"]}
+        changed = sorted(name for name, value in changes.items() if _normalize(getattr(reservation, name)) != _normalize(value))
+        if not changed:
+            return self.to_dict(reservation)
+        for name, value in changes.items():
+            setattr(reservation, name, value)
+        audit(session, correlation_id, "contracts", "update_reservation", "success", reservation.reservation_id, changedFields=changed)
+        session.commit()
+        session.refresh(reservation)
+        return self.to_dict(reservation)
 
     def cancel(self, session: Session, reservation_id: str, correlation_id: str) -> dict:
         """Cancela a reserva e o rascunho vinculado; cancelar de novo devolve o mesmo estado."""

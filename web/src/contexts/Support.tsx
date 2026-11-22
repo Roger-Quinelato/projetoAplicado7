@@ -119,7 +119,7 @@ export default function Support({ params }: { params: URLSearchParams }) {
           <SelectField name="contractId" label="Contrato ativo" value={contractId} onChange={v => { setContractId(v); setEntitlement(null) }}
             options={activeContracts.map(c => ({ value: c.contractId, label: `${c.contractId.slice(0, 8)} · ${c.serviceCode} · SLA ${c.slaHours} h` }))}
             placeholder={activeContracts.length ? 'Selecione' : 'Nenhum contrato ativo para este cliente'}
-            hint="Apenas contratos ativos aparecem; ative um rascunho em Reservas e contratos." />
+            hint="Apenas contratos ativos aparecem; ative uma reserva em Reservas e contratos." />
           <SelectField name="category" label="Categoria" options={CATEGORIES} defaultValue="OUTAGE" />
           <TextArea name="description" label="Descrição (sem dados pessoais ou sensíveis)" defaultValue="Veículo não liga no pátio de retirada (cenário fictício)." />
         </ActionForm>

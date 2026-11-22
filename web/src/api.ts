@@ -61,6 +61,9 @@ export interface ReservationInput {
   slaHours?: number
 }
 
+/** Dados editáveis de uma reserva solicitada; o cliente não muda. */
+export type ReservationUpdate = Omit<ReservationInput, 'customerId'>
+
 export type ContractStatus = 'DRAFT' | 'ACTIVE' | 'CLOSED' | 'CANCELLED'
 export interface Billing { amount: number | string, currency: string, cycle: BillingCycle }
 export interface Contract {
@@ -341,6 +344,8 @@ export function createApi(token: string, fetcher: typeof fetch = (...args) => fe
       request<Reservation>('POST', '/api/v1/contracts/reservations', { body, idempotencyKey }),
     draftFromReservation: (id: Uuid, idempotencyKey: string) =>
       request<ReservationDraft>('POST', `/api/v1/contracts/reservations/${id}/draft`, { idempotencyKey }),
+    updateReservation: (id: Uuid, body: ReservationUpdate) =>
+      request<Reservation>('PATCH', `/api/v1/contracts/reservations/${id}`, { body }),
     cancelReservation: (id: Uuid) => request<Reservation>('POST', `/api/v1/contracts/reservations/${id}/cancel`),
     listContracts: (customerId?: Uuid) => get<Contract[]>('/api/v1/contracts', { customerId }),
     contractSummary: () => get<ContractSummary>('/api/v1/contracts/summary'),

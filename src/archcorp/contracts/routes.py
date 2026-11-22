@@ -105,6 +105,29 @@ class ReservationInput(BaseModel):
         return self
 
 
+
+class ReservationUpdate(BaseModel):
+    """Dados editáveis de uma reserva solicitada. O cliente não muda: para outro cliente, cancele e registre nova reserva."""
+
+    vehicleGroup: str = Field(min_length=1, max_length=50)
+    protectionCode: str = Field(min_length=1, max_length=50)
+    serviceCode: str = Field(min_length=1, max_length=80)
+    startsOn: date
+    endsOn: date
+    amount: Decimal = Field(gt=0, decimal_places=2)
+    currency: str = Field(default="BRL", pattern="^[A-Z]{3}$")
+    billingCycle: Literal["ONCE", "MONTHLY", "QUARTERLY", "YEARLY"] = "MONTHLY"
+    slaHours: int = Field(default=8, ge=1, le=720)
+
+    @model_validator(mode="after")
+    def valid_period(self):
+        """Rejeita período com fim antes do início ou início no passado."""
+        if self.endsOn < self.startsOn:
+            raise ValueError("Fim da reserva anterior ao início")
+        if self.startsOn < reservation_clock().date():
+            raise ValueError("Início da reserva no passado")
+        return self
+
 class ContractCloseInput(BaseModel):
     model_config = ConfigDict(json_schema_extra={"examples": [{"endsOn": "2027-01-08", "reason": "Devolução do veículo"}]})
 
@@ -235,6 +258,22 @@ def draft_from_reservation(
     result, replay = service.draft(session, str(reservation_id), idempotency_key, correlation_id_var.get())
     set_replay(response, replay)
     return result
+
+
+@router.patch(
+    "/reservations/{reservation_id}",
+    response_model=ReservationResponse,
+    responses={
+        404: {"description": "Reserva não encontrada."},
+        409: {"description": "Somente reserva solicitada pode ser editada."},
+        422: {"description": "Período ou valores inválidos."},
+    },
+    dependencies=[Depends(RESERVATION_ACTORS)],
+)
+def update_reservation(reservation_id: UUID, body: ReservationUpdate, session: Session = Depends(get_session),
+                       service: ReservationService = Depends(reservation_service)) -> dict:
+    """Altera período, valor, grupo, proteção, ciclo e SLA de uma reserva solicitada; repetir os mesmos dados não tem efeito."""
+    return service.update(session, str(reservation_id), body.model_dump(mode="python"), correlation_id_var.get())
 
 
 @router.post(
