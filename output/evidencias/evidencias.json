@@ -1,9 +1,9 @@
 {
-  "geradoEm": "2026-10-29T17:43:10.169597Z",
-  "commit": "534eab2e77363318fedda77509aca0e0031f4e3a",
-  "commitCurto": "534eab2",
-  "branch": "fix/etapa2-sem-supabase-e-correcoes",
-  "arvoreLimpa": true,
+  "geradoEm": "2026-11-22T15:21:44.545853Z",
+  "commit": "ba3ebcb8f5a9112d79aff3db22c95bd742c01862",
+  "commitCurto": "ba3ebcb",
+  "branch": "feat/interface-simplificada",
+  "arvoreLimpa": false,
   "ambiente": {
     "sistema": "Windows-11-10.0.26300-SP0",
     "python": "3.12.10"
@@ -16,33 +16,37 @@
     "pytest": {
       "comando": "pytest -q",
       "banco": "SQLite",
-      "aprovados": 269,
+      "aprovados": 272,
       "ignorados": 14,
       "falhas": 0,
-      "segundos": 419.5,
-      "inicio": "2026-10-29T17:43:14.693129Z",
+      "segundos": 375.6,
+      "inicio": "2026-11-22T15:21:49.192593Z",
       "ok": true
     },
     "desempenho": {
       "comando": "scripts/performance_smoke.py",
       "banco": "sqlite",
       "metaP95Ms": 500,
-      "maiorP95Ms": 21.53,
+      "maiorP95Ms": 28.7,
       "consultas": 10,
       "ok": true
     },
     "web": {
       "comando": "npm test (web)",
       "resumo": [
-        "pass 19",
+        "pass 24",
         "fail 0"
       ],
       "ok": true
     }
   },
   "ci": {
-    "disponivel": false,
-    "observacao": "nenhuma execução de CI para este commit (faça push e aguarde)"
+    "disponivel": true,
+    "execucao": 45035586550,
+    "workflow": "Verify",
+    "status": "completed",
+    "conclusao": "failure",
+    "url": "https://github.com/Roger-Quinelato/projetoAplicado7/actions/runs/45035586550"
   },
   "ok": true
 }

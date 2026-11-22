@@ -375,6 +375,7 @@ outro `X-Correlation-ID`, mesmo quando pertencem à mesma demonstração.
 Os diagramas descrevem o protótipo acadêmico. Produtos, interfaces e topologia dos
 sistemas reais continuam como premissas a validar com a organização.
 
-As revisões T12 e T15 convergem na head `0005_merge_finance_support` sem
-renumerar histórico publicado (ADR-004). Mutações do chamado bloqueiam a mesma
+As revisões T12 e T15 convergem em `0005_merge_finance_support` sem
+renumerar histórico publicado (ADR-004); a head atual é `0006_task_type`,
+aditiva (tipo da tarefa no Workflow). Mutações do chamado bloqueiam a mesma
 linha Ticket; histórico, auditoria, idempotência e outbox são atômicos.

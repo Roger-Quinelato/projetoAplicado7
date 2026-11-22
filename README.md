@@ -32,10 +32,10 @@ Cada contexto é dono dos próprios dados e expõe uma interface pública. Nenhu
 | Contexto | Responsabilidade no protótipo |
 |---|---|
 | `crm` | Clientes, contatos, consentimentos e oportunidades |
-| `contracts` | Reservas, rascunhos, ativação e encerramento de contratos, com SLA |
+| `contracts` | Reservas (com edição enquanto solicitadas), rascunhos, ativação e encerramento de contratos, com SLA |
 | `finance` | Faturas inicial e final, pagamento simulado e inadimplência por vencimento |
 | `support` | Chamados com prioridade, prazo de SLA, atribuição, resolução e reconciliação |
-| `workflow` | Processos e tarefas operacionais criados por eventos |
+| `workflow` | Processos e tarefas operacionais criados por eventos; tarefas com tipo (preparação, resolução ou devolução) |
 | `integration` | Outbox e inbox, correlação, auditoria, falhas, reprocessamento e IDs legados |
 
 Os três fluxos integrados do plano são:
@@ -307,7 +307,7 @@ Comece por estes documentos:
 - [`docs/EVOLUCAO_MANUTENCAO.md`](docs/EVOLUCAO_MANUTENCAO.md)
 
 **Entrega final**
-- `output/Relatorio_Tecnico_Cenario_4.docx`: relatório técnico na estrutura do Guia, gerado por `tools/build_report.py`. Complete a tabela de participantes antes da entrega.
+- `output/Relatorio_Tecnico_Cenario_4.docx` e `.pdf`: relatório técnico em formato de artigo (15–20 páginas, conforme o Guia), gerado por `tools/build_report.py` a partir de `output/evidencias/evidencias.json`. Para regenerar: `python tools/consolidar_evidencias.py --com-web`, `python tools/build_report.py` (requer `python-docx`) e `soffice --headless --convert-to pdf --outdir output output/Relatorio_Tecnico_Cenario_4.docx`.
 - `output/Apresentacao_Cenario_4.pptx`: apresentação de 18 slides, gerada por `tools/build_presentation.mjs`.
 - `tools/render_diagrams.py`: gera em PNG, com o mermaid-cli, os diagramas usados no relatório e na apresentação.
 

@@ -54,8 +54,10 @@ flowchart TB
 CRM, Contracts, Finance, Support e Workflow mantêm regras de negócio. No domínio
 Localiza, Contracts representa reservas e contratos de locação; Finance
 representa faturamento e cobranças; Support representa atendimento e assistência
-24h; Workflow implementa tarefas de preparação de retirada e resolução de chamados.
-Devolução, vistoria e manutenção completas pertencem ao domínio proposto.
+24h; Workflow implementa tarefas de preparação de retirada e resolução de chamados
+e aceita tarefas do tipo devolução (`RETURN`) dentro desses
+processos. Processos completos de devolução, vistoria e manutenção pertencem ao
+domínio proposto.
 Integration
 traduz, roteia, correlaciona e controla a entrega, mas não decide elegibilidade,
 SLA, cobrança, prioridade ou estado dos processos.
@@ -68,13 +70,13 @@ sem exposição no contrato ou na elegibilidade. Finance implementa faturas,
 pagamentos simulados e inadimplência, sem pré-autorização, caução, multas ou PSP.
 CRM também persiste contatos e oportunidades; Finance, pagamentos; Support,
 atribuições e histórico; Workflow, tarefas. A persistência abaixo lista tabelas
-principais, sem representar um inventário completo. Não há gestão de frota nem
+principais (por exemplo, `workflow_tasks`, com o tipo da tarefa desde a migração `0006_task_type`), sem representar um inventário completo. Não há gestão de frota nem
 integração com sistemas corporativos reais.
 
 | Contexto | Serviços e casos de uso | Interface pública | Dados oficiais (domínio proposto) | Persistência do protótipo |
 |---|---|---|---|---|
 | CRM | Cadastro, atualização, elegibilidade e consentimento | API CRM e `CustomerReader` | Cliente, contatos, consentimentos, perfil de locação e oportunidade | `crm_customers` |
-| Contracts | Reserva, rascunho, ativação, encerramento, vigência e SLA | API Contracts e `ContractEntitlementPort` | Reserva, contrato de locação, grupo de veículo, vigência, proteções e SLA | `contracts_reservations`, `contracts_contracts` |
+| Contracts | Reserva (com edição enquanto solicitada), rascunho, ativação, encerramento, vigência e SLA | API Contracts e `ContractEntitlementPort` | Reserva, contrato de locação, grupo de veículo, vigência, proteções e SLA | `contracts_reservations`, `contracts_contracts` |
 | Finance | Primeira cobrança, faturamento final, pagamento simulado e inadimplência por vencimento | Consumidores de `ContractActivated.v1` e `ContractClosed.v1`; API Finance | Pré-autorização, cobrança, fatura, pagamento, caução, multa e inadimplência | `finance_invoices` |
 | Support | Abertura, prioridade, prazo e reconciliação de chamado | API Support | Chamado, assistência, prioridade, histórico e resolução | `support_tickets` |
 | Workflow | Preparação de retirada e processo de resolução | Consumidores de eventos | Instância, tarefa, responsável, prazo e estado operacional | `workflow_instances` |

@@ -1,6 +1,6 @@
 # Integrações do Cenário 4
 
-> Revisão documental: **28/10/2026**, base `f1669d7` (`main`, integração #75). O [estado técnico](ESTADO_IMPLEMENTACAO.md) distingue implementação, evidência e lacunas; o [índice de entrega](ENTREGA_FINAL.md) reúne os materiais finais. Resultados datados são históricos, não reexecutados nesta leitura documental; a CI da base foi consultada remotamente, conforme o estado técnico.
+> Revisão documental: **28/10/2026**, base `f1669d7` (`main`, integração #75). Com os PRs #82–#85, a reserva solicitada pode ser editada por `PATCH /api/v1/contracts/reservations/{id}` e a interface trata só a reserva (o botão **Ativar** cria o rascunho e o ativa); o rascunho direto permanece na API. O [estado técnico](ESTADO_IMPLEMENTACAO.md) distingue implementação, evidência e lacunas; o [índice de entrega](ENTREGA_FINAL.md) reúne os materiais finais. Resultados datados são históricos, não reexecutados nesta leitura documental; a CI da base foi consultada remotamente, conforme o estado técnico.
 
 Este documento detalha as três integrações obrigatórias do protótipo, conforme o item 5 do `Guia.pdf`: origem, destino, informação, objetivo, comunicação, API/serviço, dados enviados/recebidos e erros. T12 e T15 estão integradas à `main` por #75; os fluxos usam dados sintéticos e adaptadores no mesmo processo. Os diagramas
 de sequência estão em `docs/arquitetura/FLUXOS_INTEGRACAO.md`. Requisições,
@@ -28,7 +28,7 @@ correlação, mapeamentos legados, idempotência, outbox, inbox, auditoria e fal
 | Informação compartilhada | Identidade global do cliente e condições da locação negociada |
 | Objetivo | Criar um rascunho de contrato de locação a partir do cliente existente, sem recadastrar seus dados |
 | Tipo de comunicação | Comando REST/JSON síncrono; consulta interna síncrona por porta pública |
-| API ou serviço utilizado | `POST /api/v1/contracts/reservations`, `POST /api/v1/contracts/reservations/{id}/draft` ou rascunho direto em `POST /api/v1/contracts/drafts`; porta `CustomerReader` envolvida por `ResilientCustomerReader` |
+| API ou serviço utilizado | `POST /api/v1/contracts/reservations`, edição opcional por `PATCH /api/v1/contracts/reservations/{id}` enquanto a reserva está solicitada, `POST /api/v1/contracts/reservations/{id}/draft` ou, só pela API, rascunho direto em `POST /api/v1/contracts/drafts`; porta `CustomerReader` envolvida por `ResilientCustomerReader` |
 | Dados enviados | Rascunho direto: `customerId`, `serviceCode`, `startsOn`, `billing.amount`, `billing.currency`, `billing.cycle` e `slaHours`. Pela reserva: condições de locação, grupo/proteção e vigência em `/reservations`; a conversão usa o ID na URL e não tem corpo |
 | Dados recebidos | `contractId`, `customerId`, produto de locação, início, cobrança, SLA e estado `DRAFT`; cabeçalhos `X-Correlation-ID` e `Idempotency-Replayed` |
 | Tratamento de erros | `400` para correlação inválida; `401`/`403` para acesso; `404` para reserva inexistente; `422 VALIDATION_ERROR` estrutural ou `422 BUSINESS_RULE_VIOLATION` para cliente inexistente, inativo, inelegível ou sem consentimento; `409` para estado, duplicidade ou chave com outro pedido; `503 SERVICE_UNAVAILABLE` ao esgotar a leitura do CRM, sem efeito de negócio. Chave obrigatória no rascunho e opcional na reserva |
@@ -347,3 +347,16 @@ em cada etapa) e RabbitMQ 3.13 real no job `rabbitmq` da CI
 As correções não alteram retroativamente registros já consumidos em versões
 anteriores. A persistência de inconsistências antigas exige análise e reparação
 específicas, sem apagar dados ou reescrever eventos automaticamente.
+
+## Mudanças aditivas da interface simplificada
+
+- Contracts: `PATCH /api/v1/contracts/reservations/{id}` edita período, valor,
+  grupo, proteção, ciclo e SLA de uma reserva `REQUESTED` sem contrato; o
+  cliente não muda. A alteração é auditada; os mesmos dados não geram efeito.
+- Workflow: a tarefa ganhou `taskType` (`ONBOARDING`, `TICKET_RESOLUTION` ou
+  `RETURN`, a devolução do veículo), migração `0006_task_type`. Tarefas criadas
+  por evento recebem o tipo do processo; na criação manual o campo é opcional
+  e, sem valor, a tarefa herda o tipo do processo. Tarefas anteriores à 0006
+  retornam `taskType: null`. Eventos e consumidores não mudaram.
+- Interface: avisos em linguagem de negócio, com código HTTP e `correlationId`
+  em “Detalhes técnicos”; nenhum contrato de evento mudou.

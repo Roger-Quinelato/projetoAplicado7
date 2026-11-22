@@ -18,7 +18,10 @@ produtos e processos internos reais da Localiza não foram levantados.
 As integrações funcionam com dados sintéticos. O despachante chama os
 consumidores internos; o RabbitMQ recebe uma cópia dos eventos. A interface
 web e as APIs demonstram F1 (cliente → contrato), F2 (ativação → fatura e
-preparação) e F3 (chamado → processo de resolução).
+preparação) e F3 (chamado → processo de resolução). A
+interface está simplificada para uso por pessoas de negócio: na tela de
+reservas, **Ativar** cria o contrato a partir da reserva e o ativa, e a reserva
+solicitada pode ser editada.
 
 ## Documentos exigidos pelo guia
 
@@ -36,7 +39,7 @@ preparação) e F3 (chamado → processo de resolução).
 | Público, valor, benefícios e viabilidade | [Visão de negócio](VISAO_NEGOCIO.md) |
 | Protótipo e código-fonte | `src/archcorp/`, `web/`, [execução](../README.md) |
 | Três fluxos funcionando | [Roteiro de demonstração](ROTEIRO_DEMONSTRACAO.md), `scripts/demo_f1.py`, `demo_f2.py`, `demo_f3.py` |
-| Relatório técnico em artigo, 15–20 páginas | [Relatório PDF, 20 páginas](../output/Relatorio_Tecnico_Cenario_4.pdf) e [DOCX editável](../output/Relatorio_Tecnico_Cenario_4.docx) |
+| Relatório técnico em artigo, 15–20 páginas | [Relatório PDF, 19 páginas](../output/Relatorio_Tecnico_Cenario_4.pdf) e [DOCX editável](../output/Relatorio_Tecnico_Cenario_4.docx) |
 | Apresentação técnica | [Slides](../output/Apresentacao_Cenario_4.pptx) |
 | Continuidade por outra equipe | README, contratos, ADRs, [estado técnico](ESTADO_IMPLEMENTACAO.md), [rastreabilidade](MATRIZ_RASTREABILIDADE.md) |
 
@@ -72,13 +75,13 @@ ser evolução ([ADR-007](adr/ADR-007-demonstracao-local-sem-supabase.md)).
 
 ## Conferência antes da submissão
 
-- Conferir a identificação já preenchida: Roger Quinelato — backend, produto e negócio; Raquel Pereira — frontend e levantamento de requisitos.
-- Confirmar se o professor aceita as premissas do cenário e a demonstração local
-  ou se mantém a publicação pública prevista no plano.
-- Conferir relatório de 15–20 páginas, figuras legíveis, citações e referências.
+- Identificação já preenchida: Roger Quinelato — backend, produto e negócio;
+  Raquel Pereira — frontend e levantamento de requisitos.
+- Relatório regenerado a partir de `tools/build_report.py`, com a
+  contagem de páginas conferida no PDF (ver
+  [evidências](EVIDENCIAS_VALIDACAO.md)).
 - Usar o mesmo commit no código, no relatório, nos slides e na demonstração.
-- Entregar pacote funcional e documentação em 09/11/2026; apresentar à turma
-  em 23/11/2026, após ajustes do professor e ensaios.
+- Confirmar com o professor as premissas do cenário e a demonstração local.
 
 O planejamento de fechamento e as pendências estão no
 [panorama de prontidão](PANORAMA_PRONTIDAO.md), separado da documentação final.

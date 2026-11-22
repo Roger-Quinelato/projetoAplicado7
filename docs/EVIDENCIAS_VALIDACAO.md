@@ -4,6 +4,29 @@
 
 Este documento é a fonte única dos números de verificação (testes, p95, roteiros). Os demais documentos citam esta página em vez de repetir os valores. As seções estão em ordem cronológica inversa; cada uma vale apenas para o commit e o ambiente indicados.
 
+## Evidência consolidada do commit `ba3ebcb` (interface simplificada)
+
+Gerada por `tools/consolidar_evidencias.py --com-web`; o arquivo bruto, com o
+horário da execução, é [`output/evidencias/evidencias.json`](../output/evidencias/evidencias.json).
+Windows 11, Python 3.12, SQLite. A árvore **não estava limpa**: havia ajustes
+não versionados nos roteiros Playwright em `web/e2e/`, que não entram nas
+verificações abaixo.
+
+| Verificação | Resultado |
+|---|---|
+| `pytest -q` (SQLite) | 272 aprovados, 14 ignorados, 0 falhas |
+| `npm test` (web) | 24 aprovados, 0 falhas |
+| `tools/export_openapi.py --check` | Sincronizado (inclui `PATCH /api/v1/contracts/reservations/{id}` e `taskType`) |
+| `scripts/performance_smoke.py` | Maior p95 de 28,7 ms em 10 consultas; meta de 500 ms |
+| `demo_f1.py`, `demo_f2.py`, `demo_f3.py` contra `uvicorn` local com SQLite novo | 20/20, 14/14 e 15/15 |
+| CI do commit ([run 45035586550](https://github.com/Roger-Quinelato/projetoAplicado7/actions/runs/45035586550)) | `application`, `postgresql` e `rabbitmq`: success; `e2e`: **failure** em quatro roteiros (`f1`, `f2-f3`, `indicadores`, `selecao-e-ambiguidade`) que ainda esperam textos da interface anterior |
+
+Relatório técnico regenerado por `tools/build_report.py` e convertido pelo
+LibreOffice: **19 páginas** A4, dentro do limite de 15–20 do Guia. A
+apresentação foi refeita com **19 slides** (negócio, arquitetura, demonstração,
+qualidade e fechamento), lendo os números de `evidencias.json`; o pacote passou na
+validação de formato e todos os slides foram conferidos renderizados.
+
 ## Evidência consolidada em 29/10/2026 (commit `534eab2`)
 
 Gerada por `tools/consolidar_evidencias.py --com-web` com a árvore limpa; o arquivo bruto é [`output/evidencias/evidencias.json`](../output/evidencias/evidencias.json). Windows 11, Python 3.12, SQLite.

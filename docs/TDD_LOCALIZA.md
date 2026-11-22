@@ -21,7 +21,7 @@ decisoes imediatas e eventos para efeitos assíncronos.
 | Contracts | Reserva/contrato de locacao, ativacao, encerramento, vigencia e SLA; grupo de veiculo registrado apenas na reserva. |
 | Finance | Consumidores de `ContractActivated.v1` (primeira fatura) e `ContractClosed.v1` (fatura final); pagamento simulado e inadimplência por vencimento. |
 | Support | Abertura de chamado, calculo de prioridade e reconciliacao de elegibilidade. |
-| Workflow | Processos de preparacao de retirada (`ONBOARDING`) e de resolucao de chamado (`TICKET_RESOLUTION`), com tarefas operacionais; devolucao e vistoria sao evolucao. |
+| Workflow | Processos de preparacao de retirada (`ONBOARDING`) e de resolucao de chamado (`TICKET_RESOLUTION`), com tarefas operacionais; a tarefa tem tipo (`ONBOARDING`, `TICKET_RESOLUTION` ou `RETURN`, devolucao do veiculo). Processo proprio de devolucao e vistoria continua como evolucao. |
 | Integration | Correlacao, IDs legados, idempotencia, outbox, inbox, auditoria e falhas. |
 
 ## Decisoes Tecnicas

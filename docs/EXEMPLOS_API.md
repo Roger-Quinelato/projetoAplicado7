@@ -742,6 +742,63 @@ Não há alocação de frota, PSP ou integração corporativa real nesses exempl
 `POST /api/v1/contracts/reservations/{reservationId}/cancel` cancela uma reserva
 `REQUESTED` ou `DRAFTED`; o rascunho vinculado passa a `CANCELLED`.
 
+### Editar uma reserva solicitada
+
+Desde o PR #83, a reserva ainda `REQUESTED` e sem contrato pode ser
+editada. O cliente não muda: para outro cliente, cancele e registre nova reserva.
+
+```http
+PATCH /api/v1/contracts/reservations/cccccccc-cccc-4ccc-8ccc-cccccccccccc HTTP/1.1
+Authorization: Bearer demo-contracts
+Content-Type: application/json
+X-Correlation-ID: 11111111-1111-4111-8111-111111111111
+
+{
+  "vehicleGroup": "SUV-COMPACTO",
+  "protectionCode": "COMPLETA",
+  "serviceCode": "RENTAL-FLEX",
+  "startsOn": "2027-01-05",
+  "endsOn": "2027-01-09",
+  "amount": 820.00,
+  "currency": "BRL",
+  "billingCycle": "ONCE",
+  "slaHours": 8
+}
+```
+
+Resposta `200 OK` com a reserva alterada. A alteração é auditada com a lista
+dos campos que mudaram; repetir os mesmos dados devolve a reserva sem novo
+registro. Reserva em outro estado recebe `409`, reserva inexistente `404`, e
+período inválido ou valor com mais de duas casas `422`.
+
+Na interface, a tela **Reservas e contratos** trata só a reserva: **Ativar**
+cria o rascunho a partir da reserva e o ativa em seguida (F1 seguido de F2),
+**Editar** usa esta rota e **Cancelar** usa a rota de cancelamento. O rascunho
+direto (`POST /api/v1/contracts/drafts`) continua na API, mas saiu da interface;
+um contrato criado só pela API aparece como “Aguardando ativação”.
+
+### Criar tarefa com tipo
+
+```http
+POST /api/v1/workflow/tasks HTTP/1.1
+Authorization: Bearer demo-operations
+Content-Type: application/json
+
+{
+  "processId": "13131313-1313-4131-8131-131313131313",
+  "title": "Conferir quilometragem na devolução",
+  "owner": "operations",
+  "taskType": "RETURN"
+}
+```
+
+Resposta `201 Created` com `taskId`, `taskType`, `state` `OPEN` e o prazo do
+processo. `taskType` é opcional (`ONBOARDING`, `TICKET_RESOLUTION` ou
+`RETURN`); sem valor, a tarefa herda o tipo do processo. Tarefas anteriores à
+migração `0006_task_type` retornam `taskType: null`. Processo concluído ou
+cancelado recebe `409 CONFLICT`. A interface avisa, sem bloquear, quando o
+processo já tem tarefa aberta com o mesmo título.
+
 ### Encerrar o contrato
 
 ```http
