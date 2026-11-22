@@ -210,8 +210,18 @@ function TechnicalDetails({ children }: { children: ReactNode }) {
   return <details className="tech"><summary>Detalhes técnicos</summary><p className="meta">{children}</p></details>
 }
 
+/** Leva à vista um elemento acionado longe dele (ex.: botão no fim de uma tabela longa). */
+export function revealElement(element: HTMLElement | null) {
+  if (!element || typeof element.scrollIntoView !== 'function') return
+  const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  element.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' })
+}
+
 export function FeedbackBanner({ feedback, onClose }: { feedback: Feedback | null, onClose: () => void }) {
-  return <div className="feedback-region" aria-live="polite">
+  const region = useRef<HTMLDivElement>(null)
+  // O aviso fica no topo da página; sem isso, quem aciona um botão no fim da tabela não vê o resultado.
+  useEffect(() => { if (feedback) revealElement(region.current) }, [feedback])
+  return <div ref={region} className="feedback-region" aria-live="polite">
     {feedback?.kind === 'success' && <div className="notice success" role="status">
       <div>
         <strong>{feedback.message}</strong>

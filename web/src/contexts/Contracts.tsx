@@ -1,8 +1,8 @@
-import { useReducer, useState } from 'react'
+import { useEffect, useReducer, useState } from 'react'
 import type { ApiResult, BillingCycle, Contract, Reservation, ReservationUpdate } from '../api'
 import {
   ActionForm, Card, CustomerPicker, Field, FeedbackBanner, Id, PageIntro, PendingIntents, ResourceView, SelectField, Status, Table, date,
-  isoDate, money, text, useActions, useIdempotencyKeys, useResource, useSession,
+  isoDate, money, revealElement, text, useActions, useIdempotencyKeys, useResource, useSession,
 } from '../ui'
 
 const CYCLES = [
@@ -69,6 +69,23 @@ export default function Contracts({ params }: { params: URLSearchParams }) {
   const [editing, setEditing] = useState<Reservation | null>(null)
   const preselected = params.get('customer') ?? ''
 
+  // O formulário de encerramento abre no topo; leva a tela até ele e foca o primeiro campo.
+  useEffect(() => {
+    if (!closing) return
+    const card = document.getElementById('encerrar-contrato')
+    revealElement(card)
+    card?.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true })
+  }, [closing])
+
+  // O mesmo vale para a edição da reserva: o formulário fica no topo e o botão Editar, na tabela.
+  const editingId = editing?.reservationId
+  useEffect(() => {
+    if (!editingId) return
+    const card = document.getElementById('editar-reserva')
+    revealElement(card)
+    card?.querySelector<HTMLElement>('input, select')?.focus({ preventScroll: true })
+  }, [editingId])
+
   const customers = useResource(a => a.listCustomers({ active: true }), [version])
   const reservations = useResource(a => a.listReservations(), [version])
   const contracts = useResource(a => a.listContracts(), [version])
@@ -110,7 +127,7 @@ export default function Contracts({ params }: { params: URLSearchParams }) {
         </ActionForm>
       </Card>
 
-      {closing ? <Card title={`Encerrar contrato ${closing.contractId.slice(0, 8)}`} roles="contracts, admin">
+      {closing ? <Card id="encerrar-contrato" title={`Encerrar contrato ${closing.contractId.slice(0, 8)}`} roles="contracts, admin">
         <p>O encerramento publica <code>ContractClosed.v1</code> e conclui a preparação de retirada em Workflow após o despacho.</p>
         <ActionForm key={closing.contractId} submit="Confirmar encerramento" busy={busy} label="Encerrar contrato" onSubmit={async f => {
           const ok = await idempotent(`close:${closing.contractId}`, 'Encerramento de contrato',
@@ -122,7 +139,7 @@ export default function Contracts({ params }: { params: URLSearchParams }) {
           <Field name="reason" label="Motivo" required={false} defaultValue="Devolução do veículo" />
         </ActionForm>
         <button type="button" className="secondary small spaced" onClick={() => setClosing(null)}>Voltar</button>
-      </Card> : editingNow ? <Card title={`Editar reserva ${editingNow.reservationId.slice(0, 8)}`} roles="commercial, contracts, admin">
+      </Card> : editingNow ? <Card id="editar-reserva" title={`Editar reserva ${editingNow.reservationId.slice(0, 8)}`} roles="commercial, contracts, admin">
         {editingNow.status !== 'REQUESTED' ? <p role="status">Esta reserva já não está solicitada e não pode mais ser editada.</p> : <>
           <p>Cliente: <strong>{customerName(editingNow.customerId)}</strong>. Para trocar o cliente, cancele esta reserva e registre outra.</p>
           <ActionForm key={editingNow.reservationId} submit="Salvar alterações" busy={busy} label="Editar reserva" onSubmit={async f => {
