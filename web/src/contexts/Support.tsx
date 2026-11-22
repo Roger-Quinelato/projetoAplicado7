@@ -40,7 +40,9 @@ function TicketHistoryCard({ ticket, version, onClose }: { ticket: Ticket, versi
   </Card>
 }
 
-type Panel = { kind: 'assign', ticket: Ticket } | { kind: 'history', ticket: Ticket } | null
+const isAssignable = (t: Ticket) => t.status === 'OPEN' || t.status === 'PENDING_ENTITLEMENT'
+
+type Panel ={ kind: 'assign', ticket: Ticket } | { kind: 'history', ticket: Ticket } | null
 
 const CATEGORIES = [
   { value: 'OUTAGE', label: 'Indisponibilidade ou pane (prioridade alta)' },
@@ -64,6 +66,10 @@ export default function Support({ params }: { params: URLSearchParams }) {
   // Com cliente escolhido, a consulta é filtrada na API: contratos de clientes fora da primeira página também aparecem.
   const contracts = useResource(a => a.listContracts(customerId || undefined), [version, customerId])
   const tickets = useResource(a => a.listTickets(), [version])
+  // O painel guarda o chamado do momento em que abriu; o estado atual vem da lista, que pode ter mudado (ex.: resolvido).
+  const assignTicket = panel?.kind === 'assign'
+    ? tickets.data?.find(t => t.ticketId === panel.ticket.ticketId) ?? panel.ticket
+    : null
 
   // Contrato vindo da URL: carregado pelo UUID para identificar o cliente, sem depender da listagem.
   useEffect(() => {
@@ -133,14 +139,18 @@ export default function Support({ params }: { params: URLSearchParams }) {
       </Card>
 
       {panel?.kind === 'assign' ? <Card title={`Atribuir chamado ${panel.ticket.ticketId.slice(0, 8)}`} roles="support, admin">
-        <ActionForm key={panel.ticket.ticketId} submit={panel.ticket.owner ? 'Reatribuir' : 'Atribuir'} busy={busy} label="Atribuir chamado" onSubmit={async f => {
+        {assignTicket && !isAssignable(assignTicket) ? <p role="status">
+          Este chamado está {assignTicket.status === 'RESOLVED' ? 'resolvido' : 'encerrado'} e não aceita atribuição ou reatribuição.
+        </p> : <ActionForm key={panel.ticket.ticketId} submit={assignTicket?.owner ? 'Reatribuir' : 'Atribuir'} busy={busy} label="Atribuir chamado" onSubmit={async f => {
           const result = await run('Atribuição de chamado', () => api.assignTicket(panel.ticket.ticketId, text(f, 'owner')))
-          if (result) { setPanel(null); refresh() }
+          if (result) setPanel(null)
+          // Falha (ex.: 409 por mudança de estado): recarrega a lista para o painel refletir o estado atual.
+          refresh()
           return result !== null
         }}>
-          <Field name="owner" label="Responsável" defaultValue={panel.ticket.owner ?? 'Equipe de assistência 24h'}
+          <Field name="owner" label="Responsável" defaultValue={assignTicket?.owner ?? 'Equipe de assistência 24h'}
             hint="Equipe ou função, sem e-mail ou telefone. Cada atribuição e reatribuição fica no histórico do chamado." />
-        </ActionForm>
+        </ActionForm>}
         <button type="button" className="secondary small spaced" onClick={() => setPanel(null)}>Voltar</button>
       </Card> : panel?.kind === 'history' ? <TicketHistoryCard ticket={panel.ticket} version={version} onClose={() => setPanel(null)} />
       : <Card title="Atendimento e SLA" roles="despacho: operations, admin; reconciliação: support, operations, admin">
@@ -170,7 +180,7 @@ export default function Support({ params }: { params: URLSearchParams }) {
           { key: 'owner', label: 'Responsável', render: r => r.owner ?? '—' },
           { key: 'contract', label: 'Contrato', render: r => <Id value={r.contractId} /> },
           { key: 'actions', label: 'Ações', render: r => <div className="row-actions">
-            {(r.status === 'OPEN' || r.status === 'PENDING_ENTITLEMENT') && <button type="button" className="inline quiet" disabled={busy} onClick={() => { setPanel({ kind: 'assign', ticket: r }); clear() }}>{r.owner ? 'Reatribuir…' : 'Atribuir…'}</button>}
+            {isAssignable(r) && <button type="button" className="inline quiet" disabled={busy} onClick={() => { setPanel({ kind: 'assign', ticket: r }); clear() }}>{r.owner ? 'Reatribuir…' : 'Atribuir…'}</button>}
             {r.status === 'OPEN' && <button type="button" className="inline" disabled={busy} onClick={() => void run('Resolução de chamado', () => keys.send(`resolve:${r.ticketId}`, null, key => api.resolveTicket(r.ticketId, key), 'Resolução de chamado'),
               t => t.slaStatus === 'BREACHED' ? 'Resolvido após o prazo do SLA.' : t.slaStatus === 'MET' ? 'Resolvido dentro do SLA.' : '').then(x => { if (x) refresh() })}>Resolver</button>}
             {r.status === 'PENDING_ENTITLEMENT' && <button type="button" className="inline" disabled={busy} onClick={() => void run('Reconciliação de elegibilidade', () => keys.send(`reconcile:${r.ticketId}`, null, key => api.reconcileTicket(r.ticketId, key), 'Reconciliação de elegibilidade')).then(x => { if (x) refresh() })}>Reconciliar</button>}
