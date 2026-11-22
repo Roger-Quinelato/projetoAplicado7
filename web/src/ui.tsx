@@ -277,14 +277,17 @@ export function Card({ title, roles, children, aside, className, id }: { title: 
   </section>
 }
 
-export function Field({ name, label, type = 'text', required = true, defaultValue, hint, ...rest }: {
+export function Field({ name, label, type = 'text', required = true, defaultValue, hint, onChange, ...rest }: {
   name: string, label: string, type?: string, required?: boolean, defaultValue?: string, hint?: string,
   min?: string, step?: string, placeholder?: string, autoComplete?: string,
+  /** Acompanha o que a pessoa digita, sem tornar o campo controlado. */
+  onChange?: (value: string) => void,
 }) {
   const id = useId()
   return <div className="field">
     <label htmlFor={id}>{label}{!required && <span className="optional"> (opcional)</span>}</label>
-    <input id={id} name={name} type={type} required={required} defaultValue={defaultValue} aria-describedby={hint ? `${id}-hint` : undefined} {...rest} />
+    <input id={id} name={name} type={type} required={required} defaultValue={defaultValue} aria-describedby={hint ? `${id}-hint` : undefined}
+      onChange={onChange && (e => onChange(e.target.value))} {...rest} />
     {hint && <small id={`${id}-hint`}>{hint}</small>}
   </div>
 }
